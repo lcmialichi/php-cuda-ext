@@ -24,7 +24,7 @@ install: build
 	@echo "Extension installed. Add 'extension=$(EXT_NAME).so' to your php.ini"
 
 uninstall:
-	@echo "🗑️  Uninstalling extension..."
+	@echo " Uninstalling extension..."
 	cd $(BUILD_DIR) && sudo make uninstall || true
 	@echo "Extension uninstalled"
 
@@ -56,11 +56,11 @@ distclean: clean
 
 status:
 	@echo "Checking extension status..."
-	@php -m | grep $(EXT_NAME) || echo "❌ Extension not loaded"
-	@php -i | grep "CUDA" || echo "ℹ️  CUDA info not available"
+	@php -m | grep $(EXT_NAME) || echo "Extension not loaded"
+	@php -i | grep "CUDA" || echo "CUDA info not available"
 
 help:
-	@echo "📦 PHP CUDA Extension Build System"
+	@echo "PHP CUDA Extension Build System"
 	@echo ""
 	@echo "Commands:"
 	@echo "  make build     - Build extension in ./build/"

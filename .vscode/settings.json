@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "cuda_wrapper.h": "c",
+        "cuda.h": "c"
+    }
+}

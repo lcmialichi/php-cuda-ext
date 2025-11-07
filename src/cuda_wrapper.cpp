@@ -4,7 +4,6 @@
 
 extern "C"
 {
-
     int cuda_wrapper_get_device_count()
     {
         int count;

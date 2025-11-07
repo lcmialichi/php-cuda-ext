@@ -12,7 +12,8 @@ if test "$PHP_CUDA" != "no"; then
     
     PHP_NEW_EXTENSION(cuda, 
         src/cuda.c 
-        src/cuda_wrapper.cpp, 
+        src/cuda_wrapper.cpp,
+        src/cublas_math.cpp,
         $ext_shared)
     
     # Links CUDA

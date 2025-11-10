@@ -16,6 +16,7 @@
         "cuda_arginfo.h": "c",
         "vector": "cpp",
         "xstring": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "xmemory": "cpp"
     }
 }

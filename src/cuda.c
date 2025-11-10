@@ -5,6 +5,8 @@
 #include "php.h"
 #include "cuda.h"
 #include "cuda_wrapper.h"
+#include "cuda_arginfo.h"
+#include "cuda_array.h"
 
 PHP_FUNCTION(cuda_get_device_count)
 {
@@ -56,11 +58,11 @@ PHP_FUNCTION(cuda_set_device)
     Z_PARAM_LONG(device_id)
     ZEND_PARSE_PARAMETERS_END();
 
-    int success = cuda_wrapper_set_device(device_id);
+    int success = cuda_wrapper_set_device((int)device_id);
 
     if (!success)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to set device %d", device_id);
+        php_error_docref(NULL, E_WARNING, "Failed to set device %d", (int)device_id);
         RETURN_FALSE;
     }
 
@@ -190,7 +192,7 @@ PHP_FUNCTION(cuda_get_peer_access)
     Z_PARAM_LONG(device2)
     ZEND_PARSE_PARAMETERS_END();
 
-    int result = cuda_wrapper_get_peer_access(device1, device2);
+    int result = cuda_wrapper_get_peer_access((int)device1, (int)device2);
 
     if (result == -1)
     {
@@ -202,19 +204,20 @@ PHP_FUNCTION(cuda_get_peer_access)
 }
 
 static zend_function_entry cuda_functions[] = {
-    PHP_FE(cuda_get_device_count, NULL)
-    PHP_FE(cuda_get_device_info, NULL)
-    PHP_FE(cuda_set_device, NULL)
-    PHP_FE(cuda_get_current_device, NULL)
-    PHP_FE(cuda_get_memory_info, NULL)
-    PHP_FE(cuda_device_reset, NULL)
-    PHP_FE(cuda_synchronize, NULL)
-    PHP_FE(cuda_get_driver_version, NULL)
-    PHP_FE(cuda_get_runtime_version, NULL)
-    PHP_FE(cuda_get_last_error, NULL)
-    PHP_FE(cuda_clear_error, NULL)
-    PHP_FE(cuda_get_peer_access, NULL)
-    PHP_FE_END};
+    PHP_FE(cuda_get_device_count, arginfo_cuda_get_device_count)
+    PHP_FE(cuda_get_device_info, arginfo_cuda_get_device_info)
+    PHP_FE(cuda_set_device, arginfo_cuda_set_device)
+    PHP_FE(cuda_get_current_device, arginfo_cuda_get_current_device)
+    PHP_FE(cuda_get_memory_info, arginfo_cuda_get_memory_info)
+    PHP_FE(cuda_device_reset, arginfo_cuda_device_reset)
+    PHP_FE(cuda_synchronize, arginfo_cuda_synchronize)
+    PHP_FE(cuda_get_driver_version, arginfo_cuda_get_driver_version)
+    PHP_FE(cuda_get_runtime_version, arginfo_cuda_get_runtime_version)
+    PHP_FE(cuda_get_last_error, arginfo_cuda_get_last_error)
+    PHP_FE(cuda_clear_error, arginfo_cuda_clear_error)
+    PHP_FE(cuda_get_peer_access, arginfo_cuda_get_peer_access)
+    PHP_FE_END
+};
 
 PHP_MINIT_FUNCTION(cuda)
 {
@@ -223,6 +226,9 @@ PHP_MINIT_FUNCTION(cuda)
     {
         php_error_docref(NULL, E_WARNING, "CUDA initialization failed");
     }
+
+    cuda_array_init();
+
     return SUCCESS;
 }
 

@@ -93,7 +93,7 @@ extern "C"
         return (error == cudaSuccess) ? can_access : -1;
     }
 
-    int *cuda_wrapper_error()
+    int cuda_wrapper_error()
     {
         cudaError_t error = cudaGetLastError();
         return (int)error;

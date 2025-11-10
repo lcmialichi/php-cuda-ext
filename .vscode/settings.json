@@ -1,7 +1,18 @@
 {
     "files.associations": {
         "*.embeddedhtml": "html",
+        "*.m4": "bat",
         "cuda_wrapper.h": "c",
-        "cuda.h": "c"
+        "cuda.h": "c",
+        "cuda_array.h": "c",
+        "cuda_array_wrapper.h": "c",
+        "cstddef": "c",
+        "cstdint": "c",
+        "cstdlib": "c",
+        "cstring": "c",
+        "exception": "c",
+        "type_traits": "c",
+        "xtr1common": "c",
+        "cuda_arginfo.h": "c"
     }
 }

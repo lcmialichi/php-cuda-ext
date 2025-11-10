@@ -2,6 +2,7 @@
 #define CUDA_WRAPPER_H
 
 #include <stddef.h>
+#include <cuda_runtime.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -21,7 +22,8 @@ extern "C"
 
     const char *cuda_wrapper_get_error_string(int error);
     const char *cuda_wrapper_get_error_type(int error);
-    int *cuda_wrapper_error();
+    int cuda_wrapper_error();
+    const char *cuda_error_type(cudaError_t error);
 
 #ifdef __cplusplus
 }

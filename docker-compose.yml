@@ -1,0 +1,10 @@
+services:
+  php_cuda_dev:
+    build: .
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - .:/usr/src/ext
+    tty: true
+    user: root

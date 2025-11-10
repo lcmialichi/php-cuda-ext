@@ -28,9 +28,14 @@ tensor_t* cuda_tensor_multiply(tensor_t* a, tensor_t* b);
 tensor_t* cuda_tensor_matmul(tensor_t* a, tensor_t* b); 
 
 int* cuda_tensor_get_shape(tensor_t* tensor);
+tensor_t *cuda_tensor_transpose(tensor_t *tensor);
+
 float* cuda_tensor_get_data(tensor_t* tensor);
 size_t cuda_tensor_get_total_size(tensor_t* tensor);
+tensor_t *cuda_tensor_copy(tensor_t *tensor);
+size_t cuda_tensor_size(tensor_t *tensor);
 
+tensor_t *cuda_tensor_create_with_data(int *shape, int ndims, float *gpu_data);
 int cuda_tensor_shapes_compatible(tensor_t* a, tensor_t* b);
 tensor_t* cuda_tensor_create_broadcasted(tensor_t* a, tensor_t* b);
 

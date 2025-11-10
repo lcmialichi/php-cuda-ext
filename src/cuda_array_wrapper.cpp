@@ -63,12 +63,12 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
         return NULL;
     }
 
-    tensor_t *tensor = (tensor_t *)malloc(sizeof(tensor_t));
+    tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
         return NULL;
 
     tensor->ndims = ndims;
-    tensor->shape = (int *)malloc(ndims * sizeof(int));
+    tensor->shape = (int *)emalloc(ndims * sizeof(int));
     memcpy(tensor->shape, shape, ndims * sizeof(int));
 
     tensor->total_size = 1;
@@ -108,7 +108,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
     }
     else
     {
-        int *strides = (int *)malloc(ndims * sizeof(int));
+        int *strides = (int *)emalloc(ndims * sizeof(int));
 
         strides[ndims - 1] = 1;
         for (int i = ndims - 2; i >= 0; i--)
@@ -117,7 +117,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
         }
 
         cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, ndims, shape, strides);
-        free(strides);
+        efree(strides);
     }
 
     return tensor;
@@ -240,36 +240,103 @@ tensor_t *cuda_tensor_multiply(tensor_t *a, tensor_t *b)
 
     return result;
 }
-tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b) {
+
+tensor_t *cuda_tensor_transpose(tensor_t *tensor)
+{
+    if (!cuda_initialized || tensor == NULL)
+    {
+        return NULL;
+    }
+
+    if (tensor->ndims == 1)
+    {
+        php_error_docref(NULL, E_WARNING, "Dim = 1");
+        return cuda_tensor_copy(tensor);
+    }
+
+    if (tensor->ndims == 2)
+    {
+        int new_shape[2] = {tensor->shape[1], tensor->shape[0]};
+        tensor_t *result = cuda_tensor_create_empty(new_shape, 2);
+        if (!result)
+            return NULL;
+
+        float alpha = 1.0f;
+        float beta = 0.0f;
+
+        cublasStatus_t status = cublasSgeam(
+            cublas_handle,
+            CUBLAS_OP_T,
+            CUBLAS_OP_N,
+            new_shape[1],
+            new_shape[0],
+            &alpha,
+            tensor->data, tensor->shape[1],
+            &beta,
+            tensor->data, tensor->shape[1],
+            result->data, new_shape[1]);
+
+        if (status != CUBLAS_STATUS_SUCCESS)
+        {
+            cuda_tensor_destroy(result);
+            return NULL;
+        }
+
+        return result;
+    }
+
+    php_error_docref(NULL, E_WARNING, "Transpose not implemented for tensors > 2D");
+    return NULL;
+}
+
+tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
+{
     if (!cuda_initialized)
         return NULL;
 
     int a_ndims = a->ndims;
     int b_ndims = b->ndims;
-    
+
     int a_rows, a_cols, b_rows, b_cols;
-    
-    if (a_ndims == 1 && b_ndims == 1) {
-        if (a->shape[0] != b->shape[0]) return NULL;
-        a_rows = 1; a_cols = a->shape[0];
-        b_rows = b->shape[0]; b_cols = 1;
+
+    if (a_ndims == 1 && b_ndims == 1)
+    {
+        if (a->shape[0] != b->shape[0])
+            return NULL;
+        a_rows = 1;
+        a_cols = a->shape[0];
+        b_rows = b->shape[0];
+        b_cols = 1;
     }
-    else if (a_ndims == 1 && b_ndims == 2) {
-        if (a->shape[0] != b->shape[0]) return NULL;
-        a_rows = 1; a_cols = a->shape[0];
-        b_rows = b->shape[0]; b_cols = b->shape[1];
+    else if (a_ndims == 1 && b_ndims == 2)
+    {
+        if (a->shape[0] != b->shape[0])
+            return NULL;
+        a_rows = 1;
+        a_cols = a->shape[0];
+        b_rows = b->shape[0];
+        b_cols = b->shape[1];
     }
-    else if (a_ndims == 2 && b_ndims == 1) {
-        if (a->shape[1] != b->shape[0]) return NULL;
-        a_rows = a->shape[0]; a_cols = a->shape[1];
-        b_rows = b->shape[0]; b_cols = 1;
+    else if (a_ndims == 2 && b_ndims == 1)
+    {
+        if (a->shape[1] != b->shape[0])
+            return NULL;
+        a_rows = a->shape[0];
+        a_cols = a->shape[1];
+        b_rows = b->shape[0];
+        b_cols = 1;
     }
-    else if (a_ndims == 2 && b_ndims == 2) {
-        if (a->shape[1] != b->shape[0]) return NULL;
-        a_rows = a->shape[0]; a_cols = a->shape[1];
-        b_rows = b->shape[0]; b_cols = b->shape[1];
+    else if (a_ndims == 2 && b_ndims == 2)
+    {
+        if (a->shape[1] != b->shape[0])
+            return NULL;
+        a_rows = a->shape[0];
+        a_cols = a->shape[1];
+        b_rows = b->shape[0];
+        b_cols = b->shape[1];
     }
-    else {
+    else
+    {
         return NULL;
     }
 
@@ -279,7 +346,8 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b) {
     int result_shape[2] = {result_rows, result_cols};
 
     tensor_t *result = cuda_tensor_create_empty(result_shape, result_ndims);
-    if (!result) return NULL;
+    if (!result)
+        return NULL;
 
     float alpha = 1.0f;
     float beta = 0.0f;
@@ -298,10 +366,10 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b) {
         a_cols,
         &beta,
         result->data,
-        result_cols
-    );
+        result_cols);
 
-    if (status != CUBLAS_STATUS_SUCCESS) {
+    if (status != CUBLAS_STATUS_SUCCESS)
+    {
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -341,6 +409,42 @@ tensor_t *cuda_tensor_create_broadcasted(tensor_t *a, tensor_t *b)
     return cuda_tensor_create_empty(result_shape, max_dims);
 }
 
+tensor_t *cuda_tensor_copy(tensor_t *tensor)
+{
+    if (!tensor)
+        return NULL;
+
+    tensor_t *copy = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!copy)
+        return NULL;
+
+    cudaError_t cuda_status = cudaMemcpy(
+        copy->data, tensor->data,
+        cuda_tensor_size(tensor) * sizeof(float),
+        cudaMemcpyDeviceToDevice);
+
+    if (cuda_status != cudaSuccess)
+    {
+        cuda_tensor_destroy(copy);
+        return NULL;
+    }
+
+    return copy;
+}
+
+size_t cuda_tensor_size(tensor_t *tensor)
+{
+    if (!tensor)
+        return 0;
+
+    size_t size = 1;
+    for (int i = 0; i < tensor->ndims; i++)
+    {
+        size *= tensor->shape[i];
+    }
+    return size;
+}
+
 void cuda_tensor_destroy(tensor_t *tensor)
 {
     if (!tensor)
@@ -349,11 +453,42 @@ void cuda_tensor_destroy(tensor_t *tensor)
     if (tensor->data)
         cudaFree(tensor->data);
     if (tensor->shape)
-        free(tensor->shape);
+        efree(tensor->shape);
     if (tensor->desc)
         cudnnDestroyTensorDescriptor(tensor->desc);
 
-    free(tensor);
+    efree(tensor);
+}
+
+int *calculate_strides(int *shape, int ndims)
+{
+    if (ndims <= 0 || !shape)
+        return NULL;
+
+    int *strides = (int *)emalloc(ndims * sizeof(int));
+    if (!strides)
+        return NULL;
+
+    // Calcula strides em ordem C (row-major)
+    strides[ndims - 1] = 1;
+    for (int i = ndims - 2; i >= 0; i--)
+    {
+        strides[i] = strides[i + 1] * shape[i + 1];
+    }
+
+    return strides;
+}
+
+tensor_t *cuda_tensor_create_with_data(int *shape, int ndims, float *gpu_data)
+{
+    tensor_t *tensor = cuda_tensor_create(shape, ndims, NULL);
+    if (!tensor)
+        return NULL;
+
+    cudaFree(tensor->data);
+
+    tensor->data = gpu_data;
+    return tensor;
 }
 
 int *cuda_tensor_get_shape(tensor_t *tensor)
@@ -363,7 +498,7 @@ int *cuda_tensor_get_shape(tensor_t *tensor)
 
 float *cuda_tensor_get_data(tensor_t *tensor)
 {
-    float *host_data = (float *)malloc(tensor->total_size * sizeof(float));
+    float *host_data = (float *)emalloc(tensor->total_size * sizeof(float));
     cudaMemcpy(host_data, tensor->data, tensor->total_size * sizeof(float),
                cudaMemcpyDeviceToHost);
     return host_data;

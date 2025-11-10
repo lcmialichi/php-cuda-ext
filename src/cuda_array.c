@@ -6,26 +6,9 @@
 #include "cuda.h"
 #include "cuda_array.h"
 #include "cuda_array_wrapper.h"
+#include "cuda_array_arginfo.h"
 
 zend_class_entry *cuda_array_ce;
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_construct, 0, 0, 1)
-    ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_multiply, 0, 0, 1)
-    ZEND_ARG_OBJ_INFO(0, other, CudaArray, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_matmul, 0, 0, 1)
-    ZEND_ARG_OBJ_INFO(0, other, CudaArray, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_getShape, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_toArray, 0, 0, 0)
-ZEND_END_ARG_INFO()
 
 typedef struct {
     tensor_t *tensor_handle;
@@ -56,6 +39,9 @@ static void cuda_array_free_object(zend_object *object) {
     cuda_array_obj *obj = php_cuda_array_fetch_object(object);
     
     if (obj->tensor_handle != NULL) {
+        if (obj->tensor_handle->data != NULL) {
+            cudaFree(obj->tensor_handle->data);
+        }
         cuda_tensor_destroy(obj->tensor_handle);
     }
     
@@ -151,16 +137,35 @@ PHP_METHOD(CudaArray, __construct) {
     
     size_t total_size = calculate_total_size(data);
     
-    float *flat_data = (float*)emalloc(total_size * sizeof(float));
+    float *host_data = (float*)emalloc(total_size * sizeof(float));
     int index = 0;
-    flatten_php_array(data, flat_data, &index);
+    flatten_php_array(data, host_data, &index);
     
-    obj->tensor_handle = cuda_tensor_create(shape, ndims, flat_data);
+    float *gpu_data = NULL;
+    cudaError_t cuda_status = cudaMalloc((void**)&gpu_data, total_size * sizeof(float));
     
-    efree(flat_data);
+    if (cuda_status != cudaSuccess) {
+        efree(host_data);
+        zend_throw_error(NULL, "Failed to allocate GPU memory: %s", cudaGetErrorString(cuda_status));
+        RETURN_NULL();
+    }
+    
+    cuda_status = cudaMemcpy(gpu_data, host_data, total_size * sizeof(float), cudaMemcpyHostToDevice);
+    
+    if (cuda_status != cudaSuccess) {
+        cudaFree(gpu_data);
+        efree(host_data);
+        zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(cuda_status));
+        RETURN_NULL();
+    }
+    
+    efree(host_data);
+    
+    obj->tensor_handle = cuda_tensor_create_with_data(shape, ndims, gpu_data);
     
     if (obj->tensor_handle == NULL) {
-        zend_throw_error(NULL, "Failed to allocate tensor on GPU");
+        cudaFree(gpu_data);
+        zend_throw_error(NULL, "Failed to create tensor on GPU");
         RETURN_NULL();
     }
     
@@ -249,6 +254,37 @@ PHP_METHOD(CudaArray, matmul) {
     }
 }
 
+PHP_METHOD(CudaArray, transpose) {
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    if (this_obj->tensor_handle == NULL) {
+        zend_throw_error(NULL, "Tensor not initialized");
+        RETURN_NULL();
+    }
+    
+    tensor_t *result_tensor = cuda_tensor_transpose(this_obj->tensor_handle);
+    
+    if (result_tensor == NULL) {
+        zend_throw_error(NULL, "Transpose failed");
+        RETURN_NULL();
+    }
+    
+    object_init_ex(return_value, cuda_array_ce);
+    cuda_array_obj *result_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+    
+    result_obj->tensor_handle = result_tensor;
+    
+    int *result_shape = cuda_tensor_get_shape(result_tensor);
+    int result_ndims = result_tensor->ndims;
+    
+    result_obj->shape = zend_new_array(result_ndims);
+    for (int i = 0; i < result_ndims; i++) {
+        zval dim;
+        ZVAL_LONG(&dim, result_shape[i]);
+        zend_hash_index_update(result_obj->shape, i, &dim);
+    }
+}
+
 PHP_METHOD(CudaArray, getShape) {
     cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
     
@@ -273,19 +309,31 @@ PHP_METHOD(CudaArray, toArray) {
         RETURN_NULL();
     }
     
-    float *host_data = cuda_tensor_get_data(obj->tensor_handle);
-    int *shape = cuda_tensor_get_shape(obj->tensor_handle);
-    int ndims = obj->tensor_handle->ndims;
+    size_t total_size = 1;
+    for (int i = 0; i < obj->tensor_handle->ndims; i++) {
+        total_size *= obj->tensor_handle->shape[i];
+    }
     
-    if (host_data == NULL) {
+    float *host_data = (float*)emalloc(total_size * sizeof(float));
+    
+    cudaError_t cuda_status = cudaMemcpy(
+        host_data, 
+        obj->tensor_handle->data, 
+        total_size * sizeof(float), 
+        cudaMemcpyDeviceToHost
+    );
+    
+    if (cuda_status != cudaSuccess) {
+        efree(host_data);
+        zend_throw_error(NULL, "Failed to copy data from GPU: %s", cudaGetErrorString(cuda_status));
         RETURN_NULL();
     }
     
-    void build_array_from_flat(zval *result, float *data, int *dims, int current_dim, size_t *offset) {
+    void build_array_from_flat(zval *result, float *data, int *dims, int current_dim, size_t *offset, int total_dims) {
         int size = dims[current_dim];
         array_init_size(result, size);
         
-        if (current_dim == ndims - 1) {
+        if (current_dim == total_dims - 1) {
             for (int i = 0; i < size; i++) {
                 zval element;
                 ZVAL_DOUBLE(&element, data[*offset]);
@@ -295,22 +343,23 @@ PHP_METHOD(CudaArray, toArray) {
         } else {
             for (int i = 0; i < size; i++) {
                 zval subarray;
-                build_array_from_flat(&subarray, data, dims, current_dim + 1, offset);
+                build_array_from_flat(&subarray, data, dims, current_dim + 1, offset, total_dims);
                 zend_hash_index_update(Z_ARRVAL_P(result), i, &subarray);
             }
         }
     }
     
     size_t offset = 0;
-    build_array_from_flat(return_value, host_data, shape, 0, &offset);
+    build_array_from_flat(return_value, host_data, obj->tensor_handle->shape, 0, &offset, obj->tensor_handle->ndims);
     
-    free(host_data);
+    efree(host_data);
 }
 
 static zend_function_entry cuda_array_methods[] = {
     PHP_ME(CudaArray, __construct, arginfo_cuda_array_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
     PHP_ME(CudaArray, multiply, arginfo_cuda_array_multiply, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, matmul, arginfo_cuda_array_matmul, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, transpose, arginfo_cuda_array_transpose, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, getShape, arginfo_cuda_array_getShape, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, toArray, arginfo_cuda_array_toArray, ZEND_ACC_PUBLIC)
     PHP_FE_END

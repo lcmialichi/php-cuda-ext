@@ -48,9 +48,10 @@ class CudaBenchmark
     {
         echo "\n🔬 3. LARGE TENSORS TEST\n";
         $tests = [
-            '256×256×256' => [256, 256, 256], // 16M
-            '512×512×64' => [512, 512, 64],  // 16M
-            '1024×1024×4' => [1024, 1024, 4], // 4M
+            '256×256×256' => [256, 256, 256],
+            '512×512×64' => [512, 512, 64],
+            '1024×1024×4' => [1024, 1024, 4],
+            '1024×1024×32' => [1024, 1024, 32],
         ];
 
         foreach ($tests as $name => $dims) {
@@ -95,6 +96,7 @@ class CudaBenchmark
             '512×512×512' => [512, 512, 512], // 134M
             '1024×1024×32' => [1024, 1024, 32], // 33M
             '2048×512×16' => [2048, 512, 16], // 16M
+            '2048×512×64' => [2048, 512, 64],
         ];
 
         foreach ($tests as $name => $dims) {
@@ -127,11 +129,12 @@ class CudaBenchmark
             }
         }
 
-        $start_gpu = microtime(true);
-        try {
+         try {
             $a = new CudaArray($data);
             $b = new CudaArray($data);
-            $gpu_result = $a->multiply($b);
+            $start_gpu = microtime(true);
+       
+            $gpu_result = $a->multiply($b)->multiply($b)->multiply($a);
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
             $gpu_success = true;
         } catch (Exception $e) {
@@ -144,18 +147,21 @@ class CudaBenchmark
 
         $start_cpu = microtime(true);
         try {
-            $cpu_result = [];
-            foreach ($data as $i => $matrix) {
-                $cpu_matrix = [];
-                foreach ($matrix as $j => $row) {
-                    $cpu_row = [];
-                    foreach ($row as $k => $val) {
-                        $cpu_row[] = $val * $data[$i][$j][$k];
+            for ($i = 0; $i < 3; $i++) {
+                $cpu_result = [];
+                foreach ($data as $i => $matrix) {
+                    $cpu_matrix = [];
+                    foreach ($matrix as $j => $row) {
+                        $cpu_row = [];
+                        foreach ($row as $k => $val) {
+                            $cpu_row[] = $val * $data[$i][$j][$k];
+                        }
+                        $cpu_matrix[] = $cpu_row;
                     }
-                    $cpu_matrix[] = $cpu_row;
+                    $cpu_result[] = $cpu_matrix;
                 }
-                $cpu_result[] = $cpu_matrix;
             }
+
             $cpu_time = (microtime(true) - $start_cpu) * 1000;
             $cpu_success = true;
         } catch (Exception $e) {
@@ -193,4 +199,8 @@ class CudaBenchmark
     }
 }
 
+$arr = new CudaArray([[1,2,3,4,5], [1,21,7,4,6]]);
 
+var_dump($arr->matmul($arr->transpose())->toArray());
+
+// var_dump($arr->transpose()->toArray()->matmul());

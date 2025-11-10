@@ -30,8 +30,6 @@ tensor_t* cuda_tensor_create_empty(const int shape[], int ndims);
 void cuda_tensor_destroy(tensor_t* tensor);
 
 tensor_t* cuda_tensor_multiply(tensor_t* a, tensor_t* b);
-tensor_t *cuda_tensor_multiply_scalar(tensor_t *tensor, float scalar);
-
 tensor_t* cuda_tensor_matmul(tensor_t* a, tensor_t* b); 
 
 int* cuda_tensor_get_shape(tensor_t* tensor);

@@ -77,68 +77,6 @@ static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index) {
     } ZEND_HASH_FOREACH_END();
 }
 
-tensor_t *cuda_tensor_multiply_scalar(tensor_t *tensor, float scalar) {
-    if (!cuda_initialized || !tensor) {
-        return NULL;
-    }
-    
-    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
-    if (!result) return NULL;
-    
-    cudnnOpTensorDescriptor_t op_desc;
-    cudnnStatus_t status = cudnnCreateOpTensorDescriptor(&op_desc);
-    
-    if (status != CUDNN_STATUS_SUCCESS) {
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-    
-    status = cudnnSetOpTensorDescriptor(
-        op_desc,
-        CUDNN_OP_TENSOR_MUL,
-        CUDNN_DATA_FLOAT,
-        CUDNN_PROPAGATE_NAN
-    );
-    
-    if (status != CUDNN_STATUS_SUCCESS) {
-        cudnnDestroyOpTensorDescriptor(op_desc);
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-    
-    tensor_t *scalar_tensor = cuda_tensor_create_scalar(scalar, tensor->shape, tensor->ndims);
-    if (!scalar_tensor) {
-        cudnnDestroyOpTensorDescriptor(op_desc);
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-    
-    const float alpha1 = 1.0f;
-    const float alpha2 = 1.0f;
-    const float beta = 0.0f;
-    
-    status = cudnnOpTensor(
-        cudnn_handle,
-        op_desc,
-        &alpha1,
-        tensor->desc, tensor->data,
-        &alpha2,
-        scalar_tensor->desc, scalar_tensor->data,
-        &beta,
-        result->desc, result->data
-    );
-    
-    cudnnDestroyOpTensorDescriptor(op_desc);
-    cuda_tensor_destroy(scalar_tensor);
-    
-    if (status != CUDNN_STATUS_SUCCESS) {
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-    
-    return result;
-}
-
 tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims) {
     size_t total_size = 1;
     for (int i = 0; i < ndims; i++) {

@@ -1,4 +1,5 @@
 #include "cuda_array_wrapper.h"
+#include "cuda_kernels.h"
 #include <stdlib.h>
 #include <string.h>
 #include <cstdio>
@@ -40,57 +41,105 @@ int cuda_wrapper_init()
     return 1;
 }
 
-cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size) {
-    float *pinned_host_data;
-    cudaError_t status = cudaMallocHost((void**)&pinned_host_data, total_size * sizeof(float));
-    if (status != cudaSuccess) return status;
+extern "C" { 
+    void launch_divide_kernel(float *a, float *b, float *result, int n);
+}
+
+tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b, tensor_t *result) {
+    size_t total_size = cuda_tensor_size(a);
+    launch_divide_kernel(a->data, b->data, result->data, total_size);
     
+    cudaError_t status = cudaDeviceSynchronize();
+    return (status == cudaSuccess) ? result : NULL;
+}
+
+cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size)
+{
+    float *pinned_host_data;
+    cudaError_t status = cudaMallocHost((void **)&pinned_host_data, total_size * sizeof(float));
+    if (status != cudaSuccess)
+        return status;
+
     int host_index = 0;
     flatten_php_array_to_buffer(data, pinned_host_data, &host_index);
-    
-    status = cudaMemcpyAsync(gpu_data, pinned_host_data, total_size * sizeof(float), 
-                            cudaMemcpyHostToDevice, 0);
-    
+
+    status = cudaMemcpyAsync(gpu_data, pinned_host_data, total_size * sizeof(float),
+                             cudaMemcpyHostToDevice, 0);
+
     cudaFreeHost(pinned_host_data);
     *index = host_index;
     return status;
 }
 
-static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index) {
-    if (Z_TYPE_P(data) != IS_ARRAY) {
-        if (Z_TYPE_P(data) == IS_LONG) {
+static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index)
+{
+    if (Z_TYPE_P(data) != IS_ARRAY)
+    {
+        if (Z_TYPE_P(data) == IS_LONG)
+        {
             buffer[(*index)++] = (float)Z_LVAL_P(data);
-        } else if (Z_TYPE_P(data) == IS_DOUBLE) {
+        }
+        else if (Z_TYPE_P(data) == IS_DOUBLE)
+        {
             buffer[(*index)++] = (float)Z_DVAL_P(data);
-        } else if (Z_TYPE_P(data) == IS_TRUE) {
+        }
+        else if (Z_TYPE_P(data) == IS_TRUE)
+        {
             buffer[(*index)++] = 1.0f;
-        } else if (Z_TYPE_P(data) == IS_FALSE) {
+        }
+        else if (Z_TYPE_P(data) == IS_FALSE)
+        {
             buffer[(*index)++] = 0.0f;
         }
         return;
     }
-    
+
     HashTable *ht = Z_ARRVAL_P(data);
     zval *current;
-    ZEND_HASH_FOREACH_VAL(ht, current) {
+    ZEND_HASH_FOREACH_VAL(ht, current)
+    {
         flatten_php_array_to_buffer(current, buffer, index);
-    } ZEND_HASH_FOREACH_END();
+    }
+    ZEND_HASH_FOREACH_END();
 }
 
-tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims) {
+tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
+{
     size_t total_size = 1;
-    for (int i = 0; i < ndims; i++) {
+    for (int i = 0; i < ndims; i++)
+    {
         total_size *= shape[i];
     }
-    
-    float *host_data = (float*)emalloc(total_size * sizeof(float));
-    for (size_t i = 0; i < total_size; i++) {
+
+    float *host_data = (float *)emalloc(total_size * sizeof(float));
+    for (size_t i = 0; i < total_size; i++)
+    {
         host_data[i] = value;
     }
-    
+
     tensor_t *tensor = cuda_tensor_create(shape, ndims, host_data);
     efree(host_data);
-    
+
+    return tensor;
+}
+
+tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
+{
+    size_t total_size = 1;
+    for (int i = 0; i < ndims; i++)
+    {
+        total_size *= shape[i];
+    }
+
+    float *data = (float *)emalloc(total_size * sizeof(float));
+    for (size_t i = 0; i < total_size; i++)
+    {
+        data[i] = value;
+    }
+
+    tensor_t *tensor = cuda_tensor_create(shape, ndims, data);
+    efree(data);
+
     return tensor;
 }
 
@@ -219,33 +268,123 @@ tensor_t *cuda_tensor_multiply(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
+    return cuda_tensor_op(a, b, result, CUDNN_OP_MUL);
+}
+
+
+tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (a == NULL || b == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Null tensor input");
+        return NULL;
+    }
+
+    if (a->data == NULL || b->data == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Tensor data is NULL");
+        return NULL;
+    }
+
+    if (a->desc == NULL || b->desc == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Tensor descriptor is NULL");
+        return NULL;
+    }
+
+    if (a->ndims != b->ndims)
+    {
+        php_error_docref(NULL, E_WARNING, "Different number of dimensions: %d vs %d",
+                         a->ndims, b->ndims);
+        return NULL;
+    }
+
+    for (int i = 0; i < a->ndims; i++)
+    {
+        if (a->shape[i] != b->shape[i])
+        {
+            php_error_docref(NULL, E_WARNING, "Shape mismatch at dimension %d: %d vs %d",
+                             i, a->shape[i], b->shape[i]);
+            return NULL;
+        }
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    if (result->desc == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Result tensor descriptor is NULL");
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return cuda_tensor_op(a, b, result, KERNEL_DIV);
+}
+
+tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, tensor_t *result, cuda_op_type_t op_type)
+{
+    if (!cuda_initialized || !a || !b || !result) {
+        return NULL;
+    }
+
     cudnnOpTensorDescriptor_t op_desc;
     cudnnStatus_t status = cudnnCreateOpTensorDescriptor(&op_desc);
+    
+    if (status != CUDNN_STATUS_SUCCESS) {
+        return NULL;
+    }
 
-    if (status != CUDNN_STATUS_SUCCESS)
+    float alpha1 = 1.0f;
+    float alpha2 = 1.0f;
+    float beta = 0.0f;
+
+    cudnnOpTensorOp_t cudnn_op;
+    switch (op_type)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to create OpTensor descriptor: %d", status);
-        cuda_tensor_destroy(result);
+    case CUDNN_OP_ADD:
+        cudnn_op = CUDNN_OP_TENSOR_ADD;
+        break;
+    case CUDNN_OP_MUL:
+        cudnn_op = CUDNN_OP_TENSOR_MUL;
+        break;
+    case CUDNN_OP_SUB:
+        cudnn_op = CUDNN_OP_TENSOR_ADD;
+        alpha2 = -1.0f;
+        break;
+    case CUDNN_OP_MIN:
+        cudnn_op = CUDNN_OP_TENSOR_MIN;
+        break;
+    case CUDNN_OP_MAX:
+        cudnn_op = CUDNN_OP_TENSOR_MAX;
+        break;
+    case KERNEL_DIV:
+        return cuda_tensor_divide(a, b, result);
+    default:
+        cudnnDestroyOpTensorDescriptor(op_desc);
         return NULL;
     }
 
     status = cudnnSetOpTensorDescriptor(
         op_desc,
-        CUDNN_OP_TENSOR_MUL,
+        cudnn_op,
         CUDNN_DATA_FLOAT,
         CUDNN_PROPAGATE_NAN);
 
-    if (status != CUDNN_STATUS_SUCCESS)
-    {
-        php_error_docref(NULL, E_WARNING, "Failed to set OpTensor descriptor: %d", status);
+    if (status != CUDNN_STATUS_SUCCESS) {
         cudnnDestroyOpTensorDescriptor(op_desc);
-        cuda_tensor_destroy(result);
         return NULL;
     }
-
-    const float alpha1 = 1.0f;
-    const float alpha2 = 1.0f;
-    const float beta = 0.0f;
 
     status = cudnnOpTensor(
         cudnn_handle,
@@ -259,25 +398,67 @@ tensor_t *cuda_tensor_multiply(tensor_t *a, tensor_t *b)
 
     cudnnDestroyOpTensorDescriptor(op_desc);
 
-    if (status != CUDNN_STATUS_SUCCESS)
+    return (status == CUDNN_STATUS_SUCCESS) ? result : NULL;
+}
+
+tensor_t *cuda_tensor_add(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
     {
-        php_error_docref(NULL, E_WARNING, "cuDNN operation failed with status: %d", status);
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
 
-        if (status == CUDNN_STATUS_BAD_PARAM)
+    if (a == NULL || b == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Null tensor input");
+        return NULL;
+    }
+
+    if (a->data == NULL || b->data == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Tensor data is NULL");
+        return NULL;
+    }
+
+    if (a->desc == NULL || b->desc == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Tensor descriptor is NULL");
+        return NULL;
+    }
+
+    if (a->ndims != b->ndims)
+    {
+        php_error_docref(NULL, E_WARNING, "Different number of dimensions: %d vs %d",
+                         a->ndims, b->ndims);
+        return NULL;
+    }
+
+    for (int i = 0; i < a->ndims; i++)
+    {
+        if (a->shape[i] != b->shape[i])
         {
-            php_error_docref(NULL, E_WARNING, "BAD_PARAM - checking descriptors...");
-            php_error_docref(NULL, E_WARNING, "A desc: %p, B desc: %p, Result desc: %p",
-                             a->desc, b->desc, result->desc);
-            php_error_docref(NULL, E_WARNING, "A data: %p, B data: %p, Result data: %p",
-                             a->data, b->data, result->data);
-            php_error_docref(NULL, E_WARNING, "cuDNN handle: %p", cudnn_handle);
+            php_error_docref(NULL, E_WARNING, "Shape mismatch at dimension %d: %d vs %d",
+                             i, a->shape[i], b->shape[i]);
+            return NULL;
         }
+    }
 
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    if (result->desc == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Result tensor descriptor is NULL");
         cuda_tensor_destroy(result);
         return NULL;
     }
 
-    return result;
+    return cuda_tensor_op(a, b, result, CUDNN_OP_ADD);
 }
 
 tensor_t *cuda_tensor_transpose(tensor_t *tensor)
@@ -416,7 +597,6 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
     return result;
 }
 
-
 tensor_t *cuda_tensor_copy(tensor_t *tensor)
 {
     if (!tensor)
@@ -477,7 +657,6 @@ int *calculate_strides(int *shape, int ndims)
     if (!strides)
         return NULL;
 
-    // Calcula strides em ordem C (row-major)
     strides[ndims - 1] = 1;
     for (int i = ndims - 2; i >= 0; i--)
     {
@@ -486,7 +665,6 @@ int *calculate_strides(int *shape, int ndims)
 
     return strides;
 }
-
 
 int *cuda_tensor_get_shape(tensor_t *tensor)
 {

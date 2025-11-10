@@ -1,8 +1,15 @@
-CXX = g++
-CXXFLAGS = -fPIC -O2 -std=c++11
+NVCC_FLAGS = -arch=sm_60 -O2 -Xcompiler -fPIC
 
-src/cuda_wrapper.lo: src/cuda_wrapper.cpp
-	$(CXX) $(CXXFLAGS) -I. $(PHP_INCLUDES) -c $< -o $@
+$(builddir)/src/cuda_kernels.o: src/cuda_kernels.cu
+	@mkdir -p $(builddir)/src
+	$(NVCC) $(NVCC_FLAGS) -c -o $@ $<
 
-src/cuda_array.lo: src/cuda_array.c
-	$(CXX) $(CXXFLAGS) -I. $(PHP_INCLUDES) -c $< -o $@
+# Cria a biblioteca estática
+libcudakernels.a: $(builddir)/src/cuda_kernels.o
+	ar rcs $@ $<
+
+# Link com a biblioteca
+$(builddir)/cuda.la: libcudakernels.a
+
+clean-cuda:
+	rm -f $(builddir)/src/cuda_kernels.o libcudakernels.a

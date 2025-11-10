@@ -8,7 +8,15 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_construct, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_multiply, 0, 1, CudaArray, 0)
-    ZEND_ARG_INFO(0, other)  // Aceita CudaArray, float, int, etc.
+    ZEND_ARG_INFO(0, other)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_divide, 0, 1, CudaArray, 0)
+    ZEND_ARG_INFO(0, other)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_add, 0, 1, CudaArray, 0)
+    ZEND_ARG_INFO(0, other)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_matmul, 0, 0, 1)
@@ -21,9 +29,15 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_transpose, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_toArray, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_zeros, 0, 0, 1)
+    ZEND_ARG_ARRAY_INFO(0, shape, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_ones, 0, 0, 1)
+    ZEND_ARG_ARRAY_INFO(0, shape, 0)
+ZEND_END_ARG_INFO()
 
 #endif

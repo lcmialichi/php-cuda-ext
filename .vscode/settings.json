@@ -13,6 +13,9 @@
         "exception": "c",
         "type_traits": "c",
         "xtr1common": "c",
-        "cuda_arginfo.h": "c"
+        "cuda_arginfo.h": "c",
+        "vector": "cpp",
+        "xstring": "cpp",
+        "xutility": "cpp"
     }
 }

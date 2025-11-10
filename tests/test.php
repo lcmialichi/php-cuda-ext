@@ -199,16 +199,21 @@ class CudaBenchmark
     }
 }
 
-CudaBenchmark::runAllTests();
+// CudaBenchmark::runAllTests();
 
-$cud = new CudaArray([[1, 2], [3, 4]]);
-$cud2 = new CudaArray([[5, 6, 5, 6], [7, 8, 9, 10]]);
+$ones = CudaArray::ones([2, 3, 3]);
 
-$newCuda = $cud2->transpose()->matmul($cud)->multiply(1/100);
+var_dump(CudaArray::ones([2, 3, 3])->divide(2)->toArray());
 
 
-var_dump($newCuda->getShape());
-var_dump($newCuda->toArray());
+// $cud = new CudaArray([[1, 2], [3, 4]]);
+// $cud2 = new CudaArray([[5, 6, 5, 6], [7, 8, 9, 10]]);
+
+// $newCuda = $cud2->transpose()->matmul($cud)->multiply(1/100);
+
+
+// var_dump($newCuda->getShape());
+// var_dump($newCuda->toArray());
 
 
 

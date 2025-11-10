@@ -277,6 +277,162 @@ PHP_METHOD(CudaArray, multiply)
     }
 }
 
+PHP_METHOD(CudaArray, divide)
+{
+    zval *other_zv;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_ZVAL(other_zv)
+    ZEND_PARSE_PARAMETERS_END();
+
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+
+    if (this_obj->tensor_handle == NULL)
+    {
+        zend_throw_error(NULL, "Tensor not initialized");
+        RETURN_NULL();
+    }
+
+    tensor_t *result_tensor = NULL;
+    tensor_t *tensor_b;
+
+    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
+    {
+        cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+
+        if (other_obj->tensor_handle == NULL)
+        {
+            zend_throw_error(NULL, "Other tensor not initialized");
+            RETURN_NULL();
+        }
+
+        tensor_b = other_obj->tensor_handle;
+    }
+
+    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
+    {
+        double scalar_value;
+
+        if (Z_TYPE_P(other_zv) == IS_DOUBLE)
+        {
+            scalar_value = Z_DVAL_P(other_zv);
+        }
+        else
+        {
+            scalar_value = (double)Z_LVAL_P(other_zv);
+        }
+
+        tensor_b = cuda_tensor_create_scalar((float)scalar_value, this_obj->tensor_handle->shape, this_obj->tensor_handle->ndims);
+    }
+    else
+    {
+        zend_throw_error(NULL, "Parameter must be CudaArray or number");
+        RETURN_NULL();
+    }
+
+    result_tensor = cuda_tensor_divide(this_obj->tensor_handle, tensor_b);
+
+    if (result_tensor == NULL)
+    {
+        zend_throw_error(NULL, "Multiplication failed");
+        RETURN_NULL();
+    }
+
+    object_init_ex(return_value, cuda_array_ce);
+    cuda_array_obj *result_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+
+    result_obj->tensor_handle = result_tensor;
+
+    int *result_shape = cuda_tensor_get_shape(result_tensor);
+    int result_ndims = result_tensor->ndims;
+
+    result_obj->shape = zend_new_array(result_ndims);
+    for (int i = 0; i < result_ndims; i++)
+    {
+        zval dim;
+        ZVAL_LONG(&dim, result_shape[i]);
+        zend_hash_index_update(result_obj->shape, i, &dim);
+    }
+}
+
+PHP_METHOD(CudaArray, add)
+{
+    zval *other_zv;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_ZVAL(other_zv)
+    ZEND_PARSE_PARAMETERS_END();
+
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+
+    if (this_obj->tensor_handle == NULL)
+    {
+        zend_throw_error(NULL, "Tensor not initialized");
+        RETURN_NULL();
+    }
+
+    tensor_t *result_tensor = NULL;
+    tensor_t *tensor_b;
+
+    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
+    {
+        cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+
+        if (other_obj->tensor_handle == NULL)
+        {
+            zend_throw_error(NULL, "Other tensor not initialized");
+            RETURN_NULL();
+        }
+
+        tensor_b = other_obj->tensor_handle;
+    }
+
+    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
+    {
+        double scalar_value;
+
+        if (Z_TYPE_P(other_zv) == IS_DOUBLE)
+        {
+            scalar_value = Z_DVAL_P(other_zv);
+        }
+        else
+        {
+            scalar_value = (double)Z_LVAL_P(other_zv);
+        }
+
+        tensor_b = cuda_tensor_create_scalar((float)scalar_value, this_obj->tensor_handle->shape, this_obj->tensor_handle->ndims);
+    }
+    else
+    {
+        zend_throw_error(NULL, "Parameter must be CudaArray or number");
+        RETURN_NULL();
+    }
+
+    result_tensor = cuda_tensor_add(this_obj->tensor_handle, tensor_b);
+
+    if (result_tensor == NULL)
+    {
+        zend_throw_error(NULL, "Multiplication failed");
+        RETURN_NULL();
+    }
+
+    object_init_ex(return_value, cuda_array_ce);
+    cuda_array_obj *result_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+
+    result_obj->tensor_handle = result_tensor;
+
+    int *result_shape = cuda_tensor_get_shape(result_tensor);
+    int result_ndims = result_tensor->ndims;
+
+    result_obj->shape = zend_new_array(result_ndims);
+    for (int i = 0; i < result_ndims; i++)
+    {
+        zval dim;
+        ZVAL_LONG(&dim, result_shape[i]);
+        zend_hash_index_update(result_obj->shape, i, &dim);
+    }
+}
+
 PHP_METHOD(CudaArray, matmul)
 {
     zval *other_zv;
@@ -375,6 +531,110 @@ PHP_METHOD(CudaArray, getShape)
     ZEND_HASH_FOREACH_END();
 }
 
+PHP_METHOD(CudaArray, zeros)
+{
+    zval *shape_array;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ARRAY(shape_array)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    int shape[10] = {0};
+    int ndims = 0;
+
+    zval *dim;
+    int i = 0;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(shape_array), dim) {
+        if (i < 10 && Z_TYPE_P(dim) == IS_LONG) {
+            shape[i++] = Z_LVAL_P(dim);
+        }
+    } ZEND_HASH_FOREACH_END();
+    ndims = i;
+
+    if (ndims == 0)
+    {
+        zend_throw_error(NULL, "Invalid shape: must provide dimensions");
+        RETURN_NULL();
+    }
+
+    size_t total_size = 1;
+    for (int i = 0; i < ndims; i++) {
+        total_size *= shape[i];
+    }
+
+    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, 0);
+    if (!tensor)
+    {
+        zend_throw_error(NULL, "Failed to create zeros tensor");
+        RETURN_NULL();
+    }
+
+    object_init_ex(return_value, cuda_array_ce);
+    cuda_array_obj *result_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+    result_obj->tensor_handle = tensor;
+
+    result_obj->shape = zend_new_array(ndims);
+    for (int i = 0; i < ndims; i++)
+    {
+        zval dim;
+        ZVAL_LONG(&dim, shape[i]);
+        zend_hash_index_update(result_obj->shape, i, &dim);
+    }
+}
+
+
+PHP_METHOD(CudaArray, ones)
+{
+    zval *shape_array;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ARRAY(shape_array)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    int shape[10] = {0};
+    int ndims = 0;
+
+    zval *dim;
+    int i = 0;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(shape_array), dim) {
+        if (i < 10 && Z_TYPE_P(dim) == IS_LONG) {
+            shape[i++] = Z_LVAL_P(dim);
+        }
+    } ZEND_HASH_FOREACH_END();
+    ndims = i;
+
+    if (ndims == 0)
+    {
+        zend_throw_error(NULL, "Invalid shape: must provide dimensions");
+        RETURN_NULL();
+    }
+
+    size_t total_size = 1;
+    for (int i = 0; i < ndims; i++) {
+        total_size *= shape[i];
+    }
+
+    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, 1);
+    if (!tensor)
+    {
+        zend_throw_error(NULL, "Failed to create ones tensor");
+        RETURN_NULL();
+    }
+
+    object_init_ex(return_value, cuda_array_ce);
+    cuda_array_obj *result_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+    result_obj->tensor_handle = tensor;
+
+    result_obj->shape = zend_new_array(ndims);
+    for (int i = 0; i < ndims; i++)
+    {
+        zval dim;
+        ZVAL_LONG(&dim, shape[i]);
+        zend_hash_index_update(result_obj->shape, i, &dim);
+    }
+}
+
+
 PHP_METHOD(CudaArray, toArray)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
@@ -440,11 +700,15 @@ PHP_METHOD(CudaArray, toArray)
 static zend_function_entry cuda_array_methods[] = {
     PHP_ME(CudaArray, __construct, arginfo_cuda_array_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
         PHP_ME(CudaArray, multiply, arginfo_cuda_array_multiply, ZEND_ACC_PUBLIC)
+        PHP_ME(CudaArray, divide, arginfo_cuda_array_divide, ZEND_ACC_PUBLIC)
+        PHP_ME(CudaArray, add, arginfo_cuda_array_add, ZEND_ACC_PUBLIC)
             PHP_ME(CudaArray, matmul, arginfo_cuda_array_matmul, ZEND_ACC_PUBLIC)
                 PHP_ME(CudaArray, transpose, arginfo_cuda_array_transpose, ZEND_ACC_PUBLIC)
                     PHP_ME(CudaArray, getShape, arginfo_cuda_array_getShape, ZEND_ACC_PUBLIC)
                         PHP_ME(CudaArray, toArray, arginfo_cuda_array_toArray, ZEND_ACC_PUBLIC)
-                            PHP_FE_END};
+                            PHP_ME(CudaArray, zeros, arginfo_cuda_array_zeros, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+                            PHP_ME(CudaArray, ones, arginfo_cuda_array_ones, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+                                PHP_FE_END};
 
 void cuda_array_init()
 {

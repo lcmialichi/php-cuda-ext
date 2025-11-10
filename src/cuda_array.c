@@ -137,35 +137,24 @@ PHP_METHOD(CudaArray, __construct) {
     
     size_t total_size = calculate_total_size(data);
     
-    float *host_data = (float*)emalloc(total_size * sizeof(float));
+    obj->tensor_handle = cuda_tensor_create_empty(shape, ndims);
+    if (!obj->tensor_handle) {
+        zend_throw_error(NULL, "Failed to create empty tensor");
+        RETURN_NULL();
+    }
+    
     int index = 0;
-    flatten_php_array(data, host_data, &index);
-    
-    float *gpu_data = NULL;
-    cudaError_t cuda_status = cudaMalloc((void**)&gpu_data, total_size * sizeof(float));
-    
-    if (cuda_status != cudaSuccess) {
-        efree(host_data);
-        zend_throw_error(NULL, "Failed to allocate GPU memory: %s", cudaGetErrorString(cuda_status));
-        RETURN_NULL();
-    }
-    
-    cuda_status = cudaMemcpy(gpu_data, host_data, total_size * sizeof(float), cudaMemcpyHostToDevice);
+    cudaError_t cuda_status = cuda_flatten_php_array_to_gpu(
+        data, 
+        obj->tensor_handle->data, 
+        &index, 
+        total_size
+    );
     
     if (cuda_status != cudaSuccess) {
-        cudaFree(gpu_data);
-        efree(host_data);
+        cuda_tensor_destroy(obj->tensor_handle);
+        obj->tensor_handle = NULL;
         zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(cuda_status));
-        RETURN_NULL();
-    }
-    
-    efree(host_data);
-    
-    obj->tensor_handle = cuda_tensor_create_with_data(shape, ndims, gpu_data);
-    
-    if (obj->tensor_handle == NULL) {
-        cudaFree(gpu_data);
-        zend_throw_error(NULL, "Failed to create tensor on GPU");
         RETURN_NULL();
     }
     
@@ -181,21 +170,47 @@ PHP_METHOD(CudaArray, multiply) {
     zval *other_zv;
     
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_OBJECT_OF_CLASS(other_zv, cuda_array_ce)
+        Z_PARAM_ZVAL(other_zv)
     ZEND_PARSE_PARAMETERS_END();
     
     cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
-    cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
     
-    if (this_obj->tensor_handle == NULL || other_obj->tensor_handle == NULL) {
+    if (this_obj->tensor_handle == NULL) {
         zend_throw_error(NULL, "Tensor not initialized");
         RETURN_NULL();
     }
     
-    tensor_t *result_tensor = cuda_tensor_multiply(this_obj->tensor_handle, other_obj->tensor_handle);
+    tensor_t *result_tensor = NULL;
+    
+    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce)) {
+        cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+        
+        if (other_obj->tensor_handle == NULL) {
+            zend_throw_error(NULL, "Other tensor not initialized");
+            RETURN_NULL();
+        }
+        
+        result_tensor = cuda_tensor_multiply(this_obj->tensor_handle, other_obj->tensor_handle);
+    }
+    
+    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG) {
+        double scalar_value;
+        
+        if (Z_TYPE_P(other_zv) == IS_DOUBLE) {
+            scalar_value = Z_DVAL_P(other_zv);
+        } else {
+            scalar_value = (double)Z_LVAL_P(other_zv);
+        }
+        
+        result_tensor = cuda_tensor_multiply_scalar(this_obj->tensor_handle, (float)scalar_value);
+    }
+    else {
+        zend_throw_error(NULL, "Parameter must be CudaArray or number");
+        RETURN_NULL();
+    }
     
     if (result_tensor == NULL) {
-        zend_throw_error(NULL, "Multiplication failed - incompatible shapes");
+        zend_throw_error(NULL, "Multiplication failed");
         RETURN_NULL();
     }
     

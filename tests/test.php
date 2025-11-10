@@ -129,11 +129,11 @@ class CudaBenchmark
             }
         }
 
-         try {
+        try {
+            $start_gpu = microtime(true);
             $a = new CudaArray($data);
             $b = new CudaArray($data);
-            $start_gpu = microtime(true);
-       
+
             $gpu_result = $a->multiply($b)->multiply($b)->multiply($a);
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
             $gpu_success = true;
@@ -199,8 +199,20 @@ class CudaBenchmark
     }
 }
 
-$arr = new CudaArray([[1,2,3,4,5], [1,21,7,4,6]]);
+// CudaBenchmark::runAllTests();
 
-var_dump($arr->matmul($arr->transpose())->toArray());
+$cud = new CudaArray([[1, 2], [3, 4]]);
+$cud2 = new CudaArray([[5, 6, 5, 6], [7, 8, 9, 10]]);
 
-// var_dump($arr->transpose()->toArray()->matmul());
+$newCuda = $cud2->transpose()->matmul($cud)->multiply(1/100);
+
+
+var_dump($newCuda->getShape());
+var_dump($newCuda->toArray());
+
+
+
+
+
+
+

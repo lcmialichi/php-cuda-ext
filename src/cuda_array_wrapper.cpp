@@ -40,19 +40,120 @@ int cuda_wrapper_init()
     return 1;
 }
 
-void cuda_wrapper_cleanup()
-{
-    if (cudnn_handle)
-    {
-        cudnnDestroy(cudnn_handle);
-        cudnn_handle = NULL;
+cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size) {
+    float *pinned_host_data;
+    cudaError_t status = cudaMallocHost((void**)&pinned_host_data, total_size * sizeof(float));
+    if (status != cudaSuccess) return status;
+    
+    int host_index = 0;
+    flatten_php_array_to_buffer(data, pinned_host_data, &host_index);
+    
+    status = cudaMemcpyAsync(gpu_data, pinned_host_data, total_size * sizeof(float), 
+                            cudaMemcpyHostToDevice, 0);
+    
+    cudaFreeHost(pinned_host_data);
+    *index = host_index;
+    return status;
+}
+
+static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index) {
+    if (Z_TYPE_P(data) != IS_ARRAY) {
+        if (Z_TYPE_P(data) == IS_LONG) {
+            buffer[(*index)++] = (float)Z_LVAL_P(data);
+        } else if (Z_TYPE_P(data) == IS_DOUBLE) {
+            buffer[(*index)++] = (float)Z_DVAL_P(data);
+        } else if (Z_TYPE_P(data) == IS_TRUE) {
+            buffer[(*index)++] = 1.0f;
+        } else if (Z_TYPE_P(data) == IS_FALSE) {
+            buffer[(*index)++] = 0.0f;
+        }
+        return;
     }
-    if (cublas_handle)
-    {
-        cublasDestroy(cublas_handle);
-        cublas_handle = NULL;
+    
+    HashTable *ht = Z_ARRVAL_P(data);
+    zval *current;
+    ZEND_HASH_FOREACH_VAL(ht, current) {
+        flatten_php_array_to_buffer(current, buffer, index);
+    } ZEND_HASH_FOREACH_END();
+}
+
+tensor_t *cuda_tensor_multiply_scalar(tensor_t *tensor, float scalar) {
+    if (!cuda_initialized || !tensor) {
+        return NULL;
     }
-    cuda_initialized = 0;
+    
+    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!result) return NULL;
+    
+    cudnnOpTensorDescriptor_t op_desc;
+    cudnnStatus_t status = cudnnCreateOpTensorDescriptor(&op_desc);
+    
+    if (status != CUDNN_STATUS_SUCCESS) {
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+    
+    status = cudnnSetOpTensorDescriptor(
+        op_desc,
+        CUDNN_OP_TENSOR_MUL,
+        CUDNN_DATA_FLOAT,
+        CUDNN_PROPAGATE_NAN
+    );
+    
+    if (status != CUDNN_STATUS_SUCCESS) {
+        cudnnDestroyOpTensorDescriptor(op_desc);
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+    
+    tensor_t *scalar_tensor = cuda_tensor_create_scalar(scalar, tensor->shape, tensor->ndims);
+    if (!scalar_tensor) {
+        cudnnDestroyOpTensorDescriptor(op_desc);
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+    
+    const float alpha1 = 1.0f;
+    const float alpha2 = 1.0f;
+    const float beta = 0.0f;
+    
+    status = cudnnOpTensor(
+        cudnn_handle,
+        op_desc,
+        &alpha1,
+        tensor->desc, tensor->data,
+        &alpha2,
+        scalar_tensor->desc, scalar_tensor->data,
+        &beta,
+        result->desc, result->data
+    );
+    
+    cudnnDestroyOpTensorDescriptor(op_desc);
+    cuda_tensor_destroy(scalar_tensor);
+    
+    if (status != CUDNN_STATUS_SUCCESS) {
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+    
+    return result;
+}
+
+tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims) {
+    size_t total_size = 1;
+    for (int i = 0; i < ndims; i++) {
+        total_size *= shape[i];
+    }
+    
+    float *host_data = (float*)emalloc(total_size * sizeof(float));
+    for (size_t i = 0; i < total_size; i++) {
+        host_data[i] = value;
+    }
+    
+    tensor_t *tensor = cuda_tensor_create(shape, ndims, host_data);
+    efree(host_data);
+    
+    return tensor;
 }
 
 tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
@@ -377,37 +478,6 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
     return result;
 }
 
-int cuda_tensor_shapes_compatible(tensor_t *a, tensor_t *b)
-{
-    int max_dims = (a->ndims > b->ndims) ? a->ndims : b->ndims;
-
-    for (int i = 0; i < max_dims; i++)
-    {
-        int dim_a = (i < a->ndims) ? a->shape[a->ndims - 1 - i] : 1;
-        int dim_b = (i < b->ndims) ? b->shape[b->ndims - 1 - i] : 1;
-
-        if (dim_a != dim_b && dim_a != 1 && dim_b != 1)
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-tensor_t *cuda_tensor_create_broadcasted(tensor_t *a, tensor_t *b)
-{
-    int max_dims = (a->ndims > b->ndims) ? a->ndims : b->ndims;
-    int result_shape[max_dims];
-
-    for (int i = 0; i < max_dims; i++)
-    {
-        int dim_a = (i < a->ndims) ? a->shape[a->ndims - 1 - i] : 1;
-        int dim_b = (i < b->ndims) ? b->shape[b->ndims - 1 - i] : 1;
-        result_shape[max_dims - 1 - i] = (dim_a > dim_b) ? dim_a : dim_b;
-    }
-
-    return cuda_tensor_create_empty(result_shape, max_dims);
-}
 
 tensor_t *cuda_tensor_copy(tensor_t *tensor)
 {
@@ -479,34 +549,10 @@ int *calculate_strides(int *shape, int ndims)
     return strides;
 }
 
-tensor_t *cuda_tensor_create_with_data(int *shape, int ndims, float *gpu_data)
-{
-    tensor_t *tensor = cuda_tensor_create(shape, ndims, NULL);
-    if (!tensor)
-        return NULL;
-
-    cudaFree(tensor->data);
-
-    tensor->data = gpu_data;
-    return tensor;
-}
 
 int *cuda_tensor_get_shape(tensor_t *tensor)
 {
     return tensor->shape;
-}
-
-float *cuda_tensor_get_data(tensor_t *tensor)
-{
-    float *host_data = (float *)emalloc(tensor->total_size * sizeof(float));
-    cudaMemcpy(host_data, tensor->data, tensor->total_size * sizeof(float),
-               cudaMemcpyDeviceToHost);
-    return host_data;
-}
-
-size_t cuda_tensor_get_total_size(tensor_t *tensor)
-{
-    return tensor->total_size;
 }
 
 tensor_t *cuda_tensor_create_empty(const int shape[], int ndims)

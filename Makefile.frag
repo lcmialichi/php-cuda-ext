@@ -4,11 +4,9 @@ $(builddir)/src/cuda_kernels.o: src/cuda_kernels.cu
 	@mkdir -p $(builddir)/src
 	$(NVCC) $(NVCC_FLAGS) -c -o $@ $<
 
-# Cria a biblioteca estática
 libcudakernels.a: $(builddir)/src/cuda_kernels.o
 	ar rcs $@ $<
 
-# Link com a biblioteca
 $(builddir)/cuda.la: libcudakernels.a
 
 clean-cuda:

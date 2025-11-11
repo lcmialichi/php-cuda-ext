@@ -52,6 +52,7 @@ static void cuda_array_free_object(zend_object *object) {
     zend_object_std_dtor(&obj->obj);
 }
 
+
 static void extract_shape_from_array(zval *data, int *shape, int *ndims) {
     *ndims = 0;
     
@@ -118,6 +119,7 @@ static size_t calculate_total_size(zval *data) {
 }
 
 typedef tensor_t* (*tensor_operation_func)(tensor_t*, tensor_t*);
+typedef tensor_t* (*scalar_operation_func)(tensor_t*, float);
 
 static void create_result_object(zval *return_value, tensor_t *result_tensor) {
     object_init_ex(return_value, cuda_array_ce);
@@ -157,7 +159,10 @@ static tensor_t* get_second_tensor(zval *other_zv, cuda_array_obj *this_obj) {
     }
 }
 
-static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char* operation_name, tensor_operation_func operation_func) {
+static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, 
+                                   const char* operation_name, 
+                                   tensor_operation_func tensor_func,
+                                   scalar_operation_func scalar_func) {
     zval *other_zv;
     
     ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -171,14 +176,26 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char* o
         RETURN_NULL();
     }
     
-    tensor_t *tensor_b = get_second_tensor(other_zv, this_obj);
-    if (!tensor_b) RETURN_NULL();
+    tensor_t *result_tensor = NULL;
     
-    tensor_t *result_tensor = operation_func(this_obj->tensor_handle, tensor_b);
-    
-    if (tensor_b != this_obj->tensor_handle && 
-        !(Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))) {
-        cuda_tensor_destroy(tensor_b);
+    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce)) {
+        cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+        
+        if (other_obj->tensor_handle == NULL) {
+            zend_throw_error(NULL, "Other tensor not initialized");
+            RETURN_NULL();
+        }
+        
+        result_tensor = tensor_func(this_obj->tensor_handle, other_obj->tensor_handle);
+        
+    } else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG) {
+        float scalar_value = (Z_TYPE_P(other_zv) == IS_DOUBLE) ? 
+                            (float)Z_DVAL_P(other_zv) : (float)Z_LVAL_P(other_zv);
+        result_tensor = scalar_func(this_obj->tensor_handle, scalar_value);
+        
+    } else {
+        zend_throw_error(NULL, "Operation requires CudaArray or numeric value");
+        RETURN_NULL();
     }
     
     if (result_tensor == NULL) {
@@ -190,19 +207,19 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char* o
 }
 
 PHP_METHOD(CudaArray, multiply) {
-    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Multiplication", cuda_tensor_multiply);
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Multiplication", cuda_tensor_multiply, cuda_tensor_multiply_scalar);
 }
 
 PHP_METHOD(CudaArray, divide) {
-    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Division", cuda_tensor_divide);
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Division", cuda_tensor_divide, cuda_tensor_divide_scalar);
 }
 
 PHP_METHOD(CudaArray, add) {
-    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Addition", cuda_tensor_add);
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Addition", cuda_tensor_add, cuda_tensor_add_scalar);
 }
 
 PHP_METHOD(CudaArray, subtract) {
-    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Subtraction", cuda_tensor_subtract);
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Subtraction", cuda_tensor_subtract, cuda_tensor_subtract_scalar);
 }
 
 PHP_METHOD(CudaArray, __construct) {
@@ -330,6 +347,99 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char* meth
     create_result_object(return_value, tensor);
 }
 
+PHP_METHOD(CudaArray, power) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Power", cuda_tensor_power, cuda_tensor_power_scalar);
+}
+
+PHP_METHOD(CudaArray, sqrt) {
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    tensor_t *result_tensor = cuda_tensor_sqrt(this_obj->tensor_handle);
+    
+    if (result_tensor == NULL) {
+        zend_throw_error(NULL, "Square root operation failed");
+        RETURN_NULL();
+    }
+    
+    create_result_object(return_value, result_tensor);
+}
+
+PHP_METHOD(CudaArray, exp) {
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    tensor_t *result_tensor = cuda_tensor_exp(this_obj->tensor_handle);
+    
+    if (result_tensor == NULL) {
+        zend_throw_error(NULL, "Exponential operation failed");
+        RETURN_NULL();
+    }
+    
+    create_result_object(return_value, result_tensor);
+}
+
+PHP_METHOD(CudaArray, log) {
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    tensor_t *result_tensor = cuda_tensor_log(this_obj->tensor_handle);
+    
+    if (result_tensor == NULL) {
+        zend_throw_error(NULL, "Logarithm operation failed");
+        RETURN_NULL();
+    }
+    
+    create_result_object(return_value, result_tensor);
+}
+
+PHP_METHOD(CudaArray, sin) {
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    tensor_t *result_tensor = cuda_tensor_sin(this_obj->tensor_handle);
+    
+    if (result_tensor == NULL) {
+        zend_throw_error(NULL, "Sine operation failed");
+        RETURN_NULL();
+    }
+    
+    create_result_object(return_value, result_tensor);
+}
+
+PHP_METHOD(CudaArray, cos) {
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    tensor_t *result_tensor = cuda_tensor_cos(this_obj->tensor_handle);
+    
+    if (result_tensor == NULL) {
+        zend_throw_error(NULL, "Cosine operation failed");
+        RETURN_NULL();
+    }
+    
+    create_result_object(return_value, result_tensor);
+}
+
+PHP_METHOD(CudaArray, greater) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Greater", cuda_tensor_greater, cuda_tensor_greater_scalar);
+}
+
+PHP_METHOD(CudaArray, less) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Less", cuda_tensor_less, cuda_tensor_less_scalar);
+}
+
+PHP_METHOD(CudaArray, equal) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Equal", cuda_tensor_equal, cuda_tensor_equal_scalar);
+}
+
+PHP_METHOD(CudaArray, notEqual) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "NotEqual", cuda_tensor_not_equal, cuda_tensor_not_equal_scalar);
+}
+
+PHP_METHOD(CudaArray, greaterEqual) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "GreaterEqual", cuda_tensor_greater_equal, cuda_tensor_greater_equal_scalar);
+}
+
+PHP_METHOD(CudaArray, lessEqual) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "LessEqual", cuda_tensor_less_equal, cuda_tensor_less_equal_scalar);
+}
+
 PHP_METHOD(CudaArray, zeros) {
     static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "zeros", 0.0f);
 }
@@ -451,6 +561,18 @@ static zend_function_entry cuda_array_methods[] = {
     PHP_ME(CudaArray, subtract, arginfo_cuda_array_subtract, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, matmul, arginfo_cuda_array_matmul, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, transpose, arginfo_cuda_array_transpose, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, power, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, sqrt, arginfo_cuda_array_unary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, exp, arginfo_cuda_array_unary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, log, arginfo_cuda_array_unary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, sin, arginfo_cuda_array_unary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, cos, arginfo_cuda_array_unary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, greater, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, less, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, equal, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, notEqual, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, greaterEqual, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, lessEqual, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, getShape, arginfo_cuda_array_getShape, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, toArray, arginfo_cuda_array_toArray, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, zeros, arginfo_cuda_array_zeros, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -464,10 +586,12 @@ void cuda_array_init() {
     
     INIT_CLASS_ENTRY(ce, "CudaArray", cuda_array_methods);
     cuda_array_ce = zend_register_internal_class(&ce);
-    
+
     cuda_array_ce->create_object = cuda_array_create_object;
     
     memcpy(&cuda_array_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     cuda_array_handlers.offset = XtOffsetOf(cuda_array_obj, obj);
     cuda_array_handlers.free_obj = cuda_array_free_object;
+
+
 }

@@ -130,9 +130,13 @@ class CudaBenchmark
         }
 
         try {
-            $start_gpu = microtime(true);
+
+            $init_time = microtime(true);
             $a = new CudaArray($data);
             $b = new CudaArray($data);
+
+            $init_time_result = (microtime(true) - $init_time) * 1000;
+            $start_gpu = microtime(true);
 
             $gpu_result = $a->multiply($b)->multiply($b)->multiply($a);
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
@@ -169,7 +173,7 @@ class CudaBenchmark
             $cpu_success = false;
         }
 
-        echo "GPU: " . ($gpu_success ? round($gpu_time, 1) . "ms" : "FAILED");
+        echo "GPU: init: " . ($gpu_success ? round($gpu_time, 1) . "ms, " : "FAILED, ") . ($gpu_success ? round($gpu_time, 1) . "ms" : "FAILED");
 
         if ($cpu_success) {
             $speedup = $cpu_time / $gpu_time;
@@ -199,27 +203,10 @@ class CudaBenchmark
     }
 }
 
+
 // CudaBenchmark::runAllTests();
 
-$ones = CudaArray::ones([2, 3, 3]);
-$test = new CudaArray([[[0.2, 0.3, 0.5], [0.2, 0.3, 0.5], [0.2, 0.3, 0.5]],[[0.2, 0.3, 0.5], [0.2, 0.3, 0.5], [0.2, 0.3, 0.5]]]);
-
-
-var_dump($ones->add(3)->subtract(2)->toArray());
-
-
-// $cud = new CudaArray([[1, 2], [3, 4]]);
-// $cud2 = new CudaArray([[5, 6, 5, 6], [7, 8, 9, 10]]);
-
-// $newCuda = $cud2->transpose()->matmul($cud)->multiply(1/100);
-
-
-// var_dump($newCuda->getShape());
-// var_dump($newCuda->toArray());
-
-
-
-
-
+$ones = CudaArray::ones([254, 254, 124]);
+$ones->add($ones);
 
 

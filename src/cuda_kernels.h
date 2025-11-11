@@ -5,7 +5,6 @@
 extern "C"
 {
 #endif
-
     void launch_add_kernel(float *a, float *b, float *result, int n);
     void launch_subtract_kernel(float *a, float *b, float *result, int n);
     void launch_multiply_kernel(float *a, float *b, float *result, int n);
@@ -34,6 +33,13 @@ extern "C"
     void launch_greater_equal_kernel(float *a, float *b, float *result, int n);
     void launch_less_equal_kernel(float *a, float *b, float *result, int n);
     void launch_not_equal_kernel(float *a, float *b, float *result, int n);
+
+    void launch_scalar_greater_kernel(float *a, float scalar, float *result, int n);
+    void launch_scalar_less_kernel(float *a, float scalar, float *result, int n);
+    void launch_scalar_equal_kernel(float *a, float scalar, float *result, int n);
+    void launch_scalar_not_equal_kernel(float *a, float scalar, float *result, int n);
+    void launch_scalar_greater_equal_kernel(float *a, float scalar, float *result, int n);
+    void launch_scalar_less_equal_kernel(float *a, float scalar, float *result, int n);
 
     void launch_sum_kernel(float *a, float *result, int n);
     void launch_max_kernel(float *a, float *result, int n);

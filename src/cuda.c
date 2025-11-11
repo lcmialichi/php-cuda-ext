@@ -226,7 +226,7 @@ PHP_MINIT_FUNCTION(cuda)
     {
         php_error_docref(NULL, E_WARNING, "CUDA initialization failed");
     }
-
+    
     cuda_array_init();
 
     return SUCCESS;

@@ -473,6 +473,721 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
     return result;
 }
 
+tensor_t *cuda_tensor_power(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise power");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_power_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Power operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_add_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_add_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar addition failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_subtract_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_subtract_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar subtraction failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_multiply_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_multiply_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar multiplication failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_divide_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (scalar == 0.0f) {
+        php_error_docref(NULL, E_WARNING, "Division by zero");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_divide_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar division failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_power_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_power_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar power operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_sqrt(tensor_t *tensor)
+{
+    if (!cuda_initialized || tensor == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(tensor);
+    launch_sqrt_kernel(tensor->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Square root operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_exp(tensor_t *tensor)
+{
+    if (!cuda_initialized || tensor == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(tensor);
+    launch_exp_kernel(tensor->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Exponential operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_log(tensor_t *tensor)
+{
+    if (!cuda_initialized || tensor == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(tensor);
+    launch_log_kernel(tensor->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Logarithm operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_sin(tensor_t *tensor)
+{
+    if (!cuda_initialized || tensor == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(tensor);
+    launch_sin_kernel(tensor->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Sine operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_cos(tensor_t *tensor)
+{
+    if (!cuda_initialized || tensor == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(tensor->shape, tensor->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(tensor);
+    launch_cos_kernel(tensor->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Cosine operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_greater(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise comparison");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_greater_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Greater than operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_less(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise comparison");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_less_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Less than operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_equal(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise comparison");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_equal_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_not_equal(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise comparison");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_not_equal_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Not equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_greater_equal(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise comparison");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_greater_equal_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Greater equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_less_equal(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        php_error_docref(NULL, E_WARNING, "Shapes not compatible for element-wise comparison");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_less_equal_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Less equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_greater_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_greater_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar greater than operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_less_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_less_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar less than operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_equal_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_equal_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_not_equal_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_not_equal_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar not equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_greater_equal_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_greater_equal_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar greater equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_tensor_less_equal_scalar(tensor_t *a, float scalar)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_scalar_less_equal_kernel(a->data, scalar, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar less equal operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+
 tensor_t *cuda_tensor_copy(tensor_t *tensor)
 {
     if (!tensor)

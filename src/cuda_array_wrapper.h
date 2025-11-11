@@ -5,6 +5,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include "php.h"
+#include "conditional.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,17 +18,6 @@ typedef struct {
     size_t total_size;
     cudnnTensorDescriptor_t desc;
 } tensor_t;
-
-typedef enum {
-    CUDNN_OP_ADD,
-    CUDNN_OP_MUL,
-    CUDNN_OP_SUB,
-    CUDNN_OP_DIV,
-    CUDNN_OP_MIN,
-    CUDNN_OP_MAX,
-    KERNEL_DIV
-} cuda_op_type_t;
-
 
 int cuda_wrapper_init();
 
@@ -46,6 +36,31 @@ tensor_t *cuda_tensor_subtract(tensor_t *a, tensor_t *b);
 tensor_t* cuda_tensor_multiply(tensor_t* a, tensor_t* b);
 tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b);
 tensor_t* cuda_tensor_matmul(tensor_t* a, tensor_t* b);
+tensor_t *cuda_tensor_power(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_sqrt(tensor_t *tensor);
+tensor_t *cuda_tensor_exp(tensor_t *tensor);
+tensor_t *cuda_tensor_log(tensor_t *tensor);
+tensor_t *cuda_tensor_sin(tensor_t *tensor);
+tensor_t *cuda_tensor_cos(tensor_t *tensor);
+tensor_t *cuda_tensor_power_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_add_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_subtract_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_multiply_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_divide_scalar(tensor_t *a, float scalar);
+
+tensor_t *cuda_tensor_greater(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_less(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_equal(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_not_equal(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_greater_equal(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_less_equal(tensor_t *a, tensor_t *b);
+
+tensor_t *cuda_tensor_greater_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_less_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_equal_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_not_equal_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_greater_equal_scalar(tensor_t *a, float scalar);
+tensor_t *cuda_tensor_less_equal_scalar(tensor_t *a, float scalar);
 
 int* cuda_tensor_get_shape(tensor_t* tensor);
 tensor_t *cuda_tensor_transpose(tensor_t *tensor);

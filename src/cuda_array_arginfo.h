@@ -27,6 +27,13 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_matmul, 0, 0, 1)
     ZEND_ARG_OBJ_INFO(0, other, CudaArray, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_unary, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_binary, 0, 0, 1)
+    ZEND_ARG_INFO(0, other)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_getShape, 0, 0, 0)
 ZEND_END_ARG_INFO()
 

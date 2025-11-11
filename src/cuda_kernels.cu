@@ -5,13 +5,13 @@
 
 extern "C"
 {
-
     __global__ void add_kernel(float *a, float *b, float *result, int n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < n)
             result[i] = a[i] + b[i];
     }
+
 
     __global__ void subtract_kernel(float *a, float *b, float *result, int n)
     {
@@ -181,6 +181,48 @@ extern "C"
             result[i] = (a[i] != b[i]) ? 1.0f : 0.0f;
     }
 
+    __global__ void scalar_greater_kernel(float *a, float scalar, float *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        result[i] = (a[i] > scalar) ? 1.0f : 0.0f;
+    }
+}
+
+__global__ void scalar_less_kernel(float *a, float scalar, float *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        result[i] = (a[i] < scalar) ? 1.0f : 0.0f;
+    }
+}
+
+__global__ void scalar_equal_kernel(float *a, float scalar, float *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        result[i] = (fabsf(a[i] - scalar) < 1e-6f) ? 1.0f : 0.0f;
+    }
+}
+
+__global__ void scalar_not_equal_kernel(float *a, float scalar, float *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        result[i] = (fabsf(a[i] - scalar) >= 1e-6f) ? 1.0f : 0.0f;
+    }
+}
+
+__global__ void scalar_greater_equal_kernel(float *a, float scalar, float *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        result[i] = (a[i] >= scalar) ? 1.0f : 0.0f;
+    }
+}
+
+__global__ void scalar_less_equal_kernel(float *a, float scalar, float *result, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        result[i] = (a[i] <= scalar) ? 1.0f : 0.0f;
+    }
+}
+
     __global__ void sum_kernel(float *a, float *result, int n)
     {
         extern __shared__ float shared[];
@@ -205,11 +247,6 @@ extern "C"
         }
     }
 
-#include <cuda_runtime.h>
-#include <math.h>
-
-    extern "C"
-    {
         __device__ float atomicMaxFloat(float *address, float val)
         {
             int *address_as_int = (int *)address;
@@ -554,5 +591,40 @@ extern "C"
             cudaMemcpy(result, &init, sizeof(float), cudaMemcpyHostToDevice);
             min_kernel<<<blocks, threads, shared_mem>>>(a, result, n);
         }
-    }
+
+        void launch_scalar_greater_kernel(float *a, float scalar, float *result, int n) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+    scalar_greater_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
+}
+
+void launch_scalar_less_kernel(float *a, float scalar, float *result, int n) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+    scalar_less_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
+}
+
+void launch_scalar_equal_kernel(float *a, float scalar, float *result, int n) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+    scalar_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
+}
+
+void launch_scalar_not_equal_kernel(float *a, float scalar, float *result, int n) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+    scalar_not_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
+}
+
+void launch_scalar_greater_equal_kernel(float *a, float scalar, float *result, int n) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+    scalar_greater_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
+}
+
+void launch_scalar_less_equal_kernel(float *a, float scalar, float *result, int n) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+    scalar_less_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
+}
 }

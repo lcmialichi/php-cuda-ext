@@ -17,6 +17,8 @@
         "vector": "cpp",
         "xstring": "cpp",
         "xutility": "cpp",
-        "xmemory": "cpp"
+        "xmemory": "cpp",
+        "cstdio": "cpp",
+        "shape_validation.c": "cpp"
     }
 }

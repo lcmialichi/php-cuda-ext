@@ -201,6 +201,10 @@ PHP_METHOD(CudaArray, add) {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Addition", cuda_tensor_add);
 }
 
+PHP_METHOD(CudaArray, subtract) {
+    binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Subtraction", cuda_tensor_subtract);
+}
+
 PHP_METHOD(CudaArray, __construct) {
     zval *data;
     
@@ -444,6 +448,7 @@ static zend_function_entry cuda_array_methods[] = {
     PHP_ME(CudaArray, multiply, arginfo_cuda_array_multiply, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, divide, arginfo_cuda_array_divide, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, add, arginfo_cuda_array_add, ZEND_ACC_PUBLIC)
+    PHP_ME(CudaArray, subtract, arginfo_cuda_array_subtract, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, matmul, arginfo_cuda_array_matmul, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, transpose, arginfo_cuda_array_transpose, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, getShape, arginfo_cuda_array_getShape, ZEND_ACC_PUBLIC)

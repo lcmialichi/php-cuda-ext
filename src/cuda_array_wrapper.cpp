@@ -1,6 +1,7 @@
 #include "cuda_array_wrapper.h"
 #include "cuda_kernels.h"
 #include <stdlib.h>
+#include "helpers.c"
 #include <string.h>
 #include <cstdio>
 #include "php.h"
@@ -39,18 +40,6 @@ int cuda_wrapper_init()
 
     cuda_initialized = 1;
     return 1;
-}
-
-extern "C" { 
-    void launch_divide_kernel(float *a, float *b, float *result, int n);
-}
-
-tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b, tensor_t *result) {
-    size_t total_size = cuda_tensor_size(a);
-    launch_divide_kernel(a->data, b->data, result->data, total_size);
-    
-    cudaError_t status = cudaDeviceSynchronize();
-    return (status == cudaSuccess) ? result : NULL;
 }
 
 cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size)
@@ -216,42 +205,12 @@ tensor_t *cuda_tensor_multiply(tensor_t *a, tensor_t *b)
     if (!cuda_initialized)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
-        return NULL;
+        return 0;
     }
 
-    if (a == NULL || b == NULL)
+    if (shapes_compatible_elementwise(a, b) == 0)
     {
-        php_error_docref(NULL, E_WARNING, "Null tensor input");
         return NULL;
-    }
-
-    if (a->data == NULL || b->data == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Tensor data is NULL");
-        return NULL;
-    }
-
-    if (a->desc == NULL || b->desc == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Tensor descriptor is NULL");
-        return NULL;
-    }
-
-    if (a->ndims != b->ndims)
-    {
-        php_error_docref(NULL, E_WARNING, "Different number of dimensions: %d vs %d",
-                         a->ndims, b->ndims);
-        return NULL;
-    }
-
-    for (int i = 0; i < a->ndims; i++)
-    {
-        if (a->shape[i] != b->shape[i])
-        {
-            php_error_docref(NULL, E_WARNING, "Shape mismatch at dimension %d: %d vs %d",
-                             i, a->shape[i], b->shape[i]);
-            return NULL;
-        }
     }
 
     tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
@@ -268,51 +227,59 @@ tensor_t *cuda_tensor_multiply(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    return cuda_tensor_op(a, b, result, CUDNN_OP_MUL);
+    size_t total_size = cuda_tensor_size(a);
+    launch_multiply_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    return (status == cudaSuccess) ? result : NULL;
 }
 
+
+tensor_t *cuda_tensor_subtract(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized)
+    {
+        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
+        return 0;
+    }
+
+    if (shapes_compatible_elementwise(a, b) == 0)
+    {
+        return NULL;
+    }
+
+    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    if (result->desc == NULL)
+    {
+        php_error_docref(NULL, E_WARNING, "Result tensor descriptor is NULL");
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    size_t total_size = cuda_tensor_size(a);
+    launch_subtract_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    return (status == cudaSuccess) ? result : NULL;
+}
 
 tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b)
 {
     if (!cuda_initialized)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
-        return NULL;
+        return 0;
     }
 
-    if (a == NULL || b == NULL)
+    if (shapes_compatible_elementwise(a, b) == 0)
     {
-        php_error_docref(NULL, E_WARNING, "Null tensor input");
         return NULL;
-    }
-
-    if (a->data == NULL || b->data == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Tensor data is NULL");
-        return NULL;
-    }
-
-    if (a->desc == NULL || b->desc == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Tensor descriptor is NULL");
-        return NULL;
-    }
-
-    if (a->ndims != b->ndims)
-    {
-        php_error_docref(NULL, E_WARNING, "Different number of dimensions: %d vs %d",
-                         a->ndims, b->ndims);
-        return NULL;
-    }
-
-    for (int i = 0; i < a->ndims; i++)
-    {
-        if (a->shape[i] != b->shape[i])
-        {
-            php_error_docref(NULL, E_WARNING, "Shape mismatch at dimension %d: %d vs %d",
-                             i, a->shape[i], b->shape[i]);
-            return NULL;
-        }
     }
 
     tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
@@ -329,76 +296,11 @@ tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    return cuda_tensor_op(a, b, result, KERNEL_DIV);
-}
+    size_t total_size = cuda_tensor_size(a);
+    launch_divide_kernel(a->data, b->data, result->data, total_size);
 
-tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, tensor_t *result, cuda_op_type_t op_type)
-{
-    if (!cuda_initialized || !a || !b || !result) {
-        return NULL;
-    }
-
-    cudnnOpTensorDescriptor_t op_desc;
-    cudnnStatus_t status = cudnnCreateOpTensorDescriptor(&op_desc);
-    
-    if (status != CUDNN_STATUS_SUCCESS) {
-        return NULL;
-    }
-
-    float alpha1 = 1.0f;
-    float alpha2 = 1.0f;
-    float beta = 0.0f;
-
-    cudnnOpTensorOp_t cudnn_op;
-    switch (op_type)
-    {
-    case CUDNN_OP_ADD:
-        cudnn_op = CUDNN_OP_TENSOR_ADD;
-        break;
-    case CUDNN_OP_MUL:
-        cudnn_op = CUDNN_OP_TENSOR_MUL;
-        break;
-    case CUDNN_OP_SUB:
-        cudnn_op = CUDNN_OP_TENSOR_ADD;
-        alpha2 = -1.0f;
-        break;
-    case CUDNN_OP_MIN:
-        cudnn_op = CUDNN_OP_TENSOR_MIN;
-        break;
-    case CUDNN_OP_MAX:
-        cudnn_op = CUDNN_OP_TENSOR_MAX;
-        break;
-    case KERNEL_DIV:
-        return cuda_tensor_divide(a, b, result);
-    default:
-        cudnnDestroyOpTensorDescriptor(op_desc);
-        return NULL;
-    }
-
-    status = cudnnSetOpTensorDescriptor(
-        op_desc,
-        cudnn_op,
-        CUDNN_DATA_FLOAT,
-        CUDNN_PROPAGATE_NAN);
-
-    if (status != CUDNN_STATUS_SUCCESS) {
-        cudnnDestroyOpTensorDescriptor(op_desc);
-        return NULL;
-    }
-
-    status = cudnnOpTensor(
-        cudnn_handle,
-        op_desc,
-        &alpha1,
-        a->desc, a->data,
-        &alpha2,
-        b->desc, b->data,
-        &beta,
-        result->desc, result->data);
-
-    cudnnDestroyOpTensorDescriptor(op_desc);
-
-    return (status == CUDNN_STATUS_SUCCESS) ? result : NULL;
+    cudaError_t status = cudaDeviceSynchronize();
+    return (status == cudaSuccess) ? result : NULL;
 }
 
 tensor_t *cuda_tensor_add(tensor_t *a, tensor_t *b)
@@ -406,42 +308,12 @@ tensor_t *cuda_tensor_add(tensor_t *a, tensor_t *b)
     if (!cuda_initialized)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
-        return NULL;
+        return 0;
     }
 
-    if (a == NULL || b == NULL)
+    if (shapes_compatible_elementwise(a, b) == 0)
     {
-        php_error_docref(NULL, E_WARNING, "Null tensor input");
         return NULL;
-    }
-
-    if (a->data == NULL || b->data == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Tensor data is NULL");
-        return NULL;
-    }
-
-    if (a->desc == NULL || b->desc == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Tensor descriptor is NULL");
-        return NULL;
-    }
-
-    if (a->ndims != b->ndims)
-    {
-        php_error_docref(NULL, E_WARNING, "Different number of dimensions: %d vs %d",
-                         a->ndims, b->ndims);
-        return NULL;
-    }
-
-    for (int i = 0; i < a->ndims; i++)
-    {
-        if (a->shape[i] != b->shape[i])
-        {
-            php_error_docref(NULL, E_WARNING, "Shape mismatch at dimension %d: %d vs %d",
-                             i, a->shape[i], b->shape[i]);
-            return NULL;
-        }
     }
 
     tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
@@ -458,7 +330,11 @@ tensor_t *cuda_tensor_add(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    return cuda_tensor_op(a, b, result, CUDNN_OP_ADD);
+    size_t total_size = cuda_tensor_size(a);
+    launch_add_kernel(a->data, b->data, result->data, total_size);
+
+    cudaError_t status = cudaDeviceSynchronize();
+    return (status == cudaSuccess) ? result : NULL;
 }
 
 tensor_t *cuda_tensor_transpose(tensor_t *tensor)

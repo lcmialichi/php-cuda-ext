@@ -41,9 +41,8 @@ static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index);
 
 void cuda_tensor_destroy(tensor_t* tensor);
 
-// operations
-tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, tensor_t *result, cuda_op_type_t op_type);
 tensor_t *cuda_tensor_add(tensor_t *a, tensor_t *b);
+tensor_t *cuda_tensor_subtract(tensor_t *a, tensor_t *b);
 tensor_t* cuda_tensor_multiply(tensor_t* a, tensor_t* b);
 tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b);
 tensor_t* cuda_tensor_matmul(tensor_t* a, tensor_t* b);

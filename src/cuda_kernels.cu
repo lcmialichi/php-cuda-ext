@@ -210,8 +210,6 @@ extern "C"
 
     extern "C"
     {
-        // ============ ATOMIC FUNCTIONS PARA FLOAT ============
-
         __device__ float atomicMaxFloat(float *address, float val)
         {
             int *address_as_int = (int *)address;

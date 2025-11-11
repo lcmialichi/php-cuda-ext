@@ -199,11 +199,13 @@ class CudaBenchmark
     }
 }
 
-CudaBenchmark::runAllTests();
+// CudaBenchmark::runAllTests();
 
-// $ones = CudaArray::ones([2, 3, 3]);
+$ones = CudaArray::ones([2, 3, 3]);
+$test = new CudaArray([[[0.2, 0.3, 0.5], [0.2, 0.3, 0.5], [0.2, 0.3, 0.5]],[[0.2, 0.3, 0.5], [0.2, 0.3, 0.5], [0.2, 0.3, 0.5]]]);
 
-// var_dump(CudaArray::ones([2, 3, 3])->divide(2)->multiply()->toArray());
+
+var_dump($ones->add(3)->subtract(2)->toArray());
 
 
 // $cud = new CudaArray([[1, 2], [3, 4]]);

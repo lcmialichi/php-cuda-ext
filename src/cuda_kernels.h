@@ -1,10 +1,29 @@
 #ifndef CUDA_KERNELS_H
 #define CUDA_KERNELS_H
 
+#define OP_ADD 0
+#define OP_SUB 1
+#define OP_MUL 2
+#define OP_DIV 3
+#define OP_POW 4
+#define OP_GT 5
+#define OP_LT 6
+#define OP_EQ 7
+#define OP_NE 8
+#define OP_GE 9
+#define OP_LE 10
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+    void launch_broadcast_kernel(float *a, float *b, float *result,
+                                 int *a_strides, int a_dims,
+                                 int *b_strides, int b_dims,
+                                 int *result_shape, int result_dims,
+                                 size_t total_elements, int operation_type);
+
     void launch_add_kernel(float *a, float *b, float *result, int n);
     void launch_subtract_kernel(float *a, float *b, float *result, int n);
     void launch_multiply_kernel(float *a, float *b, float *result, int n);

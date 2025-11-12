@@ -6,10 +6,13 @@
 #include <cublas_v2.h>
 #include "php.h"
 #include "conditional.h"
+#include "cuda_kernels.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define MAX_DIMS 10
 
 typedef struct {
     float* data;
@@ -17,6 +20,7 @@ typedef struct {
     int ndims;
     size_t total_size;
     cudnnTensorDescriptor_t desc;
+    int ref_count;
 } tensor_t;
 
 int cuda_wrapper_init();
@@ -28,6 +32,7 @@ tensor_t* cuda_tensor_create_empty(const int shape[], int ndims);
 
 cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size);
 static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index);
+tensor_t* cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims);   
 
 void cuda_tensor_destroy(tensor_t* tensor);
 
@@ -61,6 +66,8 @@ tensor_t *cuda_tensor_equal_scalar(tensor_t *a, float scalar);
 tensor_t *cuda_tensor_not_equal_scalar(tensor_t *a, float scalar);
 tensor_t *cuda_tensor_greater_equal_scalar(tensor_t *a, float scalar);
 tensor_t *cuda_tensor_less_equal_scalar(tensor_t *a, float scalar);
+
+tensor_t* perform_broadcast_operation(tensor_t *a, tensor_t *b, int operation_type);
 
 int* cuda_tensor_get_shape(tensor_t* tensor);
 tensor_t *cuda_tensor_transpose(tensor_t *tensor);

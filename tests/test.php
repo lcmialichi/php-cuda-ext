@@ -204,9 +204,8 @@ class CudaBenchmark
 }
 
 
-// CudaBenchmark::runAllTests();
+$a = new CudaArray([[[1, 2], [3, 4]]]); // shape (1, 2, 2)
+$b = new CudaArray([10, 20]);            // shape (2,)
 
-$ones = CudaArray::ones([254, 254, 124]);
-$ones->add($ones);
-
-
+$result = $a->multiply($b);
+var_dump($result->toArray());

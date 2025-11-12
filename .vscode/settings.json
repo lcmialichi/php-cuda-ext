@@ -22,6 +22,9 @@
         "shape_validation.c": "cpp",
         "tensor.h": "c",
         "cuda_array_arginfo.h": "c",
-        "helpers.c": "cpp"
+        "helpers.c": "cpp",
+        "initializer_list": "c",
+        "list": "c",
+        "xhash": "c"
     }
 }

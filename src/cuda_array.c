@@ -19,6 +19,44 @@ typedef struct {
 
 static zend_object_handlers cuda_array_handlers;
 
+static int parse_slice_parameter(zval *param, slice_info_t *slice)
+{
+    // ✅ ZERO a estrutura primeiro
+    memset(slice, 0, sizeof(slice_info_t));
+    
+    if (Z_TYPE_P(param) == IS_NULL) {
+        slice->type = SLICE_ALL;
+        return 1;
+    }
+    
+    if (Z_TYPE_P(param) == IS_LONG) {
+        slice->type = SLICE_INDEX;
+        slice->data.index = Z_LVAL_P(param);
+        return 1;
+    }
+    
+    if (Z_TYPE_P(param) == IS_ARRAY) {
+        HashTable *ht = Z_ARRVAL_P(param);
+        if (zend_array_count(ht) == 2) {
+            zval *start_val = zend_hash_index_find(ht, 0);
+            zval *end_val = zend_hash_index_find(ht, 1);
+            
+            if (start_val && end_val && 
+                Z_TYPE_P(start_val) == IS_LONG && 
+                Z_TYPE_P(end_val) == IS_LONG) {
+                
+                slice->type = SLICE_RANGE;
+                slice->data.range.start = Z_LVAL_P(start_val);
+                slice->data.range.end = Z_LVAL_P(end_val);
+                return 1;
+            }
+        }
+    }
+    
+    printf("!!! ERROR: Invalid slice parameter type=%d !!!\n", Z_TYPE_P(param));
+    return 0;
+}
+
 static cuda_array_obj *php_cuda_array_fetch_object(zend_object *obj) {
     return (cuda_array_obj*)((char*)obj - XtOffsetOf(cuda_array_obj, obj));
 }
@@ -328,6 +366,83 @@ PHP_METHOD(CudaArray, __construct) {
     }
 }
 
+PHP_METHOD(CudaArray, __invoke)
+{
+    zval *slices;
+    int slice_count;
+    
+    ZEND_PARSE_PARAMETERS_START(0, -1)
+        Z_PARAM_VARIADIC('*', slices, slice_count)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    
+    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    
+    if (this_obj->tensor_handle == NULL) {
+        zend_throw_error(NULL, "Tensor not initialized");
+        RETURN_NULL();
+    }
+    
+    if (slice_count == 0) {
+        
+        int ndims = this_obj->tensor_handle->ndims;
+        slice_info_t *slice_info = (slice_info_t *)emalloc(ndims * sizeof(slice_info_t));
+        
+        for (int i = 0; i < ndims; i++) {
+            slice_info[i].type = SLICE_ALL;
+        }
+        
+        tensor_t *view_tensor = cuda_tensor_create_view(this_obj->tensor_handle, slice_info, ndims);
+        efree(slice_info);
+        
+        if (!view_tensor) {
+            zend_throw_error(NULL, "Failed to create full tensor view");
+            RETURN_NULL();
+        }
+        
+        object_init_ex(return_value, cuda_array_ce);
+        cuda_array_obj *new_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+        new_obj->tensor_handle = view_tensor;
+        
+        new_obj->shape = zend_new_array(view_tensor->ndims);
+        for (int i = 0; i < view_tensor->ndims; i++) {
+            zval dim;
+            ZVAL_LONG(&dim, view_tensor->shape[i]);
+            zend_hash_index_update(new_obj->shape, i, &dim);
+        }
+        
+        return;
+    }
+    
+    slice_info_t *slice_info = (slice_info_t *)emalloc(slice_count * sizeof(slice_info_t));
+    for (int i = 0; i < slice_count; i++) {
+        if (!parse_slice_parameter(&slices[i], &slice_info[i])) {
+            efree(slice_info);
+            zend_throw_error(NULL, "Invalid slice parameter at dimension %d", i + 1);
+            RETURN_NULL();
+        }
+    }
+    
+    tensor_t *view_tensor = cuda_tensor_create_view(this_obj->tensor_handle, slice_info, slice_count);
+    efree(slice_info);
+    
+    if (!view_tensor) {
+        zend_throw_error(NULL, "Failed to create tensor view");
+        RETURN_NULL();
+    }
+    
+    object_init_ex(return_value, cuda_array_ce);
+    cuda_array_obj *new_obj = php_cuda_array_fetch_object(Z_OBJ_P(return_value));
+    new_obj->tensor_handle = view_tensor;
+    
+    new_obj->shape = zend_new_array(view_tensor->ndims);
+    for (int i = 0; i < view_tensor->ndims; i++) {
+        zval dim;
+        ZVAL_LONG(&dim, view_tensor->shape[i]);
+        zend_hash_index_update(new_obj->shape, i, &dim);
+    }
+}
+
 PHP_METHOD(CudaArray, matmul) {
     zval *other_zv;
     
@@ -617,6 +732,7 @@ PHP_METHOD(CudaArray, toArray) {
 
 static zend_function_entry cuda_array_methods[] = {
     PHP_ME(CudaArray, __construct, arginfo_cuda_array_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+    PHP_ME(CudaArray, __invoke, arginfo_cuda_array_invoke, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, multiply, arginfo_cuda_array_multiply, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, divide, arginfo_cuda_array_divide, ZEND_ACC_PUBLIC)
     PHP_ME(CudaArray, add, arginfo_cuda_array_add, ZEND_ACC_PUBLIC)

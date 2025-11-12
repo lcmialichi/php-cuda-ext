@@ -11,6 +11,10 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_multiply, 0, 1, CudaAr
     ZEND_ARG_INFO(0, other)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_invoke, 0, 0, 0)
+    ZEND_ARG_VARIADIC_INFO(0, slices)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_subtract, 0, 1, CudaArray, 0)
     ZEND_ARG_INFO(0, other)
 ZEND_END_ARG_INFO()

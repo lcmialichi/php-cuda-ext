@@ -138,7 +138,8 @@ class CudaBenchmark
             $init_time_result = (microtime(true) - $init_time) * 1000;
             $start_gpu = microtime(true);
 
-            $gpu_result = $a->multiply($b)->multiply($b)->multiply($a);
+            $window = $a();
+            $gpu_result = $window->multiply($b)->multiply($b)->multiply($a);
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
             $gpu_success = true;
         } catch (Exception $e) {
@@ -204,25 +205,11 @@ class CudaBenchmark
 }
 
 
+// CudaBenchmark::runAllTests();
 
-CudaBenchmark::runAllTests();
-// $a = new CudaArray([1, 2, 3]);
-// $b = new CudaArray([4, 5, 6]);
+$test = CudaArray::ones([3 ,3, 3]);
+var_dump($test(null, [0, 2], [0, 1])->multiply(10)->toArray());
 
-// $temp1 = $a->multiply($b);    // Primeiro
-// echo "Temp1 created\n";
-
-// $temp2 = $temp1->multiply($b); // Segundo
-// echo "Temp2 created\n";
-
-// $result = $temp2->multiply($a); // Terceiro - onde quebra
-// echo "Result created\n";
-
-// // Ou teste se é problema com $a específico:
-// $result = $temp2->multiply($b); // Usa $b novamente - ainda quebra?
+var_dump($test->toArray());
 
 
-// $a = new CudaArray([1, 2, 3]);
-// $b = new CudaArray([4, 5, 6]);
-
-// $a->multiply($b)->multiply($b)->multiply($a);

@@ -13,8 +13,6 @@
 extern "C" {
 #endif
 
-#define MAX_DIMS 10
-
 cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size);
 static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index);
 tensor_t* cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims);   

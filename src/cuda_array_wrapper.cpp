@@ -138,16 +138,42 @@ tensor_t *perform_broadcast_operation(tensor_t *a, tensor_t *b, int operation_ty
         return NULL;
     }
 
-    tensor_t *result = cuda_tensor_create_empty(result_shape, result_dims);
+    tensor_t *result;
+
+    if (a->is_view)
+    {
+        result = cuda_tensor_create_view(a->base_tensor, a->slices, a->num_slices);
+        if (!result)
+        {
+            php_printf("ERROR: Failed to create result view\n");
+            return NULL;
+        }
+
+        efree(result->shape);
+        result->shape = (int *)emalloc(result_dims * sizeof(int));
+        memcpy(result->shape, result_shape, result_dims * sizeof(int));
+
+        result->ndims = result_dims;
+        result->total_size = 1;
+        for (int i = 0; i < result_dims; i++)
+        {
+            result->total_size *= result_shape[i];
+        }
+    }
+    else
+    {
+        result = cuda_tensor_create_empty(result_shape, result_dims);
+        if (!result)
+        {
+            return NULL;
+        }
+    }
+
     if (a->data == NULL || b->data == NULL || result->data == NULL)
     {
-        php_printf("ERROR: NULL data pointer!\n");
         cuda_tensor_destroy(result);
         return NULL;
     }
-
-    if (!result)
-        return NULL;
 
     launch_broadcast_kernel(
         a->data, b->data, result->data,
@@ -549,22 +575,54 @@ tensor_t *cuda_tensor_multiply_scalar(tensor_t *a, float scalar)
         return NULL;
     }
 
-    tensor_t *result = cuda_tensor_create_empty(a->shape, a->ndims);
-    if (!result)
+    tensor_t *result;
+
+    if (a->is_view)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
-        return NULL;
+        size_t total_size = a->total_size;
+        
+        int num_blocks = (total_size + 255) / 256;
+        if (num_blocks > 65535) num_blocks = 65535;
+        
+        result = cuda_tensor_create_view(a->base_tensor, a->slices, a->num_slices);
+        if (!result) return NULL;
+
+        launch_scalar_multiply_kernel(a->data, scalar, result->data, total_size);
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess)
+        {
+            return NULL;
+        }
     }
-
-    size_t total_size = cuda_tensor_size(a);
-    launch_scalar_multiply_kernel(a->data, scalar, result->data, total_size);
-
-    cudaError_t status = cudaDeviceSynchronize();
-    if (status != cudaSuccess)
+    else
     {
-        php_error_docref(NULL, E_WARNING, "Scalar multiplication failed: %s", cudaGetErrorString(status));
-        cuda_tensor_destroy(result);
-        return NULL;
+        result = cuda_tensor_create_empty(a->shape, a->ndims);
+        if (!result)
+        {
+            php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+            return NULL;
+        }
+
+        if (a->data == NULL || result->data == NULL)
+        {
+            cuda_tensor_destroy(result); 
+            return NULL;
+        }
+
+        size_t total_size = cuda_tensor_size(a);
+        
+        int num_blocks = (total_size + 255) / 256;
+        if (num_blocks > 65535) num_blocks = 65535;
+        
+        
+        launch_scalar_multiply_kernel(a->data, scalar, result->data, total_size);
+
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess)
+        {
+            cuda_tensor_destroy(result); 
+            return NULL;
+        }
     }
 
     return result;

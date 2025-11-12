@@ -204,8 +204,25 @@ class CudaBenchmark
 }
 
 
-$a = new CudaArray([[[1, 2], [3, 4]]]); // shape (1, 2, 2)
-$b = new CudaArray([10, 20]);            // shape (2,)
 
-$result = $a->multiply($b);
-var_dump($result->toArray());
+CudaBenchmark::runAllTests();
+// $a = new CudaArray([1, 2, 3]);
+// $b = new CudaArray([4, 5, 6]);
+
+// $temp1 = $a->multiply($b);    // Primeiro
+// echo "Temp1 created\n";
+
+// $temp2 = $temp1->multiply($b); // Segundo
+// echo "Temp2 created\n";
+
+// $result = $temp2->multiply($a); // Terceiro - onde quebra
+// echo "Result created\n";
+
+// // Ou teste se é problema com $a específico:
+// $result = $temp2->multiply($b); // Usa $b novamente - ainda quebra?
+
+
+// $a = new CudaArray([1, 2, 3]);
+// $b = new CudaArray([4, 5, 6]);
+
+// $a->multiply($b)->multiply($b)->multiply($a);

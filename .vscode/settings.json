@@ -19,6 +19,9 @@
         "xutility": "cpp",
         "xmemory": "cpp",
         "cstdio": "cpp",
-        "shape_validation.c": "cpp"
+        "shape_validation.c": "cpp",
+        "tensor.h": "c",
+        "cuda_array_arginfo.h": "c",
+        "helpers.c": "cpp"
     }
 }

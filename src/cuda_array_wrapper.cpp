@@ -4,42 +4,7 @@
 #include <string.h>
 #include <cstdio>
 #include "php.h"
-
-static cudnnHandle_t cudnn_handle = NULL;
-static cublasHandle_t cublas_handle = NULL;
-static int cuda_initialized = 0;
-
-int cuda_wrapper_init()
-{
-    if (cuda_initialized)
-        return 1;
-
-    cudaError_t cuda_status = cudaSuccess;
-    cudnnStatus_t cudnn_status = CUDNN_STATUS_SUCCESS;
-    cublasStatus_t cublas_status = CUBLAS_STATUS_SUCCESS;
-
-    cuda_status = cudaSetDevice(0);
-    if (cuda_status != cudaSuccess)
-    {
-        return 0;
-    }
-
-    cudnn_status = cudnnCreate(&cudnn_handle);
-    if (cudnn_status != CUDNN_STATUS_SUCCESS)
-    {
-        return 0;
-    }
-
-    cublas_status = cublasCreate(&cublas_handle);
-    if (cublas_status != CUBLAS_STATUS_SUCCESS)
-    {
-        cudnnDestroy(cudnn_handle);
-        return 0;
-    }
-
-    cuda_initialized = 1;
-    return 1;
-}
+#include "tensor.h"
 
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
 {
@@ -76,7 +41,6 @@ int calculate_broadcast_shape(int *a_shape, int a_dims,
                               int *b_shape, int b_dims,
                               int *result_shape, int *result_dims)
 {
-
     *result_dims = (a_dims > b_dims) ? a_dims : b_dims;
 
     for (int i = 0; i < *result_dims; i++)
@@ -119,7 +83,6 @@ int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *a_strides, int *b_strides,
                                 size_t *total_elements)
 {
-
     if (!calculate_broadcast_shape(a->shape, a->ndims, b->shape, b->ndims,
                                    result_shape, result_dims))
     {
@@ -176,6 +139,13 @@ tensor_t *perform_broadcast_operation(tensor_t *a, tensor_t *b, int operation_ty
     }
 
     tensor_t *result = cuda_tensor_create_empty(result_shape, result_dims);
+    if (a->data == NULL || b->data == NULL || result->data == NULL)
+    {
+        php_printf("ERROR: NULL data pointer!\n");
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
     if (!result)
         return NULL;
 
@@ -352,116 +322,6 @@ static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index)
     }
 }
 
-tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
-{
-    size_t total_size = 1;
-    for (int i = 0; i < ndims; i++)
-    {
-        total_size *= shape[i];
-    }
-
-    float *host_data = (float *)emalloc(total_size * sizeof(float));
-    for (size_t i = 0; i < total_size; i++)
-    {
-        host_data[i] = value;
-    }
-
-    tensor_t *tensor = cuda_tensor_create(shape, ndims, host_data);
-    efree(host_data);
-
-    return tensor;
-}
-
-tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
-{
-    size_t total_size = 1;
-    for (int i = 0; i < ndims; i++)
-    {
-        total_size *= shape[i];
-    }
-
-    float *data = (float *)emalloc(total_size * sizeof(float));
-    for (size_t i = 0; i < total_size; i++)
-    {
-        data[i] = value;
-    }
-
-    tensor_t *tensor = cuda_tensor_create(shape, ndims, data);
-    efree(data);
-
-    return tensor;
-}
-
-tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
-{
-    if (!cuda_initialized && !cuda_wrapper_init())
-    {
-        printf("not initialized");
-        return NULL;
-    }
-
-    tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
-    if (!tensor)
-        return NULL;
-
-    tensor->ndims = ndims;
-    tensor->shape = (int *)emalloc(ndims * sizeof(int));
-    memcpy(tensor->shape, shape, ndims * sizeof(int));
-
-    tensor->total_size = 1;
-    tensor->ref_count = 1;
-
-    for (int i = 0; i < ndims; i++)
-    {
-        tensor->total_size *= shape[i];
-    }
-
-    cudaMalloc(&tensor->data, tensor->total_size * sizeof(float));
-    if (data)
-    {
-        cudaMemcpy(tensor->data, data, tensor->total_size * sizeof(float),
-                   cudaMemcpyHostToDevice);
-    }
-
-    cudnnCreateTensorDescriptor(&tensor->desc);
-
-    if (ndims <= 4)
-    {
-        int dims[4] = {1, 1, 1, 1};
-        int strides[4] = {1, 1, 1, 1};
-
-        for (int i = 0; i < ndims && i < 4; i++)
-        {
-            dims[i] = shape[i];
-        }
-
-        strides[3] = 1;
-        if (ndims >= 4)
-            strides[2] = dims[3];
-        if (ndims >= 3)
-            strides[1] = dims[2] * strides[2];
-        if (ndims >= 2)
-            strides[0] = dims[1] * strides[1];
-
-        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, 4, dims, strides);
-    }
-    else
-    {
-        int *strides = (int *)emalloc(ndims * sizeof(int));
-
-        strides[ndims - 1] = 1;
-        for (int i = ndims - 2; i >= 0; i--)
-        {
-            strides[i] = strides[i + 1] * shape[i + 1];
-        }
-
-        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, ndims, shape, strides);
-        efree(strides);
-    }
-
-    return tensor;
-}
-
 tensor_t *cuda_tensor_multiply(tensor_t *a, tensor_t *b)
 {
     return cuda_tensor_op(a, b, OP_MUL);
@@ -479,12 +339,12 @@ tensor_t *cuda_tensor_divide(tensor_t *a, tensor_t *b)
 
 tensor_t *cuda_tensor_add(tensor_t *a, tensor_t *b)
 {
-   return cuda_tensor_op(a, b, OP_ADD);
+    return cuda_tensor_op(a, b, OP_ADD);
 }
 
 tensor_t *cuda_tensor_transpose(tensor_t *tensor)
 {
-    if (!cuda_initialized || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL)
     {
         return NULL;
     }
@@ -532,7 +392,7 @@ tensor_t *cuda_tensor_transpose(tensor_t *tensor)
 
 tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
         return NULL;
 
     int a_ndims = a->ndims;
@@ -625,7 +485,7 @@ tensor_t *cuda_tensor_power(tensor_t *a, tensor_t *b)
 
 tensor_t *cuda_tensor_add_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -654,7 +514,7 @@ tensor_t *cuda_tensor_add_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_subtract_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -683,7 +543,7 @@ tensor_t *cuda_tensor_subtract_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_multiply_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -712,7 +572,7 @@ tensor_t *cuda_tensor_multiply_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_divide_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -747,7 +607,7 @@ tensor_t *cuda_tensor_divide_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_power_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -776,7 +636,7 @@ tensor_t *cuda_tensor_power_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_sqrt(tensor_t *tensor)
 {
-    if (!cuda_initialized || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
         return NULL;
@@ -805,7 +665,7 @@ tensor_t *cuda_tensor_sqrt(tensor_t *tensor)
 
 tensor_t *cuda_tensor_exp(tensor_t *tensor)
 {
-    if (!cuda_initialized || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
         return NULL;
@@ -834,7 +694,7 @@ tensor_t *cuda_tensor_exp(tensor_t *tensor)
 
 tensor_t *cuda_tensor_log(tensor_t *tensor)
 {
-    if (!cuda_initialized || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
         return NULL;
@@ -863,7 +723,7 @@ tensor_t *cuda_tensor_log(tensor_t *tensor)
 
 tensor_t *cuda_tensor_sin(tensor_t *tensor)
 {
-    if (!cuda_initialized || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
         return NULL;
@@ -892,7 +752,7 @@ tensor_t *cuda_tensor_sin(tensor_t *tensor)
 
 tensor_t *cuda_tensor_cos(tensor_t *tensor)
 {
-    if (!cuda_initialized || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL)
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
         return NULL;
@@ -931,7 +791,7 @@ tensor_t *cuda_tensor_less(tensor_t *a, tensor_t *b)
 
 tensor_t *cuda_tensor_equal(tensor_t *a, tensor_t *b)
 {
-     return cuda_tensor_op(a, b, OP_EQ);
+    return cuda_tensor_op(a, b, OP_EQ);
 }
 
 tensor_t *cuda_tensor_not_equal(tensor_t *a, tensor_t *b)
@@ -951,7 +811,7 @@ tensor_t *cuda_tensor_less_equal(tensor_t *a, tensor_t *b)
 
 tensor_t *cuda_tensor_greater_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -980,7 +840,7 @@ tensor_t *cuda_tensor_greater_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_less_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -1009,7 +869,7 @@ tensor_t *cuda_tensor_less_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_equal_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -1038,7 +898,7 @@ tensor_t *cuda_tensor_equal_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_not_equal_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -1067,7 +927,7 @@ tensor_t *cuda_tensor_not_equal_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_greater_equal_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -1096,7 +956,7 @@ tensor_t *cuda_tensor_greater_equal_scalar(tensor_t *a, float scalar)
 
 tensor_t *cuda_tensor_less_equal_scalar(tensor_t *a, float scalar)
 {
-    if (!cuda_initialized)
+    if (!cuda_initialized())
     {
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
@@ -1159,21 +1019,6 @@ size_t cuda_tensor_size(tensor_t *tensor)
     return size;
 }
 
-void cuda_tensor_destroy(tensor_t *tensor)
-{
-    if (!tensor)
-        return;
-
-    if (tensor->data)
-        cudaFree(tensor->data);
-    if (tensor->shape)
-        efree(tensor->shape);
-    if (tensor->desc)
-        cudnnDestroyTensorDescriptor(tensor->desc);
-
-    efree(tensor);
-}
-
 int *calculate_strides(int *shape, int ndims)
 {
     if (ndims <= 0 || !shape)
@@ -1195,9 +1040,4 @@ int *calculate_strides(int *shape, int ndims)
 int *cuda_tensor_get_shape(tensor_t *tensor)
 {
     return tensor->shape;
-}
-
-tensor_t *cuda_tensor_create_empty(const int shape[], int ndims)
-{
-    return cuda_tensor_create(shape, ndims, NULL);
 }

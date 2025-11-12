@@ -2,6 +2,7 @@
 #include <math.h>
 #include "cuda_kernels.h"
 #include <float.h>
+#include <cstdio>
 
 extern "C"
 {
@@ -74,6 +75,7 @@ extern "C"
             break;
         }
     }
+
     __global__ void add_kernel(float *a, float *b, float *result, int n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;

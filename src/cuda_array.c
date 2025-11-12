@@ -7,6 +7,7 @@
 #include "cuda_array.h"
 #include "cuda_array_wrapper.h"
 #include "cuda_array_arginfo.h"
+#include "tensor.h"
 
 zend_class_entry *cuda_array_ce;
 
@@ -38,15 +39,15 @@ static zend_object *cuda_array_create_object(zend_class_entry *class_type) {
 static void cuda_array_free_object(zend_object *object) {
     cuda_array_obj *obj = php_cuda_array_fetch_object(object);
     
+    
     if (obj->tensor_handle != NULL) {
-        if (obj->tensor_handle->data != NULL) {
-            cudaFree(obj->tensor_handle->data);
-        }
         cuda_tensor_destroy(obj->tensor_handle);
+        obj->tensor_handle = NULL;
     }
     
     if (obj->shape != NULL) {
         zend_array_destroy(obj->shape);
+        obj->shape = NULL;
     }
     
     zend_object_std_dtor(&obj->obj);

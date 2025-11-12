@@ -30,5 +30,5 @@ if test "$PHP_CUDA" != "no"; then
     
     PHP_SUBST(CUDA_SHARED_LIBADD)
     
-    PHP_NEW_EXTENSION(cuda, src/cuda.c src/cuda_wrapper.cpp src/cuda_array.c src/cuda_array_wrapper.cpp, $ext_shared)
+    PHP_NEW_EXTENSION(cuda, src/cuda.c src/cuda_wrapper.cpp src/cuda_array.c src/cuda_array_wrapper.cpp src/tensor.c, $ext_shared)
 fi

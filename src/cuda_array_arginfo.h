@@ -64,7 +64,4 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_full, 0, 0, 2)
     ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
-
-
-
 #endif

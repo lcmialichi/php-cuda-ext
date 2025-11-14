@@ -174,7 +174,7 @@ class CudaBenchmark
             $cpu_success = false;
         }
 
-        echo "GPU: init: " . ($gpu_success ? round($gpu_time, 1) . "ms, " : "FAILED, ") . ($gpu_success ? round($gpu_time, 1) . "ms" : "FAILED");
+        echo "GPU: init: " . ($init_time_result ? round($init_time_result, 1) . "ms, " : "FAILED, ") . ($gpu_success ? round($gpu_time, 1) . "ms" : "FAILED");
 
         if ($cpu_success) {
             $speedup = $cpu_time / $gpu_time;
@@ -204,12 +204,4 @@ class CudaBenchmark
     }
 }
 
-
-// CudaBenchmark::runAllTests();
-
-$test = CudaArray::ones([3 ,3, 3]);
-var_dump($test(null, [0, 2], [0, 1])->multiply(10)->toArray());
-
-var_dump($test->toArray());
-
-
+CudaBenchmark::runAllTests();

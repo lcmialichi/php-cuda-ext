@@ -24,17 +24,6 @@ extern "C"
                                  int *result_shape, int result_dims,
                                  size_t total_elements, int operation_type);
 
-    void launch_add_kernel(float *a, float *b, float *result, int n);
-    void launch_subtract_kernel(float *a, float *b, float *result, int n);
-    void launch_multiply_kernel(float *a, float *b, float *result, int n);
-    void launch_divide_kernel(float *a, float *b, float *result, int n);
-    void launch_power_kernel(float *a, float *b, float *result, int n);
-
-    void launch_scalar_add_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_subtract_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_multiply_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_divide_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_power_kernel(float *a, float scalar, float *result, int n);
 
     void launch_sqrt_kernel(float *a, float *result, int n);
     void launch_exp_kernel(float *a, float *result, int n);
@@ -45,20 +34,6 @@ extern "C"
     void launch_abs_kernel(float *a, float *result, int n);
     void launch_negate_kernel(float *a, float *result, int n);
     void launch_reciprocal_kernel(float *a, float *result, int n);
-
-    void launch_greater_kernel(float *a, float *b, float *result, int n);
-    void launch_less_kernel(float *a, float *b, float *result, int n);
-    void launch_equal_kernel(float *a, float *b, float *result, int n);
-    void launch_greater_equal_kernel(float *a, float *b, float *result, int n);
-    void launch_less_equal_kernel(float *a, float *b, float *result, int n);
-    void launch_not_equal_kernel(float *a, float *b, float *result, int n);
-
-    void launch_scalar_greater_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_less_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_equal_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_not_equal_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_greater_equal_kernel(float *a, float scalar, float *result, int n);
-    void launch_scalar_less_equal_kernel(float *a, float scalar, float *result, int n);
 
     void launch_sum_kernel(float *a, float *result, int n);
     void launch_max_kernel(float *a, float *result, int n);

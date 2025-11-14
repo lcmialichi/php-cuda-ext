@@ -25,6 +25,7 @@
         "helpers.c": "cpp",
         "initializer_list": "c",
         "list": "c",
-        "xhash": "c"
+        "xhash": "c",
+        "cuda_kernels.h": "c"
     }
 }

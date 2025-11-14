@@ -14,18 +14,18 @@ extern zend_module_entry cuda_module_entry;
 #include "TSRM.h"
 #endif
 
-PHP_FUNCTION(cuda_get_device_count);
-PHP_FUNCTION(cuda_get_device_info);
-PHP_FUNCTION(cuda_set_device);
-PHP_FUNCTION(cuda_get_current_device);
-PHP_FUNCTION(cuda_get_memory_info);
-PHP_FUNCTION(cuda_device_reset);
-PHP_FUNCTION(cuda_get_driver_version);
-PHP_FUNCTION(cuda_get_runtime_version);
-PHP_FUNCTION(cuda_get_last_error);
-PHP_FUNCTION(cuda_clear_error);
-PHP_FUNCTION(cuda_get_peer_access);
-PHP_FUNCTION(cuda_synchronize);
+ZEND_FUNCTION(cuda_get_device_count);
+ZEND_FUNCTION(cuda_get_device_info);
+ZEND_FUNCTION(cuda_set_device);
+ZEND_FUNCTION(cuda_get_current_device);
+ZEND_FUNCTION(cuda_get_memory_info);
+ZEND_FUNCTION(cuda_device_reset);
+ZEND_FUNCTION(cuda_get_driver_version);
+ZEND_FUNCTION(cuda_get_runtime_version);
+ZEND_FUNCTION(cuda_get_last_error);
+ZEND_FUNCTION(cuda_clear_error);
+ZEND_FUNCTION(cuda_get_peer_access);
+ZEND_FUNCTION(cuda_synchronize);
 
 PHP_MINIT_FUNCTION(cuda);
 PHP_MSHUTDOWN_FUNCTION(cuda);

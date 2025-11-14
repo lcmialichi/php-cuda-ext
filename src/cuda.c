@@ -8,7 +8,7 @@
 #include "cuda_arginfo.h"
 #include "cuda_array.h"
 
-PHP_FUNCTION(cuda_get_device_count)
+ZEND_FUNCTION(cuda_get_device_count)
 {
     int count = cuda_wrapper_get_device_count();
 
@@ -21,7 +21,7 @@ PHP_FUNCTION(cuda_get_device_count)
     RETURN_LONG(count);
 }
 
-PHP_FUNCTION(cuda_get_device_info)
+ZEND_FUNCTION(cuda_get_device_info)
 {
     zend_long device_id = 0;
 
@@ -50,7 +50,7 @@ PHP_FUNCTION(cuda_get_device_info)
     add_assoc_long(return_value, "total_global_memory", total_mem);
 }
 
-PHP_FUNCTION(cuda_set_device)
+ZEND_FUNCTION(cuda_set_device)
 {
     zend_long device_id;
 
@@ -69,7 +69,7 @@ PHP_FUNCTION(cuda_set_device)
     RETURN_TRUE;
 }
 
-PHP_FUNCTION(cuda_get_current_device)
+ZEND_FUNCTION(cuda_get_current_device)
 {
     int device = cuda_wrapper_get_current_device();
 
@@ -82,7 +82,7 @@ PHP_FUNCTION(cuda_get_current_device)
     RETURN_LONG(device);
 }
 
-PHP_FUNCTION(cuda_get_memory_info)
+ZEND_FUNCTION(cuda_get_memory_info)
 {
     size_t free_mem, total_mem;
     int success = cuda_wrapper_get_memory_info(&free_mem, &total_mem);
@@ -100,7 +100,7 @@ PHP_FUNCTION(cuda_get_memory_info)
     add_assoc_double(return_value, "usage_percentage", ((double)(total_mem - free_mem) / total_mem) * 100.0);
 }
 
-PHP_FUNCTION(cuda_device_reset)
+ZEND_FUNCTION(cuda_device_reset)
 {
     int success = cuda_wrapper_device_reset();
 
@@ -113,7 +113,7 @@ PHP_FUNCTION(cuda_device_reset)
     RETURN_TRUE;
 }
 
-PHP_FUNCTION(cuda_get_driver_version)
+ZEND_FUNCTION(cuda_get_driver_version)
 {
     int driver_version = cuda_wrapper_get_driver_version();
 
@@ -131,7 +131,7 @@ PHP_FUNCTION(cuda_get_driver_version)
     add_assoc_string(return_value, "version_string", version_str);
 }
 
-PHP_FUNCTION(cuda_get_runtime_version)
+ZEND_FUNCTION(cuda_get_runtime_version)
 {
     int runtime_version = cuda_wrapper_get_runtime_version();
 
@@ -149,7 +149,7 @@ PHP_FUNCTION(cuda_get_runtime_version)
     add_assoc_string(return_value, "version_string", version_str);
 }
 
-PHP_FUNCTION(cuda_synchronize)
+ZEND_FUNCTION(cuda_synchronize)
 {
     int success = cuda_wrapper_synchronize();
 
@@ -163,7 +163,7 @@ PHP_FUNCTION(cuda_synchronize)
 }
 
 
-PHP_FUNCTION(cuda_get_last_error)
+ZEND_FUNCTION(cuda_get_last_error)
 {
     int error = cuda_wrapper_error();
     if (error == 0)
@@ -177,13 +177,13 @@ PHP_FUNCTION(cuda_get_last_error)
     add_assoc_string(return_value, "error_type", cuda_wrapper_get_error_type(error));
 }
 
-PHP_FUNCTION(cuda_clear_error)
+ZEND_FUNCTION(cuda_clear_error)
 {
     cuda_wrapper_error();
     RETURN_TRUE;
 }
 
-PHP_FUNCTION(cuda_get_peer_access)
+ZEND_FUNCTION(cuda_get_peer_access)
 {
     zend_long device1, device2;
 

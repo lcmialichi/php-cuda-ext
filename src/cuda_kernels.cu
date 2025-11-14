@@ -6,7 +6,7 @@
 
 extern "C"
 {
-    __global__ void broadcast_kernel(float *a, float *b, float *result,
+   __global__ void broadcast_kernel(float *a, float *b, float *result,
                                      int *a_strides, int a_dims,
                                      int *b_strides, int b_dims,
                                      int *result_shape, int result_dims,
@@ -75,7 +75,7 @@ extern "C"
             break;
         }
     }
-
+    
     __global__ void add_kernel(float *a, float *b, float *result, int n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -438,108 +438,8 @@ extern "C"
             result[i] = tanhf(a[i]);
         }
     }
+
     
-    void launch_broadcast_kernel(float *a, float *b, float *result,
-                                 int *a_strides, int a_dims,
-                                 int *b_strides, int b_dims,
-                                 int *result_shape, int result_dims,
-                                 size_t total_elements, int operation_type)
-    {
-
-        int threads = 256;
-        int blocks = (total_elements + threads - 1) / threads;
-
-        int *d_a_strides, *d_b_strides, *d_result_shape;
-
-        cudaMalloc(&d_a_strides, a_dims * sizeof(int));
-        cudaMalloc(&d_b_strides, b_dims * sizeof(int));
-        cudaMalloc(&d_result_shape, result_dims * sizeof(int));
-
-        cudaMemcpy(d_a_strides, a_strides, a_dims * sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_b_strides, b_strides, b_dims * sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_result_shape, result_shape, result_dims * sizeof(int), cudaMemcpyHostToDevice);
-
-        broadcast_kernel<<<blocks, threads>>>(
-            a, b, result,
-            d_a_strides, a_dims,
-            d_b_strides, b_dims,
-            d_result_shape, result_dims,
-            total_elements, operation_type);
-
-        cudaFree(d_a_strides);
-        cudaFree(d_b_strides);
-        cudaFree(d_result_shape);
-    }
-
-    void launch_add_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        add_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_subtract_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        subtract_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_multiply_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        multiply_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_divide_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        divide_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_power_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        power_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_scalar_add_kernel(float *a, float scalar, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        scalar_add_kernel<<<blocks, threads>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_subtract_kernel(float *a, float scalar, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        scalar_subtract_kernel<<<blocks, threads>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_multiply_kernel(float *a, float scalar, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        scalar_multiply_kernel<<<blocks, threads>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_divide_kernel(float *a, float scalar, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        scalar_divide_kernel<<<blocks, threads>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_power_kernel(float *a, float scalar, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        scalar_power_kernel<<<blocks, threads>>>(a, scalar, result, n);
-    }
 
     void launch_sqrt_kernel(float *a, float *result, int n)
     {
@@ -604,48 +504,6 @@ extern "C"
         reciprocal_kernel<<<blocks, threads>>>(a, result, n);
     }
 
-    void launch_greater_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        greater_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_less_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        less_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_equal_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        equal_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_greater_equal_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        greater_equal_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_less_equal_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        less_equal_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
-    void launch_not_equal_kernel(float *a, float *b, float *result, int n)
-    {
-        int threads = 256;
-        int blocks = (n + threads - 1) / threads;
-        not_equal_kernel<<<blocks, threads>>>(a, b, result, n);
-    }
-
     void launch_clip_kernel(float *a, float min_val, float max_val, float *result, int n)
     {
         int threads = 256;
@@ -706,45 +564,4 @@ extern "C"
         min_kernel<<<blocks, threads, shared_mem>>>(a, result, n);
     }
 
-    void launch_scalar_greater_kernel(float *a, float scalar, float *result, int n)
-    {
-        int blockSize = 256;
-        int numBlocks = (n + blockSize - 1) / blockSize;
-        scalar_greater_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_less_kernel(float *a, float scalar, float *result, int n)
-    {
-        int blockSize = 256;
-        int numBlocks = (n + blockSize - 1) / blockSize;
-        scalar_less_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int blockSize = 256;
-        int numBlocks = (n + blockSize - 1) / blockSize;
-        scalar_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_not_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int blockSize = 256;
-        int numBlocks = (n + blockSize - 1) / blockSize;
-        scalar_not_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_greater_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int blockSize = 256;
-        int numBlocks = (n + blockSize - 1) / blockSize;
-        scalar_greater_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
-    }
-
-    void launch_scalar_less_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int blockSize = 256;
-        int numBlocks = (n + blockSize - 1) / blockSize;
-        scalar_less_equal_kernel<<<numBlocks, blockSize>>>(a, scalar, result, n);
-    }
 }

@@ -51,6 +51,8 @@ extern "C"
     int cuda_initialized();
     void cuda_set_initialized(int status);
     void cuda_tensor_destroy(tensor_t *tensor);
+    
+    tensor_t *resolve_result_tensor(tensor_t *t);
     tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
     tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[]);
     tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims);

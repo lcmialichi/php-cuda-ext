@@ -1,13 +1,10 @@
+CUDA_SRCS = src/cuda_kernels.cu src/broadcast_ops.cu src/scalar_ops.cu
+CUDA_OBJS = $(CUDA_SRCS:.cu=.o)
+
 NVCC_FLAGS = -arch=sm_60 -O2 -Xcompiler -fPIC
 
-$(builddir)/src/cuda_kernels.o: src/cuda_kernels.cu
-	@mkdir -p $(builddir)/src
+%.o: %.cu
 	$(NVCC) $(NVCC_FLAGS) -c -o $@ $<
 
-libcudakernels.a: $(builddir)/src/cuda_kernels.o
-	ar rcs $@ $<
-
-$(builddir)/cuda.la: libcudakernels.a
-
-clean-cuda:
-	rm -f $(builddir)/src/cuda_kernels.o libcudakernels.a
+libcudakernels.a: $(CUDA_OBJS)
+	ar rcs $@ $^

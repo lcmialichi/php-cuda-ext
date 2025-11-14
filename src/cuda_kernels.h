@@ -17,14 +17,6 @@
 extern "C"
 {
 #endif
-
-    void launch_broadcast_kernel(float *a, float *b, float *result,
-                                 int *a_strides, int a_dims,
-                                 int *b_strides, int b_dims,
-                                 int *result_shape, int result_dims,
-                                 size_t total_elements, int operation_type);
-
-
     void launch_sqrt_kernel(float *a, float *result, int n);
     void launch_exp_kernel(float *a, float *result, int n);
     void launch_log_kernel(float *a, float *result, int n);

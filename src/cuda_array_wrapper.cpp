@@ -123,73 +123,6 @@ int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
     return 1;
 }
 
-tensor_t *perform_broadcast_operation(tensor_t *a, tensor_t *b, int operation_type)
-{
-    int result_shape[MAX_DIMS];
-    int result_dims;
-    int a_strides[MAX_DIMS] = {0};
-    int b_strides[MAX_DIMS] = {0};
-    size_t total_elements;
-
-    if (!prepare_broadcast_operation(a, b, result_shape, &result_dims,
-                                     a_strides, b_strides, &total_elements))
-    {
-        return NULL;
-    }
-
-    tensor_t *result;
-
-    if (a->is_view)
-    {
-        result = resolve_result_tensor(a);
-        if (!result)
-        {
-            return NULL;
-        }
-
-        efree(result->shape);
-        result->shape = (int *)emalloc(result_dims * sizeof(int));
-        memcpy(result->shape, result_shape, result_dims * sizeof(int));
-
-        result->ndims = result_dims;
-        result->total_size = 1;
-        for (int i = 0; i < result_dims; i++)
-        {
-            result->total_size *= result_shape[i];
-        }
-    }
-    else
-    {
-        result = cuda_tensor_create_empty(result_shape, result_dims);
-        if (!result)
-        {
-            return NULL;
-        }
-    }
-
-    if (a->data == NULL || b->data == NULL || result->data == NULL)
-    {
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-
-    launch_broadcast_kernel(
-        a->data, b->data, result->data,
-        a_strides, a->ndims,
-        b_strides, b->ndims,
-        result_shape, result_dims,
-        total_elements, operation_type);
-
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess)
-    {
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-
-    return result;
-}
-
 scalar_fn get_scalar_fn(int op)
 {
     for (int i = 0; i < sizeof(scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
@@ -748,6 +681,7 @@ tensor_t *cuda_tensor_cos(tensor_t *tensor)
 
     return result;
 }
+
 
 tensor_t *cuda_tensor_copy(tensor_t *tensor)
 {

@@ -67,6 +67,24 @@ static cuda_array_obj *php_cuda_array_fetch_object(zend_object *obj)
     return (cuda_array_obj *)((char *)obj - XtOffsetOf(cuda_array_obj, obj));
 }
 
+static cuda_array_obj *php_cuda_array_fetch_valid_object(zend_object *obj)
+{
+    cuda_array_obj *this_obj = (cuda_array_obj *)((char *)obj - XtOffsetOf(cuda_array_obj, obj));
+    if (this_obj->tensor_handle == NULL)
+    {
+        zend_error(E_ERROR, "Attempting to access uninitialized tensor!");
+        return NULL;
+    }
+
+    if (this_obj->tensor_handle->is_view && !this_obj->tensor_handle->base_tensor)
+    {
+        zend_error(E_ERROR, "Attempting to access a view with no base tensor!");
+        return NULL;
+    }
+
+    return this_obj;
+}
+
 static zend_object *cuda_array_create_object(zend_class_entry *class_type)
 {
     cuda_array_obj *obj = (cuda_array_obj *)ecalloc(1, sizeof(cuda_array_obj));
@@ -214,7 +232,7 @@ static tensor_t *get_second_tensor(zval *other_zv, cuda_array_obj *this_obj)
 {
     if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
     {
-        cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+        cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
 
         if (other_obj->tensor_handle == NULL)
         {
@@ -241,7 +259,7 @@ static void self_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
                                    self_operation_func tensor_func)
 {
 
-    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (this_obj->tensor_handle == NULL)
     {
@@ -268,7 +286,7 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
     Z_PARAM_ZVAL(other_zv)
     ZEND_PARSE_PARAMETERS_END();
 
-    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (this_obj->tensor_handle == NULL)
     {
@@ -280,7 +298,7 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
 
     if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
     {
-        cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+        cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
 
         if (other_obj->tensor_handle == NULL)
         {
@@ -436,7 +454,7 @@ PHP_METHOD(CudaArray, __invoke)
     Z_PARAM_VARIADIC('*', slices, slice_count)
     ZEND_PARSE_PARAMETERS_END();
 
-    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (this_obj->tensor_handle == NULL)
     {
@@ -479,18 +497,27 @@ PHP_METHOD(CudaArray, __invoke)
         return;
     }
 
-    slice_info_t *slice_info = (slice_info_t *)emalloc(slice_count * sizeof(slice_info_t));
-    for (int i = 0; i < slice_count; i++)
+    int ndim = this_obj->tensor_handle->ndims;
+    slice_info_t *slice_info = (slice_info_t *)emalloc(ndim * sizeof(slice_info_t));
+    for (int i = 0; i < ndim; i++)
     {
-        if (!parse_slice_parameter(&slices[i], &slice_info[i]))
+        if (i < slice_count)
         {
-            efree(slice_info);
-            zend_throw_error(NULL, "Invalid slice parameter at dimension %d", i + 1);
-            RETURN_NULL();
+            if (!parse_slice_parameter(&slices[i], &slice_info[i]))
+            {
+                efree(slice_info);
+                zend_throw_error(NULL, "Invalid slice parameter at dimension %d", i + 1);
+                RETURN_NULL();
+            }
+        }
+        else
+        {
+            memset(&slice_info[i], 0, sizeof(slice_info_t));
+            slice_info[i].type = SLICE_ALL;
         }
     }
 
-    tensor_t *view_tensor = cuda_tensor_create_view(this_obj->tensor_handle, slice_info, slice_count);
+    tensor_t *view_tensor = cuda_tensor_create_view(this_obj->tensor_handle, slice_info, ndim);
     efree(slice_info);
 
     if (!view_tensor)
@@ -520,8 +547,8 @@ PHP_METHOD(CudaArray, matmul)
     Z_PARAM_OBJECT_OF_CLASS(other_zv, cuda_array_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
-    cuda_array_obj *other_obj = php_cuda_array_fetch_object(Z_OBJ_P(other_zv));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
 
     if (this_obj->tensor_handle == NULL || other_obj->tensor_handle == NULL)
     {
@@ -544,7 +571,6 @@ PHP_METHOD(CudaArray, transpose)
 {
     self_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Transpose", cuda_tensor_transpose);
 }
-
 
 PHP_METHOD(CudaArray, sqrt)
 {
@@ -660,7 +686,7 @@ PHP_METHOD(CudaArray, reshape)
     Z_PARAM_ARRAY(new_shape_array)
     ZEND_PARSE_PARAMETERS_END();
 
-    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (this_obj->tensor_handle == NULL)
     {
@@ -741,7 +767,7 @@ PHP_METHOD(CudaArray, reshape)
 
 PHP_METHOD(CudaArray, flatten)
 {
-    cuda_array_obj *this_obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (this_obj->tensor_handle == NULL)
     {
@@ -770,7 +796,7 @@ PHP_METHOD(CudaArray, flatten)
 
 PHP_METHOD(CudaArray, getShape)
 {
-    cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (obj->shape == NULL)
     {
@@ -789,64 +815,87 @@ PHP_METHOD(CudaArray, getShape)
     ZEND_HASH_FOREACH_END();
 }
 
+PHP_METHOD(CudaArray, getStrides)
+{
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *t = obj->tensor_handle;
+
+    if (!t->strides) {
+        RETURN_NULL();
+    }
+
+    array_init_size(return_value, t->ndims);
+
+    for (int i = 0; i < t->ndims; i++) {
+        add_next_index_long(return_value, t->strides[i]);
+    }
+}
+
 PHP_METHOD(CudaArray, toArray)
 {
-    cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
-    if (obj->tensor_handle == NULL)
-    {
+    if (!obj->tensor_handle) {
         RETURN_NULL();
     }
 
-    size_t total_size = 1;
-    for (int i = 0; i < obj->tensor_handle->ndims; i++)
-    {
-        total_size *= obj->tensor_handle->shape[i];
-    }
+    tensor_t *tensor = obj->tensor_handle;
 
-    float *host_data = (float *)emalloc(total_size * sizeof(float));
+    tensor_t *base = tensor->is_view ? tensor->base_tensor : tensor;
+    size_t base_total = base->total_size;
 
-    cudaError_t cuda_status = cudaMemcpy(
+    float *host_data = emalloc(base_total * sizeof(float));
+
+    cudaError_t status = cudaMemcpy(
         host_data,
-        obj->tensor_handle->data,
-        total_size * sizeof(float),
-        cudaMemcpyDeviceToHost);
+        base->data,
+        base_total * sizeof(float),
+        cudaMemcpyDeviceToHost
+    );
 
-    if (cuda_status != cudaSuccess)
-    {
+    if (status != cudaSuccess) {
         efree(host_data);
-        zend_throw_error(NULL, "Failed to copy data from GPU: %s", cudaGetErrorString(cuda_status));
+        zend_throw_error(NULL, "Failed to copy data from GPU: %s", cudaGetErrorString(status));
         RETURN_NULL();
     }
 
-    void build_array_from_flat(zval * result, float *data, int *dims, int current_dim, size_t *offset, int total_dims)
-    {
-        int size = dims[current_dim];
-        array_init_size(result, size);
+    void build_recursive(
+        zval *result,
+        float *data,
+        int dim,
+        tensor_t *t,
+        size_t current_offset
+    ) {
+        array_init(result);
 
-        if (current_dim == total_dims - 1)
-        {
-            for (int i = 0; i < size; i++)
-            {
-                zval element;
-                ZVAL_DOUBLE(&element, data[*offset]);
-                zend_hash_index_update(Z_ARRVAL_P(result), i, &element);
-                (*offset)++;
-            }
+        if (dim == t->ndims) {
+            zval v;
+            ZVAL_DOUBLE(&v, data[current_offset]);
+            RETVAL_ZVAL(result, 0, 0);
+            return;
         }
-        else
-        {
-            for (int i = 0; i < size; i++)
-            {
-                zval subarray;
-                build_array_from_flat(&subarray, data, dims, current_dim + 1, offset, total_dims);
-                zend_hash_index_update(Z_ARRVAL_P(result), i, &subarray);
+
+        int size = t->shape[dim];
+        size_t stride = t->strides[dim];
+
+        for (int i = 0; i < size; i++) {
+
+            size_t child_offset = current_offset + i * stride;
+
+            if (dim == t->ndims - 1) {
+                zval val;
+                ZVAL_DOUBLE(&val, data[child_offset]);
+                zend_hash_index_update(Z_ARRVAL_P(result), i, &val);
+            } else {
+                zval sub;
+                build_recursive(&sub, data, dim + 1, t, child_offset);
+                zend_hash_index_update(Z_ARRVAL_P(result), i, &sub);
             }
         }
     }
 
-    size_t offset = 0;
-    build_array_from_flat(return_value, host_data, obj->tensor_handle->shape, 0, &offset, obj->tensor_handle->ndims);
+    size_t offset_elements = tensor->gpu_offset / sizeof(float);
+    build_recursive(return_value, host_data, 0, tensor, offset_elements);
 
     efree(host_data);
 }
@@ -873,6 +922,7 @@ static zend_function_entry cuda_array_methods[] = {
                                                                             PHP_ME(CudaArray, greaterEqual, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
                                                                                 PHP_ME(CudaArray, lessEqual, arginfo_cuda_array_binary, ZEND_ACC_PUBLIC)
                                                                                     PHP_ME(CudaArray, getShape, arginfo_cuda_array_getShape, ZEND_ACC_PUBLIC)
+                                                                                    PHP_ME(CudaArray, getStrides, arginfo_cuda_array_getStrides, ZEND_ACC_PUBLIC)
                                                                                         PHP_ME(CudaArray, toArray, arginfo_cuda_array_toArray, ZEND_ACC_PUBLIC)
                                                                                             PHP_ME(CudaArray, reshape, arginfo_cuda_array_reshape, ZEND_ACC_PUBLIC)
                                                                                                 PHP_ME(CudaArray, zeros, arginfo_cuda_array_zeros, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)

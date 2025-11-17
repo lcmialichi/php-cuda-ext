@@ -96,27 +96,41 @@ int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
 
     for (int i = 0; i < a->ndims; i++)
     {
-        int result_dim_idx = *result_dims - a->ndims + i;
-        if (result_dim_idx >= 0 && a->shape[i] != 1)
+        if (a->is_view)
         {
-            a_strides[i] = calculate_broadcast_stride(result_shape, *result_dims, result_dim_idx);
+            a_strides[i] = (int)a->strides[i];
         }
         else
         {
-            a_strides[i] = 0;
+            int result_dim_idx = *result_dims - a->ndims + i;
+            if (result_dim_idx >= 0 && a->shape[i] != 1)
+            {
+                a_strides[i] = calculate_broadcast_stride(result_shape, *result_dims, result_dim_idx);
+            }
+            else
+            {
+                a_strides[i] = 0;
+            }
         }
     }
 
     for (int i = 0; i < b->ndims; i++)
     {
-        int result_dim_idx = *result_dims - b->ndims + i;
-        if (result_dim_idx >= 0 && b->shape[i] != 1)
+        if (b->is_view)
         {
-            b_strides[i] = calculate_broadcast_stride(result_shape, *result_dims, result_dim_idx);
+            b_strides[i] = (int)b->strides[i];
         }
         else
         {
-            b_strides[i] = 0;
+            int result_dim_idx = *result_dims - b->ndims + i;
+            if (result_dim_idx >= 0 && b->shape[i] != 1)
+            {
+                b_strides[i] = calculate_broadcast_stride(result_shape, *result_dims, result_dim_idx);
+            }
+            else
+            {
+                b_strides[i] = 0;
+            }
         }
     }
 
@@ -203,7 +217,7 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
          a_strides, a->ndims,
          b_strides, b->ndims,
          result_shape, result_dims,
-         total_elements);
+         total_elements, a->gpu_offset, b->gpu_offset);
 
     cudaError_t status = cudaDeviceSynchronize();
     return (status == cudaSuccess) ? result : NULL;
@@ -224,7 +238,6 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, int operation_type)
         return NULL;
     }
 
-    size_t total_size = cuda_tensor_size(a);
     scalar_fn func = get_scalar_fn(operation_type);
     if (func == NULL)
     {
@@ -232,7 +245,21 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, int operation_type)
         return NULL;
     }
 
-    func(a->data, scalar, result->data, total_size);
+    for (int i = 0; i < a->ndims; i++)
+    {
+        printf("%d", a->shape[i]);
+        if (i < a->ndims - 1)
+            printf(", ");
+    }
+
+    for (int i = 0; i < a->ndims; i++)
+    {
+        printf("%zu", a->strides[i]);
+        if (i < a->ndims - 1)
+            printf(", ");
+    }
+
+    func(a->data, scalar, result->data, a->gpu_offset, a->shape, a->strides, a->ndims, a->total_size);
     cudaError_t status = cudaDeviceSynchronize();
 
     if (status != cudaSuccess)
@@ -682,7 +709,6 @@ tensor_t *cuda_tensor_cos(tensor_t *tensor)
     return result;
 }
 
-
 tensor_t *cuda_tensor_copy(tensor_t *tensor)
 {
     if (!tensor)
@@ -716,6 +742,7 @@ size_t cuda_tensor_size(tensor_t *tensor)
     {
         size *= tensor->shape[i];
     }
+
     return size;
 }
 

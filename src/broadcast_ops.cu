@@ -7,19 +7,21 @@
 extern "C"
 {
 
-#define DEFINE_BROADCAST_WRAPPER(name, Op)        \
-    void name(float *a, float *b, float *result,  \
-              int *a_strides, int a_dims,         \
-              int *b_strides, int b_dims,         \
-              int *result_shape, int result_dims, \
-              size_t total_elements)              \
-    {                                             \
-        launch_broadcast_op<Op>(                  \
-            a, b, result,                         \
-            a_strides, a_dims,                    \
-            b_strides, b_dims,                    \
-            result_shape, result_dims,            \
-            total_elements);                      \
+#define DEFINE_BROADCAST_WRAPPER(name, Op)                 \
+    void name(float *a, float *b, float *result,           \
+              int *a_strides, int a_dims,                  \
+              int *b_strides, int b_dims,                  \
+              int *result_shape, int result_dims,          \
+              size_t total_elements,                       \
+              size_t a_base_offset,                        \
+              size_t b_base_offset)                        \
+    {                                                      \
+        launch_broadcast_op<Op>(                           \
+            a, b, result,                                  \
+            a_strides, a_dims,                             \
+            b_strides, b_dims,                             \
+            result_shape, result_dims,                     \
+            total_elements, a_base_offset, b_base_offset); \
     }
 
     DEFINE_BROADCAST_WRAPPER(launch_broadcast_add, AddOp)

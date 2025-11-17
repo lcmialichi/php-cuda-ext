@@ -1,4 +1,4 @@
-#include "cuda_array_wrapper.h"
+#include "tensor.h"
 #include "php.h"
 
 char* tensor_shape_as_string(tensor_t *tensor) {

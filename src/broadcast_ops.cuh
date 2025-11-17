@@ -13,7 +13,9 @@ __global__ void broadcast_kernel_opt(
     const int *__restrict__ b_strides,
     const int *__restrict__ shape,
     int dims,
-    size_t total)
+    size_t total,
+    size_t a_base_offset,
+    size_t b_base_offset)
 {
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= total)
@@ -34,7 +36,7 @@ __global__ void broadcast_kernel_opt(
     }
 
     Op op;
-    result[idx] = op(a[a_idx], b[b_idx]);
+    result[a_idx] = op(a[a_idx + a_base_offset], b[b_idx + b_base_offset]);
 }
 
 template <typename Op>
@@ -42,7 +44,9 @@ void launch_broadcast_op(float *a, float *b, float *result,
                          int *a_strides, int a_dims,
                          int *b_strides, int b_dims,
                          int *result_shape, int result_dims,
-                         size_t total_elements)
+                         size_t total_elements,
+                         size_t a_base_offset,
+                         size_t b_base_offset)
 {
     int threads = 256;
     int blocks = (total_elements + threads - 1) / threads;
@@ -50,11 +54,33 @@ void launch_broadcast_op(float *a, float *b, float *result,
     std::vector<int> a_strides_full(result_dims, 0);
     std::vector<int> b_strides_full(result_dims, 0);
 
-    for (int i = 0; i < a_dims; i++)
-        a_strides_full[result_dims - a_dims + i] = a_strides[i];
+    for (int i = 0; i < result_dims; i++)
+    {
+        int a_index = i - (result_dims - a_dims);
 
-    for (int i = 0; i < b_dims; i++)
-        b_strides_full[result_dims - b_dims + i] = b_strides[i];
+        if (a_index >= 0)
+        {
+            a_strides_full[i] = a_strides[a_index];
+        }
+        else
+        {
+            a_strides_full[i] = 0;
+        }
+    }
+
+    for (int i = 0; i < result_dims; i++)
+    {
+        int b_index = i - (result_dims - b_dims);
+
+        if (b_index >= 0)
+        {
+            b_strides_full[i] = b_strides[b_index];
+        }
+        else
+        {
+            b_strides_full[i] = 0;
+        }
+    }
 
     int *d_a_strides, *d_b_strides, *d_shape;
 
@@ -77,7 +103,9 @@ void launch_broadcast_op(float *a, float *b, float *result,
         d_b_strides,
         d_shape,
         result_dims,
-        total_elements);
+        total_elements,
+        a_base_offset,
+        b_base_offset);
 
     cudaFree(d_a_strides);
     cudaFree(d_b_strides);

@@ -41,41 +41,6 @@ extern "C"
             result[i] = powf(a[i], b[i]);
     }
 
-    __global__ void scalar_add_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-            result[i] = a[i] + scalar;
-    }
-
-    __global__ void scalar_subtract_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-            result[i] = a[i] - scalar;
-    }
-
-    __global__ void scalar_multiply_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-            result[i] = a[i] * scalar;
-    }
-
-    __global__ void scalar_divide_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-            result[i] = a[i] / scalar;
-    }
-
-    __global__ void scalar_power_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-            result[i] = powf(a[i], scalar);
-    }
-
     __global__ void sqrt_kernel(float *a, float *result, int n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -179,60 +144,6 @@ extern "C"
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < n)
             result[i] = (a[i] != b[i]) ? 1.0f : 0.0f;
-    }
-
-    __global__ void scalar_greater_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-        {
-            result[i] = (a[i] > scalar) ? 1.0f : 0.0f;
-        }
-    }
-
-    __global__ void scalar_less_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-        {
-            result[i] = (a[i] < scalar) ? 1.0f : 0.0f;
-        }
-    }
-
-    __global__ void scalar_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-        {
-            result[i] = (fabsf(a[i] - scalar) < 1e-6f) ? 1.0f : 0.0f;
-        }
-    }
-
-    __global__ void scalar_not_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-        {
-            result[i] = (fabsf(a[i] - scalar) >= 1e-6f) ? 1.0f : 0.0f;
-        }
-    }
-
-    __global__ void scalar_greater_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-        {
-            result[i] = (a[i] >= scalar) ? 1.0f : 0.0f;
-        }
-    }
-
-    __global__ void scalar_less_equal_kernel(float *a, float scalar, float *result, int n)
-    {
-        int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i < n)
-        {
-            result[i] = (a[i] <= scalar) ? 1.0f : 0.0f;
-        }
     }
 
     __global__ void sum_kernel(float *a, float *result, int n)

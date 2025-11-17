@@ -43,115 +43,164 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, slice_info_t *slices, i
         return NULL;
     }
 
-    size_t base_strides[MAX_DIMS] = {0};
-    size_t stride = 1;
-
-    for (int i = base_tensor->ndims - 1; i >= 0; i--)
+    size_t base_strides[MAX_DIMS];
+    if (base_tensor->strides)
     {
-        base_strides[i] = stride;
-        stride *= base_tensor->shape[i];
-    }
-
-    size_t element_offset = 0;
-    if (base_tensor->is_view)
-    {
-        element_offset = base_tensor->gpu_offset / sizeof(float);
-    }
-
-    int new_ndims = num_slices;
-    int new_shape[MAX_DIMS];
-
-    for (int i = 0; i < num_slices; i++)
-    {
-        if (i < base_tensor->ndims)
+        for (int i = 0; i < base_tensor->ndims; ++i)
         {
-            switch (slices[i].type)
+            base_strides[i] = base_tensor->strides[i];
+        }
+    }
+    else
+    {
+        size_t stride = 1;
+        for (int i = base_tensor->ndims - 1; i >= 0; --i)
+        {
+            base_strides[i] = stride;
+            stride *= (size_t)base_tensor->shape[i];
+        }
+    }
+
+    size_t element_offset = base_tensor->is_view ? (base_tensor->gpu_offset / sizeof(float)) : 0;
+
+    int view_shape[MAX_DIMS];
+    size_t view_strides[MAX_DIMS];
+    int view_ndims = 0;
+
+    for (int i = 0; i < base_tensor->ndims; ++i)
+    {
+        slice_info_t slice = (i < num_slices) ? slices[i] : (slice_info_t){.type = SLICE_ALL};
+
+        switch (slice.type)
+        {
+        case SLICE_ALL:
+            view_shape[view_ndims] = base_tensor->shape[i];
+            view_strides[view_ndims] = base_strides[i];
+            view_ndims++;
+            break;
+
+        case SLICE_INDEX:
+        {
+            int index = slice.data.index;
+            if (index < 0 || index >= base_tensor->shape[i])
             {
-            case SLICE_ALL:
-                new_shape[i] = base_tensor->shape[i];
-                break;
-            case SLICE_RANGE:
-                new_shape[i] = slices[i].data.range.end - slices[i].data.range.start + 1;
-                element_offset += slices[i].data.range.start * base_strides[i];
-                break;
-            case SLICE_INDEX:
-                new_shape[i] = 1;
-                element_offset += slices[i].data.index * base_strides[i];
-                break;
+                zend_throw_error(NULL, "Index %d out of bounds for dimension %d (size %d)",
+                                 index, i, base_tensor->shape[i]);
+                return NULL;
             }
+
+            view_strides[view_ndims] = 0;
+            view_shape[view_ndims] = 1;
+            element_offset += index * base_strides[i];
+            view_ndims++;
+            break;
         }
-        else
+
+        case SLICE_RANGE:
         {
-            new_shape[i] = 1;
+            int start = slice.data.range.start;
+            int end = slice.data.range.end;
+            if (start < 0 || end < start || end >= base_tensor->shape[i])
+            {
+                zend_throw_error(NULL, "Range [%d:%d] out of bounds for dimension %d (size %d)",
+                                 start, end, i, base_tensor->shape[i]);
+                return NULL;
+            }
+            int len = (end - start + 1);
+            element_offset += (size_t)start * base_strides[i];
+
+            view_shape[view_ndims] = len;
+            view_strides[view_ndims] = base_strides[i];
+            view_ndims++;
+            break;
         }
+
+        default:
+            zend_throw_error(NULL, "Invalid slice type for dimension %d", i);
+            return NULL;
+        }
+    }
+
+    size_t view_total = 1;
+    for (int i = 0; i < view_ndims; ++i)
+        view_total *= (size_t)view_shape[i];
+
+    size_t base_total = base_tensor->total_size;
+    if (element_offset >= base_total)
+    {
+        zend_throw_error(NULL, "Slice offset %zu out of bounds (base size %zu)", element_offset, base_total);
+        return NULL;
+    }
+    if (element_offset + view_total > base_total)
+    {
+        zend_throw_error(NULL, "Slice region (offset %zu length %zu) out of bounds (base size %zu)",
+                         element_offset, view_total, base_total);
+        return NULL;
     }
 
     size_t byte_offset = element_offset * sizeof(float);
-
-    size_t base_total_elements = base_tensor->total_size;
-    if (element_offset >= base_total_elements)
-    {
-        return NULL;
-    }
 
     tensor_t *view = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!view)
         return NULL;
 
+    memset(view, 0, sizeof(tensor_t));
+
     view->is_view = 1;
-    view->gpu_offset = byte_offset;
+    view->gpu_offset = 0;
     view->data = (float *)((char *)base_tensor->data + byte_offset);
     view->ref_count = 1;
-    view->total_size = 1;
-    view->ndims = new_ndims;
-    view->shape = (int *)emalloc(new_ndims * sizeof(int));
-    memcpy(view->shape, new_shape, new_ndims * sizeof(int));
-
-    for (int i = 0; i < new_ndims; i++)
+    view->ndims = view_ndims;
+    if (view_ndims > 0)
     {
-        view->total_size *= new_shape[i];
-    }
+        view->shape = (int *)emalloc(sizeof(int) * view_ndims);
+        memcpy(view->shape, view_shape, sizeof(int) * view_ndims);
 
-    view->base_tensor = base_tensor;
-    view->base_tensor->ref_count++;
-
-    view->slices = (slice_info_t *)emalloc(num_slices * sizeof(slice_info_t));
-    memcpy(view->slices, slices, num_slices * sizeof(slice_info_t));
-    view->num_slices = num_slices;
-
-    cudnnCreateTensorDescriptor(&view->desc);
-
-    if (new_ndims <= 4)
-    {
-        int dims[4] = {1, 1, 1, 1};
-        int strides[4] = {1, 1, 1, 1};
-
-        for (int i = 0; i < new_ndims && i < 4; i++)
-        {
-            dims[i] = new_shape[i];
-        }
-
-        strides[3] = 1;
-        if (new_ndims >= 4)
-            strides[2] = dims[3];
-        if (new_ndims >= 3)
-            strides[1] = dims[2] * strides[2];
-        if (new_ndims >= 2)
-            strides[0] = dims[1] * strides[1];
-
-        cudnnSetTensorNdDescriptor(view->desc, CUDNN_DATA_FLOAT, 4, dims, strides);
+        view->strides = (size_t *)emalloc(sizeof(size_t) * view_ndims);
+        memcpy(view->strides, view_strides, sizeof(size_t) * view_ndims);
     }
     else
     {
-        int *strides = (int *)emalloc(new_ndims * sizeof(int));
-        strides[new_ndims - 1] = 1;
-        for (int i = new_ndims - 2; i >= 0; i--)
-        {
-            strides[i] = strides[i + 1] * new_shape[i + 1];
-        }
-        cudnnSetTensorNdDescriptor(view->desc, CUDNN_DATA_FLOAT, new_ndims, new_shape, strides);
-        efree(strides);
+        view->shape = NULL;
+        view->strides = NULL;
     }
+
+    view->total_size = view_total;
+
+    view->base_tensor = base_tensor;
+    base_tensor->ref_count++;
+
+    if (num_slices > 0)
+    {
+        view->num_slices = num_slices;
+        view->slices = (slice_info_t *)emalloc(sizeof(slice_info_t) * num_slices);
+        memcpy(view->slices, slices, sizeof(slice_info_t) * num_slices);
+    }
+    else
+    {
+        view->num_slices = 0;
+        view->slices = NULL;
+    }
+
+    cudnnCreateTensorDescriptor(&view->desc);
+    if (view_ndims > 0)
+    {
+        int cudnn_dims[MAX_DIMS];
+        int cudnn_strides[MAX_DIMS];
+        for (int i = 0; i < view_ndims; ++i)
+        {
+            cudnn_dims[i] = view_shape[i];
+            cudnn_strides[i] = (int)view_strides[i];
+        }
+        cudnnSetTensorNdDescriptor(view->desc, CUDNN_DATA_FLOAT, view_ndims, cudnn_dims, cudnn_strides);
+    }
+    else
+    {
+        int dims[1] = {1};
+        int strides_i[1] = {1};
+        cudnnSetTensorNdDescriptor(view->desc, CUDNN_DATA_FLOAT, 1, dims, strides_i);
+    }
+
     return view;
 }
 
@@ -170,13 +219,9 @@ void cuda_tensor_destroy(tensor_t *tensor)
     if (!tensor)
         return;
 
-    if (tensor->is_view && !tensor->base_tensor) {
-        zend_error(E_WARNING, "Attempting to destroy a view with no base tensor!");
-        return;
-    }
-
-    if (!tensor->is_view && tensor->ref_count > 1) {
-        zend_error(E_WARNING, "Attempting to destroy a base tensor that still has active views!");
+    if (tensor->is_view && !tensor->base_tensor)
+    {
+        efree(tensor);
         return;
     }
 
@@ -235,9 +280,7 @@ tensor_t *resolve_result_tensor(tensor_t *t)
 tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
 {
     if (!tensor_init())
-    {
         return NULL;
-    }
 
     tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
@@ -245,21 +288,30 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
 
     tensor->ndims = ndims;
     tensor->shape = (int *)emalloc(ndims * sizeof(int));
-    tensor->is_view = 0;
     memcpy(tensor->shape, shape, ndims * sizeof(int));
 
-    tensor->total_size = 1;
-    tensor->ref_count = 1;
+    tensor->strides = (size_t *)emalloc(ndims * sizeof(size_t));
 
-    for (int i = 0; i < ndims; i++)
+    size_t stride = 1;
+    for (int i = ndims - 1; i >= 0; i--)
     {
-        tensor->total_size *= shape[i];
+        tensor->strides[i] = stride;
+        stride *= shape[i];
     }
 
+    tensor->total_size = stride;
+    tensor->is_view = 0;
+    tensor->gpu_offset = 0;
+    tensor->slices = NULL;
+    tensor->num_slices = 0;
+    tensor->ref_count = 1;
+
     cudaMalloc((void **)&tensor->data, tensor->total_size * sizeof(float));
+
     if (data)
     {
-        cudaMemcpy(tensor->data, data, tensor->total_size * sizeof(float),
+        cudaMemcpy(tensor->data, data,
+                   tensor->total_size * sizeof(float),
                    cudaMemcpyHostToDevice);
     }
 
@@ -268,35 +320,27 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
     if (ndims <= 4)
     {
         int dims[4] = {1, 1, 1, 1};
-        int strides[4] = {1, 1, 1, 1};
+        int strides_cudnn[4] = {1, 1, 1, 1};
 
-        for (int i = 0; i < ndims && i < 4; i++)
-        {
+        for (int i = 0; i < ndims; i++)
             dims[i] = shape[i];
-        }
 
-        strides[3] = 1;
-        if (ndims >= 4)
-            strides[2] = dims[3];
-        if (ndims >= 3)
-            strides[1] = dims[2] * strides[2];
-        if (ndims >= 2)
-            strides[0] = dims[1] * strides[1];
+        strides_cudnn[ndims - 1] = 1;
+        for (int i = ndims - 2; i >= 0; i--)
+            strides_cudnn[i] = strides_cudnn[i + 1] * dims[i + 1];
 
-        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, 4, dims, strides);
+        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, 4, dims, strides_cudnn);
     }
     else
     {
-        int *strides = (int *)emalloc(ndims * sizeof(int));
+        int *strides_cudnn = (int *)emalloc(ndims * sizeof(int));
 
-        strides[ndims - 1] = 1;
+        strides_cudnn[ndims - 1] = 1;
         for (int i = ndims - 2; i >= 0; i--)
-        {
-            strides[i] = strides[i + 1] * shape[i + 1];
-        }
+            strides_cudnn[i] = strides_cudnn[i + 1] * shape[i + 1];
 
-        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, ndims, shape, strides);
-        efree(strides);
+        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, ndims, shape, strides_cudnn);
+        efree(strides_cudnn);
     }
 
     return tensor;

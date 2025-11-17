@@ -28,6 +28,7 @@ typedef struct tensor
 {
     float *data;
     int *shape;
+    size_t *strides;
     int ndims;
     size_t total_size;
     cudnnTensorDescriptor_t desc;

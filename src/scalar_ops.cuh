@@ -4,23 +4,68 @@
 #include <cuda_runtime.h>
 
 template <typename Op>
-__global__ void scalar_kernel(const float *a, float scalar, float *result, size_t total)
+__global__ void scalar_kernel_strided(
+    const float *base,
+    float scalar,
+    float *result,
+    size_t base_offset,
+    const int *shape,
+    const size_t *strides,
+    int ndims,
+    size_t total_size)
 {
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= total)
+    if (idx >= total_size)
         return;
 
+    size_t offset = 0;
+    size_t remaining = idx;
+
+    for (int d = ndims - 1; d >= 0; d--)
+    {
+        size_t coord = remaining % shape[d];
+        remaining /= shape[d];
+        offset += coord * strides[d];
+    }
+
     Op op;
-    result[idx] = op(a[idx], scalar);
+    result[base_offset + offset] = op(base[offset], scalar);
 }
 
 template <typename Op>
-void launch_scalar_op(float *a, float scalar, float *result, size_t total)
+void launch_scalar_op(
+    float *base,
+    float scalar,
+    float *result,
+    size_t base_offset,
+    int *shape,
+    size_t *strides,
+    int ndims,
+    size_t total_size)
 {
     int threads = 256;
-    int blocks = (total + threads - 1) / threads;
+    int blocks = (total_size + threads - 1) / threads;
 
-    scalar_kernel<Op><<<blocks, threads>>>(a, scalar, result, total);
+    int *d_shape;
+    size_t *d_strides;
+
+    cudaMalloc(&d_shape, ndims * sizeof(int));
+    cudaMalloc(&d_strides, ndims * sizeof(size_t));
+    cudaMemcpy(d_shape, shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_strides, strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
+
+    scalar_kernel_strided<Op><<<blocks, threads>>>(
+        base,
+        scalar,
+        result,
+        base_offset,
+        d_shape,
+        d_strides,
+        ndims,
+        total_size);
+
+    cudaFree(d_shape);
+    cudaFree(d_strides);
 }
 
 #endif

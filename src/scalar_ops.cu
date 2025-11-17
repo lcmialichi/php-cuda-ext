@@ -5,10 +5,17 @@
 
 extern "C"
 {
-#define DEFINE_SCALAR_WRAPPER(name, Op)                            \
-    void name(float *a, float scalar, float *result, size_t total) \
-    {                                                              \
-        launch_scalar_op<Op>(a, scalar, result, total);            \
+#define DEFINE_SCALAR_WRAPPER(name, Op)                                                             \
+    void name(float *base,                                                                          \
+              float scalar,                                                                         \
+              float *result,                                                                        \
+              size_t base_offset,                                                                   \
+              int *shape,                                                                           \
+              size_t *strides,                                                                      \
+              int ndims,                                                                            \
+              size_t total_size)                                                                    \
+    {                                                                                               \
+        launch_scalar_op<Op>(base, scalar, result, base_offset, shape, strides, ndims, total_size); \
     }
 
     DEFINE_SCALAR_WRAPPER(launch_scalar_add_kernel, AddOp)

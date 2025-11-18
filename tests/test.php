@@ -204,10 +204,4 @@ class CudaBenchmark
     }
 }
 
-// CudaBenchmark::runAllTests();
-
-$base = new CudaArray([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]);
-
-$view = $base(null, null, [0, 1])->multiply(2);
-
-var_dump($base->toArray());
+CudaBenchmark::runAllTests();

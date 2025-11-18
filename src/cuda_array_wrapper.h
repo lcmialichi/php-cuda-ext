@@ -28,7 +28,6 @@ tensor_t *cuda_tensor_cos(tensor_t *tensor);
 
 tensor_t* perform_broadcast_operation(tensor_t *a, tensor_t *b, int operation_type);
 
-int* cuda_tensor_get_shape(tensor_t* tensor);
 tensor_t *cuda_tensor_transpose(tensor_t *tensor);
 
 tensor_t *cuda_tensor_copy(tensor_t *tensor);

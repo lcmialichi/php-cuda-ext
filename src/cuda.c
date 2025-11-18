@@ -6,7 +6,7 @@
 #include "cuda.h"
 #include "cuda_wrapper.h"
 #include "cuda_arginfo.h"
-#include "cuda_array.h"
+#include "cuda_array/cuda_array.h"
 
 ZEND_FUNCTION(cuda_get_device_count)
 {

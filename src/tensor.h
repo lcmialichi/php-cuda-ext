@@ -55,10 +55,6 @@ extern "C"
     
     tensor_t *resolve_result_tensor(tensor_t *t);
     tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
-    tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[]);
-    tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims);
-    tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value);
-    tensor_t *cuda_tensor_create_empty(const int shape[], int ndims);
 
 #ifdef __cplusplus
 }

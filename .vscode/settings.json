@@ -28,6 +28,9 @@
         "xhash": "c",
         "cuda_kernels.h": "c",
         "utility": "c",
-        "memory": "cpp"
+        "memory": "cpp",
+        "compare": "c",
+        "operations.h": "c",
+        "tensor_fabric.h": "c"
     }
 }

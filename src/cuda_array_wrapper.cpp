@@ -1,5 +1,6 @@
 #include "cuda_array_wrapper.h"
 #include "cuda/broadcast_ops.h"
+#include "cuda_array/tensor_fabric.h"
 #include "cuda/scalar_ops.h"
 #include "operations.h"
 #include <stdlib.h>
@@ -42,10 +43,13 @@ int calculate_broadcast_shape(int *a_shape, int a_dims,
 {
     *result_dims = (a_dims > b_dims) ? a_dims : b_dims;
 
+    int offset_a = *result_dims - a_dims;
+    int offset_b = *result_dims - b_dims;
+
     for (int i = 0; i < *result_dims; i++)
     {
-        int a_dim = (i < *result_dims - a_dims) ? 1 : a_shape[i - (*result_dims - a_dims)];
-        int b_dim = (i < *result_dims - b_dims) ? 1 : b_shape[i - (*result_dims - b_dims)];
+        int a_dim = (i < offset_a) ? 1 : a_shape[i - offset_a];
+        int b_dim = (i < offset_b) ? 1 : b_shape[i - offset_b];
 
         if (a_dim == b_dim)
         {
@@ -64,6 +68,7 @@ int calculate_broadcast_shape(int *a_shape, int a_dims,
             return 0;
         }
     }
+
     return 1;
 }
 
@@ -75,6 +80,26 @@ int calculate_broadcast_stride(int *result_shape, int result_dims, int dim_idx)
         stride *= result_shape[i];
     }
     return stride;
+}
+
+static void calculate_tensor_strides(tensor_t *tensor,
+                                     int *result_shape,
+                                     int result_dims,
+                                     int *tensor_strides)
+{
+    for (int i = 0; i < tensor->ndims; i++)
+    {
+        if (tensor->is_view)
+        {
+            tensor_strides[i] = (int)tensor->strides[i];
+            continue;
+        }
+
+        int result_dim_idx = result_dims - tensor->ndims + i;
+        tensor_strides[i] = result_dim_idx >= 0 && tensor->shape[i] != 1
+                                ? calculate_broadcast_stride(result_shape, result_dims, result_dim_idx)
+                                : 0;
+    }
 }
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
@@ -94,45 +119,8 @@ int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
         *total_elements *= result_shape[i];
     }
 
-    for (int i = 0; i < a->ndims; i++)
-    {
-        if (a->is_view)
-        {
-            a_strides[i] = (int)a->strides[i];
-        }
-        else
-        {
-            int result_dim_idx = *result_dims - a->ndims + i;
-            if (result_dim_idx >= 0 && a->shape[i] != 1)
-            {
-                a_strides[i] = calculate_broadcast_stride(result_shape, *result_dims, result_dim_idx);
-            }
-            else
-            {
-                a_strides[i] = 0;
-            }
-        }
-    }
-
-    for (int i = 0; i < b->ndims; i++)
-    {
-        if (b->is_view)
-        {
-            b_strides[i] = (int)b->strides[i];
-        }
-        else
-        {
-            int result_dim_idx = *result_dims - b->ndims + i;
-            if (result_dim_idx >= 0 && b->shape[i] != 1)
-            {
-                b_strides[i] = calculate_broadcast_stride(result_shape, *result_dims, result_dim_idx);
-            }
-            else
-            {
-                b_strides[i] = 0;
-            }
-        }
-    }
+    calculate_tensor_strides(a, result_shape, *result_dims, a_strides);
+    calculate_tensor_strides(b, result_shape, *result_dims, b_strides);
 
     return 1;
 }
@@ -376,56 +364,6 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
     }
 
     return reshaped;
-}
-
-cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size)
-{
-    float *pinned_host_data;
-    cudaError_t status = cudaMallocHost((void **)&pinned_host_data, total_size * sizeof(float));
-    if (status != cudaSuccess)
-        return status;
-
-    int host_index = 0;
-    flatten_php_array_to_buffer(data, pinned_host_data, &host_index);
-
-    status = cudaMemcpyAsync(gpu_data, pinned_host_data, total_size * sizeof(float),
-                             cudaMemcpyHostToDevice, 0);
-
-    cudaFreeHost(pinned_host_data);
-    *index = host_index;
-    return status;
-}
-
-static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index)
-{
-    if (Z_TYPE_P(data) == IS_ARRAY)
-    {
-        HashTable *ht = Z_ARRVAL_P(data);
-        zval *current;
-        ZEND_HASH_FOREACH_VAL(ht, current)
-        {
-            flatten_php_array_to_buffer(current, buffer, index);
-        }
-        ZEND_HASH_FOREACH_END();
-        return;
-    }
-
-    if (Z_TYPE_P(data) == IS_LONG)
-    {
-        buffer[(*index)++] = (float)Z_LVAL_P(data);
-    }
-    else if (Z_TYPE_P(data) == IS_DOUBLE)
-    {
-        buffer[(*index)++] = (float)Z_DVAL_P(data);
-    }
-    else if (Z_TYPE_P(data) == IS_TRUE)
-    {
-        buffer[(*index)++] = 1.0f;
-    }
-    else if (Z_TYPE_P(data) == IS_FALSE)
-    {
-        buffer[(*index)++] = 0.0f;
-    }
 }
 
 tensor_t *cuda_tensor_transpose(tensor_t *tensor)
@@ -762,9 +700,4 @@ int *calculate_strides(int *shape, int ndims)
     }
 
     return strides;
-}
-
-int *cuda_tensor_get_shape(tensor_t *tensor)
-{
-    return tensor->shape;
 }

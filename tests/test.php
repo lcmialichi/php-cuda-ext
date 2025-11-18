@@ -204,4 +204,18 @@ class CudaBenchmark
     }
 }
 
-CudaBenchmark::runAllTests();
+// CudaBenchmark::runAllTests();
+
+$cArray = new CudaArray([[1, 2, 3, 4], [5, 6, 7, 8]]);
+
+// [$x, $y, $z] = $cArray->getShape();
+
+// var_dump("Shape: ", $cArray->getShape());
+// var_dump("strides: ", $cArray->getStrides());
+
+// for ($i = 0; $i <= $x -1; $i++) {
+//     $cArray($i)->multiply($i);
+// }
+
+var_dump($cArray->reshape([4, 2])->toArray());
+

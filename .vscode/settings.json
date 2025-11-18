@@ -31,6 +31,26 @@
         "memory": "cpp",
         "compare": "c",
         "operations.h": "c",
-        "tensor_fabric.h": "c"
+        "tensor_fabric.h": "c",
+        "atomic": "c",
+        "cmath": "c",
+        "concepts": "c",
+        "cstdarg": "c",
+        "ctime": "c",
+        "cwchar": "c",
+        "functional": "c",
+        "iosfwd": "c",
+        "limits": "c",
+        "new": "c",
+        "tuple": "c",
+        "typeinfo": "c",
+        "unordered_map": "c",
+        "ca_arginfo.h": "c",
+        "broadcast_ops.h": "c",
+        "unary_ops.h": "c",
+        "scalar_ops.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "ca_private.h": "c"
     }
 }

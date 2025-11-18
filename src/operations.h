@@ -13,3 +13,12 @@
 #define OP_NE 8
 #define OP_GE 9
 #define OP_LE 10
+
+#define OP_EXP 11
+#define OP_SQRT 12
+#define OP_LOG 13
+#define OP_SIN 14
+#define OP_COS 15
+#define OP_TAN 16
+#define OP_ABS 17
+#define OP_NEG 18

@@ -3,7 +3,7 @@
 #endif
 
 #include "php.h"
-#include "../tensor.h"
+#include "tensor.h"
 
 tensor_t *create_tensor_from_php_array(zval *data);
 tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value);

@@ -24,7 +24,7 @@ extern "C"
 }
 #endif
 
-using scalar_fn = void (*)(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
+typedef void (*scalar_fn)(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
 
 typedef struct
 {

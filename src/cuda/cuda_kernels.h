@@ -5,15 +5,6 @@
 extern "C"
 {
 #endif
-    void launch_sqrt_kernel(float *a, float *result, int n);
-    void launch_exp_kernel(float *a, float *result, int n);
-    void launch_log_kernel(float *a, float *result, int n);
-    void launch_sin_kernel(float *a, float *result, int n);
-    void launch_cos_kernel(float *a, float *result, int n);
-    void launch_tan_kernel(float *a, float *result, int n);
-    void launch_abs_kernel(float *a, float *result, int n);
-    void launch_negate_kernel(float *a, float *result, int n);
-    void launch_reciprocal_kernel(float *a, float *result, int n);
 
     void launch_sum_kernel(float *a, float *result, int n);
     void launch_max_kernel(float *a, float *result, int n);

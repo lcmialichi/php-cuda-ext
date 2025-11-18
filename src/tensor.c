@@ -36,7 +36,69 @@ int tensor_init()
     return 1;
 }
 
-tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices)
+int is_contiguous(tensor_t *tensor)
+{
+    if (tensor == NULL) {
+        return 0;
+    }
+    
+    if (tensor->ndims <= 1) {
+        return 1;
+    }
+
+    size_t expected_stride = 1; 
+    int ndims = tensor->ndims;
+
+    for (int i = ndims - 1; i >= 0; i--)
+    {
+        if (tensor->strides[i] != expected_stride)
+        {
+            return 0;
+        }
+
+        expected_stride *= tensor->shape[i];
+    }
+
+    return 1;
+}
+
+tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int* shape, size_t* strides, int dims, size_t offset, size_t total_size)
+{
+    size_t byte_offset = offset * sizeof(float);
+
+    tensor_t *view = (tensor_t *)emalloc(sizeof(tensor_t));
+
+    memset(view, 0, sizeof(tensor_t));
+
+    view->is_view = 1;
+    view->gpu_offset = 0;
+    view->data = (float *)((char *)base_tensor->data + byte_offset);
+    view->total_size = total_size;
+    view->ref_count = 1;
+    view->ndims = dims;
+    view->base_tensor = base_tensor;
+    base_tensor->ref_count++;
+    view->num_slices = 0;
+    view->slices = NULL;
+
+    if (dims > 0)
+    {
+        view->shape = (int *)emalloc(sizeof(int) * dims);
+        memcpy(view->shape, shape, sizeof(int) * dims);
+
+        view->strides = (size_t *)emalloc(sizeof(size_t) * dims);
+        memcpy(view->strides, strides, sizeof(size_t) * dims);
+    }
+    else
+    {
+        view->shape = NULL;
+        view->strides = NULL;
+    }
+
+    return view;
+}
+
+tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices)
 {
     if (!base_tensor || !slices)
     {
@@ -138,48 +200,12 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, slice_info_t *slices, i
         return NULL;
     }
 
-    size_t byte_offset = element_offset * sizeof(float);
-
-    tensor_t *view = (tensor_t *)emalloc(sizeof(tensor_t));
-    if (!view)
-        return NULL;
-
-    memset(view, 0, sizeof(tensor_t));
-
-    view->is_view = 1;
-    view->gpu_offset = 0;
-    view->data = (float *)((char *)base_tensor->data + byte_offset);
-    view->ref_count = 1;
-    view->ndims = view_ndims;
-    if (view_ndims > 0)
-    {
-        view->shape = (int *)emalloc(sizeof(int) * view_ndims);
-        memcpy(view->shape, view_shape, sizeof(int) * view_ndims);
-
-        view->strides = (size_t *)emalloc(sizeof(size_t) * view_ndims);
-        memcpy(view->strides, view_strides, sizeof(size_t) * view_ndims);
-    }
-    else
-    {
-        view->shape = NULL;
-        view->strides = NULL;
-    }
-
-    view->total_size = view_total;
-
-    view->base_tensor = base_tensor;
-    base_tensor->ref_count++;
-
+    tensor_t *view = cuda_tensor_create_view(base_tensor, view_shape, view_strides, view_ndims, element_offset, view_total);
     if (num_slices > 0)
     {
         view->num_slices = num_slices;
         view->slices = (slice_info_t *)emalloc(sizeof(slice_info_t) * num_slices);
         memcpy(view->slices, slices, sizeof(slice_info_t) * num_slices);
-    }
-    else
-    {
-        view->num_slices = 0;
-        view->slices = NULL;
     }
 
     cudnnCreateTensorDescriptor(&view->desc);
@@ -259,4 +285,3 @@ void cuda_tensor_destroy(tensor_t *tensor)
 
     efree(tensor);
 }
-

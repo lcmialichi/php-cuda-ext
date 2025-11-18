@@ -8,12 +8,12 @@ extern "C"
 {
 #endif
 
-    using broadcast_fn = void (*)(float *a, float *b, float *result,
-                                  int *a_strides, int a_dims,
-                                  int *b_strides, int b_dims,
-                                  int *result_shape, int result_dims,
-                                  size_t total_elements, size_t a_base_offset,
-                                  size_t b_base_offset);
+    typedef void (*broadcast_fn)(float *a, float *b, float *result,
+                             int *a_strides, int a_dims,
+                             int *b_strides, int b_dims,
+                             int *result_shape, int result_dims,
+                             size_t total_elements, size_t a_base_offset,
+                             size_t b_base_offset);
     typedef struct
     {
         int op;

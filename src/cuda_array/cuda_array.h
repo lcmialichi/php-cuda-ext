@@ -4,7 +4,7 @@
 
 #include "php.h"
 #include "cuda_wrapper.h"
-#include "../tensor.h"
+#include "tensor.h"
 
 extern zend_class_entry *cuda_array_ce;
 
@@ -39,6 +39,9 @@ ZEND_METHOD(CudaArray, exp);
 ZEND_METHOD(CudaArray, log);
 ZEND_METHOD(CudaArray, sin);
 ZEND_METHOD(CudaArray, cos);
+ZEND_METHOD(CudaArray, tan);
+ZEND_METHOD(CudaArray, abs);
+ZEND_METHOD(CudaArray, neg);
 
 ZEND_METHOD(CudaArray, greater);
 ZEND_METHOD(CudaArray, less);

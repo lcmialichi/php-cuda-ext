@@ -94,4 +94,68 @@ struct LessEqualOp
     }
 };
 
+struct ExpOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return expf(a);
+    }
+};
+
+struct SqrtOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return sqrtf(a);
+    }
+};
+
+struct LogOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return logf(a);
+    }
+};
+
+struct SinOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return sinf(a);
+    }
+};
+
+struct CosOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return cosf(a);
+    }
+};
+
+struct TanOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return tanf(a);
+    }
+};
+
+struct AbsOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return fabsf(a);
+    }
+};
+
+struct NegOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return -a;
+    }
+};
+
 #endif

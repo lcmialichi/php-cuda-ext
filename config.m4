@@ -10,6 +10,8 @@ if test "$PHP_CUDA" != "no"; then
 
     PHP_ADD_INCLUDE(/usr/local/cuda/include)
     PHP_ADD_INCLUDE([src])
+    PHP_ADD_INCLUDE([src/cuda])
+    PHP_ADD_INCLUDE([src/cuda_array])
     PHP_ADD_LIBRARY(stdc++, 1, CUDA_SHARED_LIBADD)
     
     PHP_ADD_LIBRARY_WITH_PATH(cudnn, /usr/local/cuda/lib64, CUDA_SHARED_LIBADD)
@@ -20,7 +22,7 @@ if test "$PHP_CUDA" != "no"; then
     CFLAGS="$CFLAGS -O2"
     
     dnl Lista de arquivos CUDA
-    CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu"
+    CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu"
 
     AC_MSG_CHECKING([for CUDA kernels])
     for f in $CUDA_FILES; do
@@ -36,7 +38,14 @@ if test "$PHP_CUDA" != "no"; then
     PHP_EVAL_LIBLINE([-L. -lcudakernels], CUDA_SHARED_LIBADD)
     
     PHP_SUBST(CUDA_SHARED_LIBADD)
-    
-    PHP_NEW_EXTENSION(cuda, src/cuda.c src/cuda_wrapper.cpp src/cuda_array/cuda_array.c src/cuda_array_wrapper.cpp src/tensor.c src/cuda_array/tensor_fabric.c, $ext_shared)
+    SRC_FILES="\
+    src/cuda.c \
+    src/cuda_wrapper.cpp \
+    src/cuda_array/cuda_array.c \ 
+    src/cuda_array/ca_private.c \
+    src/tensor.c \
+    src/cuda_array/tensor_fabric.c"
+
+    PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
     PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)
 fi

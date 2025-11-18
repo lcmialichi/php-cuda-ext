@@ -20,7 +20,7 @@ if test "$PHP_CUDA" != "no"; then
     CFLAGS="$CFLAGS -O2"
     
     dnl Lista de arquivos CUDA
-    CUDA_FILES="src/cuda_kernels.cu src/broadcast_ops.cu src/scalar_ops.cu"
+    CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu"
 
     AC_MSG_CHECKING([for CUDA kernels])
     for f in $CUDA_FILES; do
@@ -31,7 +31,7 @@ if test "$PHP_CUDA" != "no"; then
 
     AC_MSG_RESULT([yes])
 
-    ar rcs libcudakernels.a src/*.o
+    ar rcs libcudakernels.a src/cuda/*.o
 
     PHP_EVAL_LIBLINE([-L. -lcudakernels], CUDA_SHARED_LIBADD)
     

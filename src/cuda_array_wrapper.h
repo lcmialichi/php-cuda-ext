@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include "php.h"
-#include "cuda_kernels.h"
+#include "cuda/cuda_kernels.h"
 #include "tensor.h"
 
 #ifdef __cplusplus

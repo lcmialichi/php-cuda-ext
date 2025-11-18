@@ -1,6 +1,6 @@
 #include "cuda_array_wrapper.h"
-#include "broadcast_ops.h"
-#include "scalar_ops.h"
+#include "cuda/broadcast_ops.h"
+#include "cuda/scalar_ops.h"
 #include "operations.h"
 #include <stdlib.h>
 #include "helpers.c"

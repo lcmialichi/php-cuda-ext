@@ -21,7 +21,6 @@ if test "$PHP_CUDA" != "no"; then
     CXXFLAGS="$CXXFLAGS -O2"
     CFLAGS="$CFLAGS -O2"
     
-    dnl Lista de arquivos CUDA
     CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu"
 
     AC_MSG_CHECKING([for CUDA kernels])

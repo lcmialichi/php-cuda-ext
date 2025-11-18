@@ -3,97 +3,112 @@ set -e
 
 EXT_NAME="cuda"
 SRC_DIR="$(pwd)"
-BUILD_DIR="/tmp/${EXT_NAME}_build" 
+BUILD_DIR="/tmp/${EXT_NAME}_build"
 INSTALL_EXT_DIR=$(php-config --extension-dir)
 
-find /usr -name "cudnn.h" 2>/dev/null
-find /usr/local -name "cudnn.h" 2>/dev/null
-find /opt -name "cudnn.h" 2>/dev/null
+echo ""
+echo "┌───────────────────────────────────────────────────────┐"
+echo "│     PHP CUDA Extension — Build & Install Script       │"
+echo "└───────────────────────────────────────────────────────┘"
+echo ""
 
-apt-get update && apt-get install -y libcudnn8-dev
-
-cd $SRC_DIR 
-echo "--- initializing extension build $EXT_NAME (C++/CUDA) ---"
-
-if [ -f "Makefile" ]; then
-    make clean 2>/dev/null
+if [ "$EUID" -ne 0 ]; then
+    echo "WARNING  Running without root privileges."
+    echo "   Dependency installation will be skipped."
+    echo "   If you need cuDNN installed automatically, run:"
+    echo "   sudo ./compile"
+    INSTALL_DEPS=0
+else
+    INSTALL_DEPS=1
 fi
 
+if [ ! -d "/usr/local/cuda" ]; then
+    echo "ERROR: CUDA Toolkit not found at /usr/local/cuda"
+    echo "   Install CUDA before continuing:"
+    echo "   https://developer.nvidia.com/cuda-downloads"
+    exit 1
+fi
+
+echo "✔ CUDA Toolkit found."
+
+echo "Searching for cudnn.h..."
+CUDNN_PATH=$(find /usr /usr/local /opt -name "cudnn.h" 2>/dev/null | head -n 1)
+
+if [ -z "$CUDNN_PATH" ]; then
+    echo "ERROR: cuDNN not found."
+
+    if [ "$INSTALL_DEPS" -eq 1 ]; then
+        echo "→ Installing libcudnn8-dev..."
+        apt-get update -qq
+        apt-get install -y libcudnn8-dev
+    else
+        echo "ERROR: cuDNN missing. The extension may not compile without it."
+        echo "   Install cuDNN manually:"
+        echo "   https://developer.nvidia.com/cudnn"
+    fi
+else
+    echo "✔ cuDNN found at: $CUDNN_PATH"
+fi
+
+echo ""
+echo "Preparing build directory..."
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
+
 cd "$BUILD_DIR"
 cp -R "$SRC_DIR"/* ./
+
+echo ""
+echo "Building PHP extension: $EXT_NAME"
+
+if [ -f "Makefile" ]; then
+    make clean || true
+fi
 
 phpize
 ./configure --with-cuda=/usr/local/cuda
 
-echo "Compiling $EXT_NAME..."
-make
+echo ""
+echo "Compiling..."
+make -j"$(nproc)"
 
-echo "installing $EXT_NAME.so at PHP (DIR: $(php-config --extension-dir))..."
+echo ""
+echo "Installing into PHP extension directory:"
+echo "→ $(php-config --extension-dir)"
 make install
 
-INSTALL_DIR=$(php-config --extension-dir)
-TEST_INI="/tmp/$EXT_NAME-test.ini"
+echo ""
+echo "Generating INI file..."
 
-echo "extension=$EXT_NAME.so" > "$TEST_INI"
-    INI_FILE_NAME="$EXT_NAME.ini"
-    INI_FILE_TEMP="/tmp/$INI_FILE_NAME"
-    echo "; Extension configuration $EXT_NAME" > "$INI_FILE_TEMP"
-    echo "extension=$EXT_NAME.so" >> "$INI_FILE_TEMP"
-    
-    PHP_INI_SCAN_DIR=$(php -i | grep 'Scan this dir for additional .ini files' | awk '{print $NF}')
-    
+INI_FILE_NAME="$EXT_NAME.ini"
+INI_FILE_TEMP="/tmp/$INI_FILE_NAME"
+
+{
+    echo "; PHP CUDA Extension Configuration"
+    echo "extension=$EXT_NAME.so"
+} > "$INI_FILE_TEMP"
+
+PHP_INI_SCAN_DIR=$(php -i | grep 'Scan this dir for additional .ini files' | awk '{print $NF}')
+
 if [ -d "$PHP_INI_SCAN_DIR" ]; then
-    if command -v phpenmod &> /dev/null; then
-        echo "   -> Enabling extension..."
-        
-        PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;")
-        MODS_AVAILABLE_DIR="/etc/php/$PHP_VERSION/mods-available"
-        
-        if [ -d "$MODS_AVAILABLE_DIR" ]; then
-            if cp "$INI_FILE_TEMP" "$MODS_AVAILABLE_DIR/"; then
-                phpenmod "$EXT_NAME"
-                echo "--- BUILD AND INSTALLATION SUCCESSFULLY COMPLETED! ---"
-                echo "Remember to RESTART your web/FPM server to apply the changes."
-            else
-                echo "   \033[33mWARNING: Permission failure. Unable to copy the INI file to $MODS_AVAILABLE_DIR.\033[0m"
-                echo "   \033[33m The extension has been compiled, but you must enable it manually with 'sudo':\033[0m"
-                echo "   \$ \033[33msudo cp $INI_FILE_TEMP $MODS_AVAILABLE_DIR/\033[0m"
-                echo "   \$ \033[33msudo phpenmod $EXT_NAME\033[0m"
-            fi
-            
-        else
-            if cp "$INI_FILE_TEMP" "$PHP_INI_SCAN_DIR/"; then
-                echo "--- BUILD AND INSTALLATION SUCCESSFULLY COMPLETED! ---"
-                echo "Extension $EXT_NAME configured in $PHP_INI_SCAN_DIR."
-                echo "Remember to RESTART your web/FPM server to apply the changes."
-            else
-                echo "   \033[33mWARNING: Permission failure. Unable to copy the INI file to $PHP_INI_SCAN_DIR.\033[0m"
-                echo "   \033[33mThe extension has been compiled, but you must enable it manually with 'sudo':\033[0m"
-                echo "   (temp INI path: $INI_FILE_TEMP)"
-                echo "   (src path: $PHP_INI_SCAN_DIR)"
-                echo "   \$ \033[33msudo cp $INI_FILE_TEMP $PHP_INI_SCAN_DIR/\033[0m"
-            fi
-        fi
+    echo "→ Found ini scan directory: $PHP_INI_SCAN_DIR"
 
+    if cp "$INI_FILE_TEMP" "$PHP_INI_SCAN_DIR/"; then
+        echo "✔ INI file installed."
     else
-        if cp "$INI_FILE_TEMP" "$PHP_INI_SCAN_DIR/"; then
-            echo "--- BUILD AND INSTALLATION SUCCESSFULLY COMPLETED! ---"
-            echo "Extension $EXT_NAME configured in $PHP_INI_SCAN_DIR."
-            echo "Remember to RESTART your web/FPM server to apply the changes."
-        else
-            echo "   \033[33mAVISO: Falha de Permissão. Não foi possível copiar o INI para $PHP_INI_SCAN_DIR.\033[0m"
-            echo "   \033[33mA extensão foi compilada, mas você deve habilitá-la manualmente com 'sudo':\033[0m"
-            echo "   (temp INI path: $INI_FILE_TEMP)"
-            echo "   (src path: $PHP_INI_SCAN_DIR)"
-            echo "   \$ \033[33msudo cp $INI_FILE_TEMP $PHP_INI_SCAN_DIR/\033[0m"
-        fi
+        echo "WARNING:  Permission denied. Install manually:"
+        echo "sudo cp $INI_FILE_TEMP $PHP_INI_SCAN_DIR/"
     fi
 
 else
-    echo "--- BUILD AND INSTALLATION SUCCESSFULLY COMPLETED! ---"
-    echo "The PHP scan directory could not be determined."
-    echo "Create the file $EXT_NAME.ini in your PHP configuration directory with the following content:"
+    echo "WARNING:  PHP scan directory could not be detected."
+    echo "Create this file manually in the appropriate PHP config directory:"
+    echo ""
+    echo "$INI_FILE_NAME:"
     echo "extension=$EXT_NAME.so"
 fi
+
+echo ""
+echo "✔ Build and installation complete!"
+echo "   Restart Apache/FPM or your PHP environment to apply changes."
+echo ""

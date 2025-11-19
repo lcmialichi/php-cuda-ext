@@ -5,6 +5,7 @@
 #include "php.h"
 #include "cuda_wrapper.h"
 #include "tensor.h"
+#include "cuda.h"
 
 extern zend_class_entry *cuda_array_ce;
 
@@ -16,7 +17,8 @@ typedef struct
 } cuda_array_obj;
 
 
-void cuda_array_init();
+int cuda_array_init(zend_cuda_globals *cuda_pool_size_mb);
+void cuda_array_shutdown();
 
 ZEND_METHOD(CudaArray, __construct);
 ZEND_METHOD(CudaArray, __invoke);

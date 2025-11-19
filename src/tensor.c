@@ -1,6 +1,8 @@
 #include "tensor.h"
 #include "php.h"
 #include "Zend/zend_API.h"
+#include <string.h>
+#include "memory_pool.h"
 
 static int cuda_is_initialized = 0;
 
@@ -23,15 +25,17 @@ int tensor_init()
 
 int is_contiguous(tensor_t *tensor)
 {
-    if (tensor == NULL) {
+    if (tensor == NULL)
+    {
         return 0;
     }
-    
-    if (tensor->ndims <= 1) {
+
+    if (tensor->ndims <= 1)
+    {
         return 1;
     }
 
-    size_t expected_stride = 1; 
+    size_t expected_stride = 1;
     int ndims = tensor->ndims;
 
     for (int i = ndims - 1; i >= 0; i--)
@@ -47,7 +51,7 @@ int is_contiguous(tensor_t *tensor)
     return 1;
 }
 
-tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int* shape, size_t* strides, int dims, size_t offset, size_t total_size)
+tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size)
 {
     size_t byte_offset = offset * sizeof(float);
 
@@ -68,16 +72,27 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int* shape, size_t* str
 
     if (dims > 0)
     {
+        int *d_shape;
+        size_t *d_strides;
+
         view->shape = (int *)emalloc(sizeof(int) * dims);
         memcpy(view->shape, shape, sizeof(int) * dims);
 
         view->strides = (size_t *)emalloc(sizeof(size_t) * dims);
         memcpy(view->strides, strides, sizeof(size_t) * dims);
+
+        cudaMemcpy(d_shape, view->shape, dims * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_strides, view->strides, dims * sizeof(size_t), cudaMemcpyHostToDevice);
+
+        view->d_shape = d_shape;
+        view->d_strides = d_strides;
     }
     else
     {
         view->shape = NULL;
         view->strides = NULL;
+        view->d_strides = NULL;
+        view->d_shape = NULL;
     }
 
     return view;
@@ -213,6 +228,18 @@ void cuda_tensor_destroy(tensor_t *tensor)
 
     if (tensor->is_view && !tensor->base_tensor)
     {
+        if (tensor->shape)
+            efree(tensor->shape);
+        if (tensor->strides)
+            efree(tensor->strides);
+        if (tensor->slices)
+            efree(tensor->slices);
+
+        if (tensor->d_shape)
+            cudaFree(tensor->d_shape);
+        if (tensor->d_strides)
+            cudaFree(tensor->d_strides);
+
         efree(tensor);
         return;
     }
@@ -239,13 +266,20 @@ void cuda_tensor_destroy(tensor_t *tensor)
     {
         if (tensor->data)
         {
-            cudaFree(tensor->data);
+            tensor_mem_free(tensor->data);
             tensor->data = NULL;
         }
     }
 
+    if (tensor->d_shape)
+        cudaFree(tensor->d_shape);
+    if (tensor->d_strides)
+        cudaFree(tensor->d_strides);
+
     if (tensor->shape)
         efree(tensor->shape);
+    if (tensor->strides)
+        efree(tensor->strides);
 
     efree(tensor);
 }

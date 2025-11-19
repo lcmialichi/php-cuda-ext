@@ -1,10 +1,11 @@
 #include "php.h"
-#include "cuda.h"
 #include "cuda_array.h"
 #include "ca_private.h"
 #include "ca_arginfo.h"
 #include "operations.h"
 #include "tensor_fabric.h"
+#include "memory_pool.h"    
+#include "cuda.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -552,8 +553,18 @@ static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor)
     }
 }
 
-void cuda_array_init()
+int cuda_array_init(zend_cuda_globals *globals)
 {
+    long pool_size_mb = globals.cuda_pool_size_mb;
+    size_t required_size_bytes = (size_t)pool_size_mb * 1024 * 1024;
+
+    if (!tensor_mem_init(required_size_bytes)) { 
+        php_error_docref(NULL, E_WARNING, 
+                         "Failed to initialize CUDA memory pool with %ld MB.", 
+                         pool_size_mb);
+        return 0;
+    }
+
     zend_class_entry *cuda_array_ce = register_cuda_array_class();
 
     cuda_array_ce->create_object = cuda_array_create_object;
@@ -561,6 +572,13 @@ void cuda_array_init()
     memcpy(&cuda_array_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     cuda_array_handlers.offset = XtOffsetOf(cuda_array_obj, obj);
     cuda_array_handlers.free_obj = cuda_array_free_object;
+
+    return 1;
+}
+
+void cuda_array_shutdown()
+{
+    tensor_mem_destroy();
 }
 
 static int parse_slice_parameter(zval *param, slice_info_t *slice)

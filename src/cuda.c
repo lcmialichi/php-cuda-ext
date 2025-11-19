@@ -6,7 +6,7 @@
 #include "cuda.h"
 #include "cuda_wrapper.h"
 #include "cuda_arginfo.h"
-#include "cuda_array/cuda_array.h"
+#include "cuda_array.h"
 
 ZEND_FUNCTION(cuda_get_device_count)
 {
@@ -162,7 +162,6 @@ ZEND_FUNCTION(cuda_synchronize)
     RETURN_TRUE;
 }
 
-
 ZEND_FUNCTION(cuda_get_last_error)
 {
     int error = cuda_wrapper_error();
@@ -205,29 +204,52 @@ ZEND_FUNCTION(cuda_get_peer_access)
 
 static zend_function_entry cuda_functions[] = {
     PHP_FE(cuda_get_device_count, arginfo_cuda_get_device_count)
-    PHP_FE(cuda_get_device_info, arginfo_cuda_get_device_info)
-    PHP_FE(cuda_set_device, arginfo_cuda_set_device)
-    PHP_FE(cuda_get_current_device, arginfo_cuda_get_current_device)
-    PHP_FE(cuda_get_memory_info, arginfo_cuda_get_memory_info)
-    PHP_FE(cuda_device_reset, arginfo_cuda_device_reset)
-    PHP_FE(cuda_synchronize, arginfo_cuda_synchronize)
-    PHP_FE(cuda_get_driver_version, arginfo_cuda_get_driver_version)
-    PHP_FE(cuda_get_runtime_version, arginfo_cuda_get_runtime_version)
-    PHP_FE(cuda_get_last_error, arginfo_cuda_get_last_error)
-    PHP_FE(cuda_clear_error, arginfo_cuda_clear_error)
-    PHP_FE(cuda_get_peer_access, arginfo_cuda_get_peer_access)
-    PHP_FE_END
-};
+        PHP_FE(cuda_get_device_info, arginfo_cuda_get_device_info)
+            PHP_FE(cuda_set_device, arginfo_cuda_set_device)
+                PHP_FE(cuda_get_current_device, arginfo_cuda_get_current_device)
+                    PHP_FE(cuda_get_memory_info, arginfo_cuda_get_memory_info)
+                        PHP_FE(cuda_device_reset, arginfo_cuda_device_reset)
+                            PHP_FE(cuda_synchronize, arginfo_cuda_synchronize)
+                                PHP_FE(cuda_get_driver_version, arginfo_cuda_get_driver_version)
+                                    PHP_FE(cuda_get_runtime_version, arginfo_cuda_get_runtime_version)
+                                        PHP_FE(cuda_get_last_error, arginfo_cuda_get_last_error)
+                                            PHP_FE(cuda_clear_error, arginfo_cuda_clear_error)
+                                                PHP_FE(cuda_get_peer_access, arginfo_cuda_get_peer_access)
+                                                    PHP_FE_END};
+
+zend_cuda_globals *cuda_pool_size_mb;
+PHP_INI_BEGIN()
+    STD_PHP_INI_ENTRY("cuda.pool_size_mb",
+                      "2560",
+                      PHP_INI_SYSTEM,
+                      OnUpdateLong,
+                      cuda_pool_size_mb,
+                      zend_cuda_globals,
+                      cuda_pool_size_mb)
+        PHP_INI_END()
+
+            ZEND_DECLARE_MODULE_GLOBALS(cuda)
+
+                static void php_cuda_init_globals(zend_cuda_globals *globals)
+{
+    globals->cuda_pool_size_mb = 2560;
+}
 
 PHP_MINIT_FUNCTION(cuda)
 {
+    ZEND_INIT_MODULE_GLOBALS(cuda, php_cuda_init_globals, NULL);
+    REGISTER_INI_ENTRIES();
+
     int count = cuda_wrapper_get_device_count();
     if (count < 0)
     {
         php_error_docref(NULL, E_WARNING, "CUDA initialization failed");
     }
-    
-    cuda_array_init();
+
+    if (!cuda_array_init(cuda_pool_size_mb))
+    {
+        return FAILURE;
+    }
 
     return SUCCESS;
 }
@@ -235,6 +257,7 @@ PHP_MINIT_FUNCTION(cuda)
 PHP_MSHUTDOWN_FUNCTION(cuda)
 {
     cuda_wrapper_device_reset();
+    cuda_array_shutdown();
     return SUCCESS;
 }
 

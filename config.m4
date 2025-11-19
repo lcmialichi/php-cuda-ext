@@ -41,6 +41,7 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda_array/cuda_array.c \ 
     src/cuda_array/ca_private.c \
     src/tensor.c \
+    src/cuda/memory_pool.c \
     src/cuda_array/tensor_fabric.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)

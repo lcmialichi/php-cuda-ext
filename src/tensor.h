@@ -34,12 +34,14 @@ typedef struct tensor
     int ndims;
     size_t total_size;
     int ref_count;
-
+    size_t allocated_size;
     int is_view;
     size_t gpu_offset;
     slice_info_t *slices;
     struct tensor *base_tensor;
     int num_slices;
+    size_t *d_strides;
+    int *d_shape;
 } tensor_t;
 
 #ifdef __cplusplus

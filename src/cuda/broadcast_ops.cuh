@@ -4,15 +4,23 @@
 #include <cuda_runtime.h>
 #include <vector>
 
+#define MAX_DIMS 10
+
+struct BroadcastParams
+{
+    int a_strides_full[MAX_DIMS];
+    int b_strides_full[MAX_DIMS];
+    int shape[MAX_DIMS];
+    int dims;
+};
+
+__constant__ BroadcastParams d_params;
+
 template <typename Op>
 __global__ void broadcast_kernel_opt(
     const float *__restrict__ a,
     const float *__restrict__ b,
     float *__restrict__ result,
-    const int *__restrict__ a_strides,
-    const int *__restrict__ b_strides,
-    const int *__restrict__ shape,
-    int dims,
     size_t total,
     size_t a_base_offset,
     size_t b_base_offset)
@@ -26,17 +34,17 @@ __global__ void broadcast_kernel_opt(
     int b_idx = 0;
 
 #pragma unroll 8
-    for (int i = dims - 1; i >= 0; i--)
+    for (int i = d_params.dims - 1; i >= 0; i--)
     {
-        int coord = tmp % shape[i];
-        tmp /= shape[i];
+        int coord = tmp % d_params.shape[i];
+        tmp /= d_params.shape[i];
 
-        a_idx += coord * a_strides[i];
-        b_idx += coord * b_strides[i];
+        a_idx += coord * d_params.a_strides_full[i];
+        b_idx += coord * d_params.b_strides_full[i];
     }
 
     Op op;
-    result[a_idx] = op(a[a_idx + a_base_offset], b[b_idx + b_base_offset]);
+    result[idx] = op(a[a_idx + a_base_offset], b[b_idx + b_base_offset]);
 }
 
 template <typename Op>
@@ -82,34 +90,18 @@ void launch_broadcast_op(float *a, float *b, float *result,
         }
     }
 
-    int *d_a_strides, *d_b_strides, *d_shape;
+    BroadcastParams h_params;
+    memcpy(h_params.a_strides_full, a_strides_full.data(), result_dims * sizeof(int));
+    memcpy(h_params.b_strides_full, b_strides_full.data(), result_dims * sizeof(int));
+    memcpy(h_params.shape, result_shape, result_dims * sizeof(int));
+    h_params.dims = result_dims;
 
-    cudaMalloc(&d_a_strides, result_dims * sizeof(int));
-    cudaMalloc(&d_b_strides, result_dims * sizeof(int));
-    cudaMalloc(&d_shape, result_dims * sizeof(int));
-
-    cudaMemcpy(d_a_strides, a_strides_full.data(),
-               result_dims * sizeof(int), cudaMemcpyHostToDevice);
-
-    cudaMemcpy(d_b_strides, b_strides_full.data(),
-               result_dims * sizeof(int), cudaMemcpyHostToDevice);
-
-    cudaMemcpy(d_shape, result_shape,
-               result_dims * sizeof(int), cudaMemcpyHostToDevice);
-
+    cudaMemcpyToSymbol(d_params, &h_params, sizeof(BroadcastParams));
     broadcast_kernel_opt<Op><<<blocks, threads>>>(
         a, b, result,
-        d_a_strides,
-        d_b_strides,
-        d_shape,
-        result_dims,
         total_elements,
         a_base_offset,
         b_base_offset);
-
-    cudaFree(d_a_strides);
-    cudaFree(d_b_strides);
-    cudaFree(d_shape);
 }
 
 #endif

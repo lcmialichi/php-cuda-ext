@@ -276,7 +276,7 @@ tensor_t *cuda_unary_op(tensor_t *a, int operation_type)
         return NULL;
     }
 
-    func(a->data, result->data, a->gpu_offset, a->shape, a->strides, a->ndims, a->total_size);
+    func(a->data, result->data, a->gpu_offset, a->d_shape, a->d_strides, a->ndims, a->total_size);
 
     cudaError_t status = cudaDeviceSynchronize();
     if (status != cudaSuccess)

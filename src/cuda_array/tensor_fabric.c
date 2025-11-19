@@ -1,5 +1,6 @@
 #include "tensor_fabric.h"
 #include "cuda_kernels.h"
+#include "memory_pool.h"
 
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
@@ -49,6 +50,11 @@ tensor_t *create_tensor_from_php_array(zval *data)
 tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
 {
     tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
+    if (!tensor)
+    {
+        return NULL;
+    }
+
     launch_fill_kernel(tensor->data, value, tensor->total_size);
     return tensor;
 }
@@ -80,20 +86,54 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
         stride *= shape[i];
     }
 
+    int *d_shape;
+    size_t *d_strides;
+
+    cudaMalloc((void **)&d_shape, ndims * sizeof(int));
+    cudaMalloc((void **)&d_strides, ndims * sizeof(size_t));
+    cudaMemcpy(d_shape, tensor->shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_strides, tensor->strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
+
     tensor->total_size = stride;
     tensor->is_view = 0;
     tensor->gpu_offset = 0;
     tensor->slices = NULL;
     tensor->num_slices = 0;
     tensor->ref_count = 1;
+    tensor->d_shape = d_shape;
+    tensor->d_strides = d_strides;
 
-    cudaMalloc((void **)&tensor->data, tensor->total_size * sizeof(float));
+    size_t required_bytes = tensor->total_size * sizeof(float);
+    tensor->allocated_size = required_bytes;
+
+    tensor->data = tensor_mem_alloc(required_bytes);
+
+    if (!tensor->data)
+    {
+        if (tensor->strides)
+            efree(tensor->strides);
+        if (tensor->shape)
+            efree(tensor->shape);
+
+        efree(tensor);
+        zend_throw_error(NULL, "Failed to allocate GPU memory...");
+        return NULL;
+    }
 
     if (data)
     {
-        cudaMemcpy(tensor->data, data,
-                   tensor->total_size * sizeof(float),
-                   cudaMemcpyHostToDevice);
+        cudaError_t err = cudaMemcpy(tensor->data, data,
+                                     required_bytes,
+                                     cudaMemcpyHostToDevice);
+        if (err != cudaSuccess)
+        {
+            tensor_mem_free(tensor->data);
+            efree(tensor->strides);
+            efree(tensor->shape);
+            efree(tensor);
+            zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(err));
+            return NULL;
+        }
     }
 
     return tensor;
@@ -123,9 +163,7 @@ tensor_t *resolve_result_tensor(tensor_t *t)
 {
     if (t->is_view)
     {
-        t->ref_count++;
-        t->base_tensor->ref_count++;
-        return t;
+        return cuda_tensor_create_view(t, t->shape, t->strides, t->ndims, t->gpu_offset, t->total_size);
     }
 
     return cuda_tensor_create_empty(t->shape, t->ndims);

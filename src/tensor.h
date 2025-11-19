@@ -1,8 +1,6 @@
 #ifndef TENSOR_H
 #define TENSOR_H
 
-#include <cublas_v2.h>
-#include <cudnn.h>
 #include <cuda_runtime.h>
 
 #define MAX_DIMS 10
@@ -35,7 +33,6 @@ typedef struct tensor
     size_t *strides;
     int ndims;
     size_t total_size;
-    cudnnTensorDescriptor_t desc;
     int ref_count;
 
     int is_view;
@@ -44,8 +41,6 @@ typedef struct tensor
     struct tensor *base_tensor;
     int num_slices;
 } tensor_t;
-static cudnnHandle_t cudnn_handle = NULL;
-static cublasHandle_t cublas_handle = NULL;
 
 #ifdef __cplusplus
 extern "C"

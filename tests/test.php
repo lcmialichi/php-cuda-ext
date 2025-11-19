@@ -109,37 +109,17 @@ class CudaBenchmark
         $total_elements = $rows * $cols * $depth;
 
         echo "🧪 {$name} (" . number_format($total_elements) . " elements): ";
-
-        if ($total_elements > 50000000) {
-            echo "Creating data...";
-            $data = array_fill(0, $rows, array_fill(0, $cols, array_fill(0, $depth, 1.0)));
-        } else {
-            echo "Creating random data...";
-            $data = [];
-            for ($i = 0; $i < $rows; $i++) {
-                $matrix = [];
-                for ($j = 0; $j < $cols; $j++) {
-                    $row = [];
-                    for ($k = 0; $k < $depth; $k++) {
-                        $row[] = (float) rand(1, 100) / 100.0;
-                    }
-                    $matrix[] = $row;
-                }
-                $data[] = $matrix;
-            }
-        }
-
         try {
 
-            $init_time = microtime(true);
-            $a = new CudaArray($data);
-            $b = new CudaArray($data);
+            $gpu_init_time = microtime(true);
+            $a = CudaArray::full([$rows, $cols, $depth], 10.0);
+            $b = CudaArray::full([$rows, $cols, $depth], 10.0);
 
-            $init_time_result = (microtime(true) - $init_time) * 1000;
+            $gpu_init_time_result = (microtime(true) - $gpu_init_time) * 1000;
             $start_gpu = microtime(true);
 
             $window = $a();
-            $gpu_result = $window->multiply($b)->multiply($b)->multiply($a);
+            $window->multiply($b)->multiply($b)->multiply($a);
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
             $gpu_success = true;
         } catch (Exception $e) {
@@ -149,6 +129,9 @@ class CudaBenchmark
 
         $cpu_time = 0;
         $cpu_success = false;
+        $cpu_init_time = microtime(true);
+        $data = array_fill(0, $rows, array_fill(0, $cols, array_fill(0, $depth, 10.0)));
+        $cpu_init_time_result = round((microtime(true) - $cpu_init_time) * 1000, 1);
 
         $start_cpu = microtime(true);
         try {
@@ -174,11 +157,11 @@ class CudaBenchmark
             $cpu_success = false;
         }
 
-        echo "GPU: init: " . ($init_time_result ? round($init_time_result, 1) . "ms, " : "FAILED, ") . ($gpu_success ? round($gpu_time, 1) . "ms" : "FAILED");
+        echo "GPU: init: " . ($gpu_init_time_result ? round($gpu_init_time_result, 1) . "ms, " : "FAILED, ") . ($gpu_success ? round($gpu_time, 1) . "ms" : "FAILED");
 
         if ($cpu_success) {
             $speedup = $cpu_time / $gpu_time;
-            echo ", CPU: " . round($cpu_time, 1) . "ms";
+            echo ", CPU: init: {$cpu_init_time_result}ms, " . round($cpu_time, 1) . "ms";
             echo ", " . round($speedup, 1) . "x faster";
         } elseif ($test_cpu && $total_elements > 5000000) {
             echo ", CPU: SKIPPED (too large)";
@@ -204,18 +187,7 @@ class CudaBenchmark
     }
 }
 
-// CudaBenchmark::runAllTests();
+CudaBenchmark::runAllTests();
 
-$cArray = new CudaArray([[1, 2, 3, 4], [5, 6, 7, 8]]);
-
-// [$x, $y, $z] = $cArray->getShape();
-
-// var_dump("Shape: ", $cArray->getShape());
-// var_dump("strides: ", $cArray->getStrides());
-
-// for ($i = 0; $i <= $x -1; $i++) {
-//     $cArray($i)->multiply($i);
-// }
-
-var_dump($cArray->reshape([4, 2])->toArray());
-
+// $cArray = new CudaArray([[1, 2, 3, 4], [5, 6, 7, 8]]);
+// $cArray2 = new CudaArray([[10, 20, 30, 40], [50, 60, 70, 80]]);

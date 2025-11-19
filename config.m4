@@ -14,8 +14,6 @@ if test "$PHP_CUDA" != "no"; then
     PHP_ADD_INCLUDE([src/cuda_array])
     PHP_ADD_LIBRARY(stdc++, 1, CUDA_SHARED_LIBADD)
     
-    PHP_ADD_LIBRARY_WITH_PATH(cudnn, /usr/local/cuda/lib64, CUDA_SHARED_LIBADD)
-    PHP_ADD_LIBRARY_WITH_PATH(cublas, /usr/local/cuda/lib64, CUDA_SHARED_LIBADD)
     PHP_ADD_LIBRARY_WITH_PATH(cudart, /usr/local/cuda/lib64, CUDA_SHARED_LIBADD)
 
     CXXFLAGS="$CXXFLAGS -O2"

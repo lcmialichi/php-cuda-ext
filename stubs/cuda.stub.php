@@ -23,7 +23,7 @@ class CudaArray
     
     public static function ones(array $shape): CudaArray {}
     public static function zeros(array $shape): CudaArray {}
-    public static function fill(array $shape, float $value): CudaArray {}
+    public static function full(array $shape, float $value): CudaArray {}
 
     public function transpose(?int $axis = null): CudaArray {}
     public function reshape(array $newShape): CudaArray {}

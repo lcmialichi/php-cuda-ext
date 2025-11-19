@@ -1,4 +1,5 @@
 #include "tensor_fabric.h"
+#include "cuda_kernels.h"
 
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
@@ -47,21 +48,8 @@ tensor_t *create_tensor_from_php_array(zval *data)
 
 tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
 {
-    size_t total_size = 1;
-    for (int i = 0; i < ndims; i++)
-    {
-        total_size *= shape[i];
-    }
-
-    float *data = (float *)emalloc(total_size * sizeof(float));
-    for (size_t i = 0; i < total_size; i++)
-    {
-        data[i] = value;
-    }
-
-    tensor_t *tensor = cuda_tensor_create(shape, ndims, data);
-    efree(data);
-
+    tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
+    launch_fill_kernel(tensor->data, value, tensor->total_size);
     return tensor;
 }
 
@@ -106,34 +94,6 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
         cudaMemcpy(tensor->data, data,
                    tensor->total_size * sizeof(float),
                    cudaMemcpyHostToDevice);
-    }
-
-    cudnnCreateTensorDescriptor(&tensor->desc);
-
-    if (ndims <= 4)
-    {
-        int dims[4] = {1, 1, 1, 1};
-        int strides_cudnn[4] = {1, 1, 1, 1};
-
-        for (int i = 0; i < ndims; i++)
-            dims[i] = shape[i];
-
-        strides_cudnn[ndims - 1] = 1;
-        for (int i = ndims - 2; i >= 0; i--)
-            strides_cudnn[i] = strides_cudnn[i + 1] * dims[i + 1];
-
-        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, 4, dims, strides_cudnn);
-    }
-    else
-    {
-        int *strides_cudnn = (int *)emalloc(ndims * sizeof(int));
-
-        strides_cudnn[ndims - 1] = 1;
-        for (int i = ndims - 2; i >= 0; i--)
-            strides_cudnn[i] = strides_cudnn[i + 1] * shape[i + 1];
-
-        cudnnSetTensorNdDescriptor(tensor->desc, CUDNN_DATA_FLOAT, ndims, shape, strides_cudnn);
-        efree(strides_cudnn);
     }
 
     return tensor;

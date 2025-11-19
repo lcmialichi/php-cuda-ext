@@ -1,9 +1,7 @@
 #ifndef CUDA_ARRAY_WRAPPER_H
 #define CUDA_ARRAY_WRAPPER_H
 
-#include <cudnn.h>
 #include <cuda_runtime.h>
-#include <cublas_v2.h>
 #include "php.h"
 #include "cuda_kernels.h"
 #include "tensor.h"

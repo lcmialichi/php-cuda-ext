@@ -15,8 +15,7 @@ echo ""
 if [ "$EUID" -ne 0 ]; then
     echo "WARNING  Running without root privileges."
     echo "   Dependency installation will be skipped."
-    echo "   If you need cuDNN installed automatically, run:"
-    echo "   sudo ./compile"
+    echo "   sudo ./compile.sh"
     INSTALL_DEPS=0
 else
     INSTALL_DEPS=1
@@ -30,25 +29,6 @@ if [ ! -d "/usr/local/cuda" ]; then
 fi
 
 echo "✔ CUDA Toolkit found."
-
-echo "Searching for cudnn.h..."
-CUDNN_PATH=$(find /usr /usr/local /opt -name "cudnn.h" 2>/dev/null | head -n 1)
-
-if [ -z "$CUDNN_PATH" ]; then
-    echo "ERROR: cuDNN not found."
-
-    if [ "$INSTALL_DEPS" -eq 1 ]; then
-        echo "→ Installing libcudnn8-dev..."
-        apt-get update -qq
-        apt-get install -y libcudnn8-dev
-    else
-        echo "ERROR: cuDNN missing. The extension may not compile without it."
-        echo "   Install cuDNN manually:"
-        echo "   https://developer.nvidia.com/cudnn"
-    fi
-else
-    echo "✔ cuDNN found at: $CUDNN_PATH"
-fi
 
 echo ""
 echo "Preparing build directory..."

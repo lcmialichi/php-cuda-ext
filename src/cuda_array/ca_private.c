@@ -176,13 +176,6 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
         return NULL;
     }
 
-    if (result->desc == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "Result tensor descriptor is NULL");
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-
     broadcast_fn func = get_broadcast_fn(operation_type);
 
     int result_shape[MAX_DIMS];
@@ -388,90 +381,7 @@ tensor_t *cuda_tensor_transpose(tensor_t *tensor)
 
 tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
 {
-    if (!cuda_initialized())
-        return NULL;
-
-    int a_ndims = a->ndims;
-    int b_ndims = b->ndims;
-
-    int a_rows, a_cols, b_rows, b_cols;
-
-    if (a_ndims == 1 && b_ndims == 1)
-    {
-        if (a->shape[0] != b->shape[0])
-            return NULL;
-        a_rows = 1;
-        a_cols = a->shape[0];
-        b_rows = b->shape[0];
-        b_cols = 1;
-    }
-    else if (a_ndims == 1 && b_ndims == 2)
-    {
-        if (a->shape[0] != b->shape[0])
-            return NULL;
-        a_rows = 1;
-        a_cols = a->shape[0];
-        b_rows = b->shape[0];
-        b_cols = b->shape[1];
-    }
-    else if (a_ndims == 2 && b_ndims == 1)
-    {
-        if (a->shape[1] != b->shape[0])
-            return NULL;
-        a_rows = a->shape[0];
-        a_cols = a->shape[1];
-        b_rows = b->shape[0];
-        b_cols = 1;
-    }
-    else if (a_ndims == 2 && b_ndims == 2)
-    {
-        if (a->shape[1] != b->shape[0])
-            return NULL;
-        a_rows = a->shape[0];
-        a_cols = a->shape[1];
-        b_rows = b->shape[0];
-        b_cols = b->shape[1];
-    }
-    else
-    {
-        return NULL;
-    }
-
-    int result_rows = a_rows;
-    int result_cols = b_cols;
-    int result_ndims = (a_ndims == 1 && b_ndims == 1) ? 1 : 2;
-    int result_shape[2] = {result_rows, result_cols};
-
-    tensor_t *result = cuda_tensor_create_empty(result_shape, result_ndims);
-    if (!result)
-        return NULL;
-
-    float alpha = 1.0f;
-    float beta = 0.0f;
-
-    cublasStatus_t status = cublasSgemm(
-        cublas_handle,
-        CUBLAS_OP_N,
-        CUBLAS_OP_N,
-        result_cols,
-        result_rows,
-        a_cols,
-        &alpha,
-        b->data,
-        result_cols,
-        a->data,
-        a_cols,
-        &beta,
-        result->data,
-        result_cols);
-
-    if (status != CUBLAS_STATUS_SUCCESS)
-    {
-        cuda_tensor_destroy(result);
-        return NULL;
-    }
-
-    return result;
+    php_error_docref(NULL, E_ERROR, "Matmul not implemented yet.");
 }
 
 tensor_t *cuda_tensor_copy(tensor_t *tensor)

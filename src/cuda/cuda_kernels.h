@@ -6,6 +6,7 @@ extern "C"
 {
 #endif
 
+    void launch_fill_kernel(float *data, float value, size_t size);
     void launch_sum_kernel(float *a, float *result, int n);
     void launch_max_kernel(float *a, float *result, int n);
     void launch_min_kernel(float *a, float *result, int n);

@@ -10,25 +10,10 @@ int tensor_init()
         return 1;
 
     cudaError_t cuda_status = cudaSuccess;
-    cudnnStatus_t cudnn_status = CUDNN_STATUS_SUCCESS;
-    cublasStatus_t cublas_status = CUBLAS_STATUS_SUCCESS;
 
     cuda_status = cudaSetDevice(0);
     if (cuda_status != cudaSuccess)
     {
-        return 0;
-    }
-
-    cudnn_status = cudnnCreate(&cudnn_handle);
-    if (cudnn_status != CUDNN_STATUS_SUCCESS)
-    {
-        return 0;
-    }
-
-    cublas_status = cublasCreate(&cublas_handle);
-    if (cublas_status != CUBLAS_STATUS_SUCCESS)
-    {
-        cudnnDestroy(cudnn_handle);
         return 0;
     }
 
@@ -208,25 +193,6 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
         memcpy(view->slices, slices, sizeof(slice_info_t) * num_slices);
     }
 
-    cudnnCreateTensorDescriptor(&view->desc);
-    if (view_ndims > 0)
-    {
-        int cudnn_dims[MAX_DIMS];
-        int cudnn_strides[MAX_DIMS];
-        for (int i = 0; i < view_ndims; ++i)
-        {
-            cudnn_dims[i] = view_shape[i];
-            cudnn_strides[i] = (int)view_strides[i];
-        }
-        cudnnSetTensorNdDescriptor(view->desc, CUDNN_DATA_FLOAT, view_ndims, cudnn_dims, cudnn_strides);
-    }
-    else
-    {
-        int dims[1] = {1};
-        int strides_i[1] = {1};
-        cudnnSetTensorNdDescriptor(view->desc, CUDNN_DATA_FLOAT, 1, dims, strides_i);
-    }
-
     return view;
 }
 
@@ -280,8 +246,6 @@ void cuda_tensor_destroy(tensor_t *tensor)
 
     if (tensor->shape)
         efree(tensor->shape);
-    if (tensor->desc)
-        cudnnDestroyTensorDescriptor(tensor->desc);
 
     efree(tensor);
 }

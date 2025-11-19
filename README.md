@@ -20,7 +20,7 @@ cd php-cuda-ext
 ```
 Compile and install the extension by running:
 ```bash
-./compile
+./compile.sh
 ```
 
 The compile script automatically performs:

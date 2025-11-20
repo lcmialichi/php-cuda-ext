@@ -119,7 +119,7 @@ class CudaBenchmark
             $start_gpu = microtime(true);
 
             $window = $a();
-            $window->multiply($b)->multiply($b)->multiply($a);
+            $window->multiply(2)->multiply(3)->multiply(4);
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
             $gpu_success = true;
         } catch (Exception $e) {
@@ -142,7 +142,7 @@ class CudaBenchmark
                     foreach ($matrix as $j => $row) {
                         $cpu_row = [];
                         foreach ($row as $k => $val) {
-                            $cpu_row[] = $val * $data[$i][$j][$k];
+                            $cpu_row[] = $val * $i + 1;
                         }
                         $cpu_matrix[] = $cpu_row;
                     }
@@ -189,11 +189,9 @@ class CudaBenchmark
 
 // CudaBenchmark::runAllTests();
 
-$cArray = CudaArray::full([1920, 1080, 3], 255);
+$ca = CudaArray::ones([1, 2]);
+$ca2 = CudaArray::ones([1, 2]);
 
-[$x, $y, $z] = $cArray->getShape();
+$result = ($ca + $ca2 * 10) / 10;
 
-for ($i = 1; $i < $z; $i++) {
-    $cArray(null, null, $i - 1)->divide(255)->multiply(255 /$i);
-}
-var_dump($cArray(1, 1, null)->toArray());
+var_dump($result->toArray());

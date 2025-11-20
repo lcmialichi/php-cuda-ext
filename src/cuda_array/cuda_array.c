@@ -4,7 +4,7 @@
 #include "ca_arginfo.h"
 #include "operations.h"
 #include "tensor_fabric.h"
-#include "memory_pool.h"    
+#include "memory_pool.h"
 #include "cuda.h"
 
 zend_class_entry *cuda_array_ce;
@@ -21,7 +21,7 @@ static void cuda_array_free_object(zend_object *object);
 static void create_result_object(zval *return_value, tensor_t *result_tensor);
 static tensor_t *get_second_tensor(zval *other_zv, cuda_array_obj *this_obj);
 static int parse_slice_parameter(zval *param, slice_info_t *slice);
-
+static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval *op1, zval *op2);
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value);
 
 static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
@@ -555,9 +555,10 @@ static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor)
 
 int cuda_array_init(size_t mb)
 {
-    if (!tensor_mem_init(mb)) { 
-        php_error_docref(NULL, E_WARNING, 
-                         "Failed to initialize CUDA memory pool with %ld MB.", 
+    if (!tensor_mem_init(mb))
+    {
+        php_error_docref(NULL, E_WARNING,
+                         "Failed to initialize CUDA memory pool with %ld MB.",
                          mb);
         return 0;
     }
@@ -569,6 +570,7 @@ int cuda_array_init(size_t mb)
     memcpy(&cuda_array_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     cuda_array_handlers.offset = XtOffsetOf(cuda_array_obj, obj);
     cuda_array_handlers.free_obj = cuda_array_free_object;
+    cuda_array_handlers.do_operation = cuda_array_do_operation;
 
     return 1;
 }
@@ -815,6 +817,91 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
     }
 
     create_result_object(return_value, result_tensor);
+}
+
+static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval *op1, zval *op2)
+{
+    if (Z_TYPE_P(op1) != IS_OBJECT || Z_OBJCE_P(op1) != cuda_array_ce)
+    {
+        return FAILURE;
+    }
+
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op1));
+    if (!this_obj || this_obj->tensor_handle == NULL)
+    {
+        return FAILURE;
+    }
+
+    const char *operation_name = NULL;
+    int operation_type = 0;
+
+    switch (opcode)
+    {
+    case ZEND_ADD:
+        operation_name = "Addition (+)";
+        operation_type = OP_ADD;
+        break;
+    case ZEND_SUB:
+        operation_name = "Subtraction (-)";
+        operation_type = OP_SUB;
+        break;
+    case ZEND_MUL:
+        operation_name = "Multiplication (*)";
+        operation_type = OP_MUL;
+        break;
+    case ZEND_DIV:
+        operation_name = "Division (/)";
+        operation_type = OP_DIV;
+        break;
+    case ZEND_POW:
+        operation_name = "Power (**)";
+        operation_type = OP_POW;
+        break;
+    default:
+        return FAILURE;
+    }
+
+    tensor_t *result_tensor = NULL;
+    zval *other_zv = op2;
+
+    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
+    {
+        cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
+
+        if (other_obj && other_obj->tensor_handle)
+        {
+            result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
+        }
+        else
+        {
+            zend_throw_error(NULL, "Other CudaArray not initialized for %s", operation_name);
+            return FAILURE;
+        }
+    }
+    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
+    {
+        float scalar_value = (Z_TYPE_P(other_zv) == IS_DOUBLE) ? (float)Z_DVAL_P(other_zv) : (float)Z_LVAL_P(other_zv);
+        result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
+    }
+    else
+    {
+        return FAILURE;
+    }
+
+    if (result_tensor == NULL)
+    {
+        zend_throw_error(NULL, "Tensor operation %s failed (incompatible shapes or internal error)", operation_name);
+        return FAILURE;
+    }
+
+    if (result == op1)
+    {
+        zval_ptr_dtor(result);
+    }
+
+    create_result_object(result, result_tensor);
+
+    return SUCCESS;
 }
 
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value)

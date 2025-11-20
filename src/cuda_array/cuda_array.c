@@ -553,15 +553,12 @@ static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor)
     }
 }
 
-int cuda_array_init(zend_cuda_globals *globals)
+int cuda_array_init(size_t mb)
 {
-    long pool_size_mb = globals.cuda_pool_size_mb;
-    size_t required_size_bytes = (size_t)pool_size_mb * 1024 * 1024;
-
-    if (!tensor_mem_init(required_size_bytes)) { 
+    if (!tensor_mem_init(mb)) { 
         php_error_docref(NULL, E_WARNING, 
                          "Failed to initialize CUDA memory pool with %ld MB.", 
-                         pool_size_mb);
+                         mb);
         return 0;
     }
 

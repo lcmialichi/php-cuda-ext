@@ -187,8 +187,8 @@ class CudaBenchmark
     }
 }
 
-CudaBenchmark::runAllTests();
+// CudaBenchmark::runAllTests();
 
 
-
-
+$cArray = CudaArray::ones([3, 10, 10]);
+var_dump($cArray->flatten()->toArray());

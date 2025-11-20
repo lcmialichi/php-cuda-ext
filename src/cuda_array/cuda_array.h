@@ -17,7 +17,7 @@ typedef struct
 } cuda_array_obj;
 
 
-int cuda_array_init(zend_cuda_globals *cuda_pool_size_mb);
+int cuda_array_init(size_t size);
 void cuda_array_shutdown();
 
 ZEND_METHOD(CudaArray, __construct);

@@ -3,17 +3,71 @@
 #endif
 
 #include "php.h"
-#include "cuda.h"
+#include "php_ini.h"
+#include "zend_interfaces.h"
+#include "zend_attributes.h"
 #include "cuda_wrapper.h"
 #include "cuda_arginfo.h"
 #include "cuda_array.h"
+#include "cuda.h"
+
+ZEND_DECLARE_MODULE_GLOBALS(cuda);
+static PHP_GINIT_FUNCTION(cuda);
+
+static size_t parse_size_string(const char *str);
+
+static PHP_INI_MH(OnUpdateMemSize)
+{
+   if (stage == PHP_INI_STAGE_RUNTIME) {
+        php_error_docref(NULL, E_WARNING,
+            "Changing cuda.memory_size at runtime (via ini_set) has no effect.");
+    }
+    
+	return SUCCESS;
+}
+
+PHP_INI_BEGIN()
+    STD_PHP_INI_ENTRY(
+        "cuda.memory_size",
+        "3G",
+        PHP_INI_ALL,
+        OnUpdateMemSize,
+        memory_size,
+        zend_cuda_globals,
+        cuda_globals
+    )
+PHP_INI_END()
+
+static PHP_GINIT_FUNCTION(cuda)
+{
+    cuda_globals->memory_size = "3G";
+}
+
+PHP_MINIT_FUNCTION(cuda)
+{
+    REGISTER_INI_ENTRIES();
+
+    const char *ini_value = INI_STR("cuda.memory_size");
+    size_t pool_size = parse_size_string(ini_value);
+
+    int count = cuda_wrapper_get_device_count();
+    if (count < 0) {
+        php_error_docref(NULL, E_WARNING, "CUDA initialization failed");
+    }
+
+    if (!cuda_array_init(pool_size)) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 
 ZEND_FUNCTION(cuda_get_device_count)
 {
     int count = cuda_wrapper_get_device_count();
 
-    if (count < 0)
-    {
+    if (count < 0) {
         php_error_docref(NULL, E_WARNING, "Failed to get device count");
         RETURN_LONG(-1);
     }
@@ -26,19 +80,20 @@ ZEND_FUNCTION(cuda_get_device_info)
     zend_long device_id = 0;
 
     ZEND_PARSE_PARAMETERS_START(0, 1)
-    Z_PARAM_OPTIONAL
-    Z_PARAM_LONG(device_id)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(device_id)
     ZEND_PARSE_PARAMETERS_END();
 
     char name[256];
     int major, minor;
     size_t total_mem;
 
-    int error = cuda_wrapper_get_device_properties(device_id, name, sizeof(name),
-                                                   &major, &minor, &total_mem);
+    int ok = cuda_wrapper_get_device_properties(
+        device_id, name, sizeof(name),
+        &major, &minor, &total_mem
+    );
 
-    if (error != 1)
-    {
+    if (ok != 1) {
         php_error_docref(NULL, E_WARNING, "Failed to get device properties");
         RETURN_NULL();
     }
@@ -55,13 +110,10 @@ ZEND_FUNCTION(cuda_set_device)
     zend_long device_id;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-    Z_PARAM_LONG(device_id)
+        Z_PARAM_LONG(device_id)
     ZEND_PARSE_PARAMETERS_END();
 
-    int success = cuda_wrapper_set_device((int)device_id);
-
-    if (!success)
-    {
+    if (!cuda_wrapper_set_device((int)device_id)) {
         php_error_docref(NULL, E_WARNING, "Failed to set device %d", (int)device_id);
         RETURN_FALSE;
     }
@@ -73,8 +125,7 @@ ZEND_FUNCTION(cuda_get_current_device)
 {
     int device = cuda_wrapper_get_current_device();
 
-    if (device == -1)
-    {
+    if (device == -1) {
         php_error_docref(NULL, E_WARNING, "Failed to get current device");
         RETURN_LONG(-1);
     }
@@ -85,10 +136,8 @@ ZEND_FUNCTION(cuda_get_current_device)
 ZEND_FUNCTION(cuda_get_memory_info)
 {
     size_t free_mem, total_mem;
-    int success = cuda_wrapper_get_memory_info(&free_mem, &total_mem);
 
-    if (!success)
-    {
+    if (!cuda_wrapper_get_memory_info(&free_mem, &total_mem)) {
         php_error_docref(NULL, E_WARNING, "Failed to get memory info");
         RETURN_NULL();
     }
@@ -97,15 +146,15 @@ ZEND_FUNCTION(cuda_get_memory_info)
     add_assoc_long(return_value, "free_memory", free_mem);
     add_assoc_long(return_value, "total_memory", total_mem);
     add_assoc_long(return_value, "used_memory", total_mem - free_mem);
-    add_assoc_double(return_value, "usage_percentage", ((double)(total_mem - free_mem) / total_mem) * 100.0);
+    add_assoc_double(
+        return_value, "usage_percentage",
+        ((double)(total_mem - free_mem) / total_mem) * 100.0
+    );
 }
 
 ZEND_FUNCTION(cuda_device_reset)
 {
-    int success = cuda_wrapper_device_reset();
-
-    if (!success)
-    {
+    if (!cuda_wrapper_device_reset()) {
         php_error_docref(NULL, E_WARNING, "Failed to reset device");
         RETURN_FALSE;
     }
@@ -115,46 +164,41 @@ ZEND_FUNCTION(cuda_device_reset)
 
 ZEND_FUNCTION(cuda_get_driver_version)
 {
-    int driver_version = cuda_wrapper_get_driver_version();
+    int version = cuda_wrapper_get_driver_version();
 
-    if (driver_version == -1)
-    {
+    if (version == -1) {
         php_error_docref(NULL, E_WARNING, "Failed to get driver version");
         RETURN_NULL();
     }
 
     array_init(return_value);
-    add_assoc_long(return_value, "version", driver_version);
+    add_assoc_long(return_value, "version", version);
 
-    char version_str[16];
-    snprintf(version_str, sizeof(version_str), "%d.%d", driver_version / 1000, (driver_version % 100) / 10);
-    add_assoc_string(return_value, "version_string", version_str);
+    char str[16];
+    snprintf(str, sizeof(str), "%d.%d", version / 1000, (version % 100) / 10);
+    add_assoc_string(return_value, "version_string", str);
 }
 
 ZEND_FUNCTION(cuda_get_runtime_version)
 {
-    int runtime_version = cuda_wrapper_get_runtime_version();
+    int version = cuda_wrapper_get_runtime_version();
 
-    if (runtime_version == -1)
-    {
+    if (version == -1) {
         php_error_docref(NULL, E_WARNING, "Failed to get runtime version");
         RETURN_NULL();
     }
 
     array_init(return_value);
-    add_assoc_long(return_value, "version", runtime_version);
+    add_assoc_long(return_value, "version", version);
 
-    char version_str[16];
-    snprintf(version_str, sizeof(version_str), "%d.%d", runtime_version / 1000, (runtime_version % 100) / 10);
-    add_assoc_string(return_value, "version_string", version_str);
+    char str[16];
+    snprintf(str, sizeof(str), "%d.%d", version / 1000, (version % 100) / 10);
+    add_assoc_string(return_value, "version_string", str);
 }
 
 ZEND_FUNCTION(cuda_synchronize)
 {
-    int success = cuda_wrapper_synchronize();
-
-    if (!success)
-    {
+    if (!cuda_wrapper_synchronize()) {
         php_error_docref(NULL, E_WARNING, "Failed to synchronize device");
         RETURN_FALSE;
     }
@@ -165,8 +209,8 @@ ZEND_FUNCTION(cuda_synchronize)
 ZEND_FUNCTION(cuda_get_last_error)
 {
     int error = cuda_wrapper_error();
-    if (error == 0)
-    {
+
+    if (error == 0) {
         RETURN_NULL();
     }
 
@@ -187,14 +231,13 @@ ZEND_FUNCTION(cuda_get_peer_access)
     zend_long device1, device2;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
-    Z_PARAM_LONG(device1)
-    Z_PARAM_LONG(device2)
+        Z_PARAM_LONG(device1)
+        Z_PARAM_LONG(device2)
     ZEND_PARSE_PARAMETERS_END();
 
     int result = cuda_wrapper_get_peer_access((int)device1, (int)device2);
 
-    if (result == -1)
-    {
+    if (result == -1) {
         php_error_docref(NULL, E_WARNING, "Failed to check peer access");
         RETURN_NULL();
     }
@@ -203,56 +246,20 @@ ZEND_FUNCTION(cuda_get_peer_access)
 }
 
 static zend_function_entry cuda_functions[] = {
-    PHP_FE(cuda_get_device_count, arginfo_cuda_get_device_count)
-        PHP_FE(cuda_get_device_info, arginfo_cuda_get_device_info)
-            PHP_FE(cuda_set_device, arginfo_cuda_set_device)
-                PHP_FE(cuda_get_current_device, arginfo_cuda_get_current_device)
-                    PHP_FE(cuda_get_memory_info, arginfo_cuda_get_memory_info)
-                        PHP_FE(cuda_device_reset, arginfo_cuda_device_reset)
-                            PHP_FE(cuda_synchronize, arginfo_cuda_synchronize)
-                                PHP_FE(cuda_get_driver_version, arginfo_cuda_get_driver_version)
-                                    PHP_FE(cuda_get_runtime_version, arginfo_cuda_get_runtime_version)
-                                        PHP_FE(cuda_get_last_error, arginfo_cuda_get_last_error)
-                                            PHP_FE(cuda_clear_error, arginfo_cuda_clear_error)
-                                                PHP_FE(cuda_get_peer_access, arginfo_cuda_get_peer_access)
-                                                    PHP_FE_END};
-
-zend_cuda_globals *cuda_pool_size_mb;
-PHP_INI_BEGIN()
-    STD_PHP_INI_ENTRY("cuda.pool_size_mb",
-                      "2560",
-                      PHP_INI_SYSTEM,
-                      OnUpdateLong,
-                      cuda_pool_size_mb,
-                      zend_cuda_globals,
-                      cuda_pool_size_mb)
-        PHP_INI_END()
-
-            ZEND_DECLARE_MODULE_GLOBALS(cuda)
-
-                static void php_cuda_init_globals(zend_cuda_globals *globals)
-{
-    globals->cuda_pool_size_mb = 2560;
-}
-
-PHP_MINIT_FUNCTION(cuda)
-{
-    ZEND_INIT_MODULE_GLOBALS(cuda, php_cuda_init_globals, NULL);
-    REGISTER_INI_ENTRIES();
-
-    int count = cuda_wrapper_get_device_count();
-    if (count < 0)
-    {
-        php_error_docref(NULL, E_WARNING, "CUDA initialization failed");
-    }
-
-    if (!cuda_array_init(cuda_pool_size_mb))
-    {
-        return FAILURE;
-    }
-
-    return SUCCESS;
-}
+    PHP_FE(cuda_get_device_count,      arginfo_cuda_get_device_count)
+    PHP_FE(cuda_get_device_info,       arginfo_cuda_get_device_info)
+    PHP_FE(cuda_set_device,            arginfo_cuda_set_device)
+    PHP_FE(cuda_get_current_device,    arginfo_cuda_get_current_device)
+    PHP_FE(cuda_get_memory_info,       arginfo_cuda_get_memory_info)
+    PHP_FE(cuda_device_reset,          arginfo_cuda_device_reset)
+    PHP_FE(cuda_synchronize,           arginfo_cuda_synchronize)
+    PHP_FE(cuda_get_driver_version,    arginfo_cuda_get_driver_version)
+    PHP_FE(cuda_get_runtime_version,   arginfo_cuda_get_runtime_version)
+    PHP_FE(cuda_get_last_error,        arginfo_cuda_get_last_error)
+    PHP_FE(cuda_clear_error,           arginfo_cuda_clear_error)
+    PHP_FE(cuda_get_peer_access,       arginfo_cuda_get_peer_access)
+    PHP_FE_END
+};
 
 PHP_MSHUTDOWN_FUNCTION(cuda)
 {
@@ -271,7 +278,21 @@ zend_module_entry cuda_module_entry = {
     NULL,
     NULL,
     PHP_CUDA_VERSION,
-    STANDARD_MODULE_PROPERTIES};
+    STANDARD_MODULE_PROPERTIES
+};
+
+static size_t parse_size_string(const char *str)
+{
+    char unit = str[strlen(str) - 1];
+    size_t n = atol(str);
+
+    switch (unit) {
+        case 'G': case 'g': return n * 1024ULL * 1024ULL * 1024ULL;
+        case 'M': case 'm': return n * 1024ULL * 1024ULL;
+        case 'K': case 'k': return n * 1024ULL;
+        default:             return n;
+    }
+}
 
 #ifdef COMPILE_DL_CUDA
 ZEND_GET_MODULE(cuda)

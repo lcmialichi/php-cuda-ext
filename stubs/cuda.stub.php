@@ -27,6 +27,7 @@ class CudaArray
 
     public function transpose(?int $axis = null): CudaArray {}
     public function reshape(array $newShape): CudaArray {}
+    public function flatten(): CudaArray {}
 
 
 }

@@ -1,6 +1,5 @@
 #ifndef PHP_CUDA_H
 #define PHP_CUDA_H
-#endif
 
 #include "php.h"
 #include <cuda_runtime.h>
@@ -15,9 +14,10 @@ extern zend_module_entry cuda_module_entry;
 #include "TSRM.h"
 #endif
 
-typedef struct _zend_cuda_globals {
-    long cuda_pool_size_mb; 
-} zend_cuda_globals;
+
+ZEND_BEGIN_MODULE_GLOBALS(cuda)
+	char				*memory_size;
+ZEND_END_MODULE_GLOBALS(cuda)
 
 ZEND_FUNCTION(cuda_get_device_count);
 ZEND_FUNCTION(cuda_get_device_info);
@@ -35,3 +35,4 @@ ZEND_FUNCTION(cuda_synchronize);
 PHP_MINIT_FUNCTION(cuda);
 PHP_MSHUTDOWN_FUNCTION(cuda);
 
+#endif

@@ -189,6 +189,11 @@ class CudaBenchmark
 
 // CudaBenchmark::runAllTests();
 
+$cArray = CudaArray::full([1920, 1080, 3], 255);
 
-$cArray = CudaArray::ones([3, 10, 10]);
-var_dump($cArray->flatten()->toArray());
+[$x, $y, $z] = $cArray->getShape();
+
+for ($i = 1; $i < $z; $i++) {
+    $cArray(null, null, $i - 1)->divide(255)->multiply(255 /$i);
+}
+var_dump($cArray(1, 1, null)->toArray());

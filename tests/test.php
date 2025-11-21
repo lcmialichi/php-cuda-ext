@@ -204,7 +204,7 @@ $result = ($ca[1] * 2) + $ca[2];
  * set at idx 0 the result (the shape remains 4x4x4)
  * @var CudaArray
  */
-$ca[0] = $result[0];
+$ca[0] = $result;
 
 /**
  * get shape from the matrix
@@ -224,16 +224,17 @@ $newCa = clone $newCa([0, 4]);
 /**
  * return to CPU as an Array
  * array(5) {
- *  [0]=>
- *  float(40.33333206176758)
- *  [1]=>
- *  float(40.33333206176758)
- *  [2]=>
- *  float(40.33333206176758)
- *  [3]=>
- *  float(40.33333206176758)
- *  [4]=>
- *  float(40.33333206176758)
- *}
+  * [0]=>
+  * float(3)
+  * [1]=>
+  * float(3)
+  * [2]=>
+  * float(3)
+  * [3]=>
+  * float(3)
+  * [4]=>
+  * float(3)
+*}
+
  */
 var_dump($newCa->toArray());

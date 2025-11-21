@@ -55,10 +55,11 @@ extern "C"
     void cuda_tensor_destroy(tensor_t *tensor);
     int is_contiguous(tensor_t *tensor);
 
-    tensor_t *resolve_result_tensor(tensor_t *t);
     tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
     tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size);
+    tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
 
+    int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value);
 #ifdef __cplusplus
 }
 #endif

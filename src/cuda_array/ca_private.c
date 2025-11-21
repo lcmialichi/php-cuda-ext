@@ -169,12 +169,6 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
         return NULL;
     }
 
-    tensor_t *result = resolve_result_tensor(a);
-    if (!result)
-    {
-        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
-        return NULL;
-    }
 
     broadcast_fn func = get_broadcast_fn(operation_type);
 
@@ -189,6 +183,8 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
     {
         return NULL;
     }
+
+    tensor_t *result = cuda_tensor_create_empty(result_shape, result_dims);
 
     if (func == NULL)
     {

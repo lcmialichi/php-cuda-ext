@@ -11,3 +11,6 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[]);
 tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims);
 tensor_t *cuda_tensor_create_empty(const int shape[], int ndims);
 tensor_t *resolve_result_tensor(tensor_t *t);
+tensor_t *cuda_tensor_clone(tensor_t *base_tensor);
+
+int cuda_tensor_get_scalar_value(tensor_t *scalar_tensor, float *result_val);

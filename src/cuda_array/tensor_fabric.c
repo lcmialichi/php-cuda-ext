@@ -47,6 +47,44 @@ tensor_t *create_tensor_from_php_array(zval *data)
     return tensor;
 }
 
+int cuda_tensor_get_scalar_value(tensor_t *scalar_tensor, float *result_val)
+{
+    if (scalar_tensor->ndims != 0)
+    {
+        return FAILURE;
+    }
+
+    void *gpu_source_ptr;
+
+    if (scalar_tensor->is_view)
+    {
+        if (!scalar_tensor->base_tensor)
+        {
+            zend_error(E_WARNING, "Scalar view has no base tensor.");
+            return FAILURE;
+        }
+        gpu_source_ptr = (char *)scalar_tensor->base_tensor->data + scalar_tensor->gpu_offset;
+    }
+    else
+    {
+        gpu_source_ptr = scalar_tensor->data;
+    }
+
+    cudaError_t status = cudaMemcpy(
+        result_val,
+        gpu_source_ptr,
+        sizeof(float),
+        cudaMemcpyDeviceToHost);
+
+    if (status != cudaSuccess)
+    {
+        zend_error(E_WARNING, "Failed to copy scalar data from GPU: %s", cudaGetErrorString(status));
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
 {
     tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
@@ -161,11 +199,6 @@ tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
 
 tensor_t *resolve_result_tensor(tensor_t *t)
 {
-    if (t->is_view)
-    {
-        return cuda_tensor_create_view(t, t->shape, t->strides, t->ndims, t->gpu_offset, t->total_size);
-    }
-
     return cuda_tensor_create_empty(t->shape, t->ndims);
 }
 
@@ -304,4 +337,25 @@ static size_t calculate_total_size(zval *data)
     }
 
     return total;
+}
+
+tensor_t *cuda_tensor_clone(tensor_t *base_tensor)
+{
+    if (base_tensor == NULL)
+    {
+        return NULL;
+    }
+
+    size_t total_elements = base_tensor->total_size;
+    size_t total_bytes = total_elements * sizeof(float);
+
+    tensor_t *new_tensor = cuda_tensor_create(base_tensor->shape, base_tensor->ndims, base_tensor->data);
+
+    if (new_tensor == NULL || new_tensor->data == NULL)
+    {
+        if (new_tensor)
+            cuda_tensor_destroy(new_tensor);
+        return NULL;
+    }
+    return new_tensor;
 }

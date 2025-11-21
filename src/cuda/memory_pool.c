@@ -94,7 +94,7 @@ static void __bfc_insert_and_coalesce_free_block(FreeBlock *new_block)
     {
         prev_block->size += new_block->size;
         prev_block->next = new_block->next;
-        free(new_block);
+        pefree(new_block, 1);
         new_block = prev_block;
     }
 
@@ -103,13 +103,13 @@ static void __bfc_insert_and_coalesce_free_block(FreeBlock *new_block)
     {
         new_block->size += next_block->size;
         new_block->next = next_block->next;
-        free(next_block);
+        pefree(next_block, 1);
     }
 }
 
 static void __allocated_add_block(void *ptr, size_t size)
 {
-    AllocatedBlock *ab = (AllocatedBlock *)malloc(sizeof(AllocatedBlock));
+    AllocatedBlock *ab = (AllocatedBlock *)pemalloc(sizeof(AllocatedBlock), 1);
     if (!ab)
         return;
     ab->ptr = ptr;
@@ -188,7 +188,7 @@ static CachedBlock *__cache_find_best_fit(size_t aligned_size)
 
 static void __cache_release_block(void *ptr, size_t size)
 {
-    FreeBlock *fb = (FreeBlock *)malloc(sizeof(FreeBlock));
+    FreeBlock *fb = (FreeBlock *)pemalloc(sizeof(FreeBlock), 1);
     if (!fb)
     {
         cudaFree(ptr);
@@ -211,7 +211,7 @@ static void __cache_add_block(void *ptr, size_t size)
         return;
     }
 
-    CachedBlock *cb = (CachedBlock *)malloc(sizeof(CachedBlock));
+    CachedBlock *cb = (CachedBlock *)pemalloc(sizeof(CachedBlock), 1);
     if (!cb)
     {
         __cache_release_block(ptr, size);
@@ -247,7 +247,7 @@ int tensor_mem_init(size_t size)
 
     pool_size = aligned_size;
 
-    FreeBlock *initial_block = (FreeBlock *)malloc(sizeof(FreeBlock));
+    FreeBlock *initial_block = (FreeBlock *)pemalloc(sizeof(FreeBlock), 1);
     if (!initial_block)
     {
         cudaFree(base_ptr);
@@ -280,7 +280,7 @@ void *tensor_mem_alloc(size_t size)
     {
         ptr = cached_block->ptr;
         size_t actual_size = cached_block->size;
-        free(cached_block);
+        pefree(cached_block, 1);
 
         __allocated_add_block(ptr, actual_size);
     }
@@ -297,7 +297,7 @@ void *tensor_mem_alloc(size_t size)
 
             if (remainder_size > ALIGNMENT)
             {
-                FreeBlock *remainder_block = (FreeBlock *)malloc(sizeof(FreeBlock));
+                FreeBlock *remainder_block = (FreeBlock *)pemalloc(sizeof(FreeBlock), 1);
                 if (remainder_block)
                 {
                     remainder_block->ptr = (char *)ptr + aligned_size;
@@ -320,7 +320,7 @@ void *tensor_mem_alloc(size_t size)
             {
                 __allocated_add_block(ptr, actual_size);
                 if (free_block)
-                    free(free_block);
+                    pefree(free_block, 1);
             }
         }
     }
@@ -341,7 +341,7 @@ void tensor_mem_free(void *ptr)
     if (ab)
     {
         size_t size_to_free = ab->size;
-        free(ab);
+        pefree(ab, 1);
 
         __cache_add_block(ptr, size_to_free);
     }
@@ -361,7 +361,7 @@ void tensor_mem_destroy()
     {
         CachedBlock *next = curr_cache->next;
         __cache_release_block(curr_cache->ptr, curr_cache->size);
-        free(curr_cache);
+        pefree(curr_cache, 1);
         curr_cache = next;
     }
     cached_list = NULL;
@@ -371,7 +371,7 @@ void tensor_mem_destroy()
     while (curr_alloc)
     {
         AllocatedBlock *next = curr_alloc->next;
-        free(curr_alloc);
+        pefree(curr_alloc, 1);
         curr_alloc = next;
     }
     allocated_list = NULL;
@@ -380,7 +380,7 @@ void tensor_mem_destroy()
     while (curr_free)
     {
         FreeBlock *next = curr_free->next;
-        free(curr_free);
+        pefree(curr_free, 1);
         curr_free = next;
     }
     free_list = NULL;

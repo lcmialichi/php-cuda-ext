@@ -119,7 +119,7 @@ class CudaBenchmark
             $start_gpu = microtime(true);
 
             $window = $a();
-            $window->multiply(2)->multiply(3)->multiply(4);
+            $window * 2 * 3 * 4;
             $gpu_time = (microtime(true) - $start_gpu) * 1000;
             $gpu_success = true;
         } catch (Exception $e) {
@@ -189,9 +189,14 @@ class CudaBenchmark
 
 // CudaBenchmark::runAllTests();
 
-$ca = CudaArray::ones([1, 2]);
-$ca2 = CudaArray::ones([1, 2]);
+$ca = CudaArray::ones([4, 4, 4]);
 
-$result = ($ca + $ca2 * 10) / 10;
+$result =   $ca[0] + $ca; // altera o valor de ca
 
-var_dump($result->toArray());
+var_dump($result->getShape());
+
+// var_dump($ca->toArray());
+
+// $result = ($ca + $ca2 * 10)**2 / 10;
+
+// var_dump($ca->toArray());

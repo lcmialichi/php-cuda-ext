@@ -189,14 +189,51 @@ class CudaBenchmark
 
 // CudaBenchmark::runAllTests();
 
+/**
+ * creates a CudaArray with shape of 4x4x4 full of ones
+ */
 $ca = CudaArray::ones([4, 4, 4]);
 
-$result =   $ca[0] + $ca; // altera o valor de ca
+/**
+ *  idx 1 * 2 (4x4), and sum with idx 2 (4x4)
+ * @var CudaArray
+ */
+$result = ($ca[1] * 2) + $ca[2];
 
-var_dump($result->getShape());
+/**
+ * set at idx 0 the result (the shape remains 4x4x4)
+ * @var CudaArray
+ */
+$ca[0] = $result[0];
 
-// var_dump($ca->toArray());
+/**
+ * get shape from the matrix
+ */
+[$x, $y, $z] = $ca->getShape();
 
-// $result = ($ca + $ca2 * 10)**2 / 10;
+/**
+ * reshape as 1x64
+ */
+$newCa = $ca->reshape([$x * $y * $z]);
 
-// var_dump($ca->toArray());
+/**
+ * creates a window of indices 0 to 4 (does not create a new tensor in memory)
+ */
+$newCa = clone $newCa([0, 4]);
+
+/**
+ * return to CPU as an Array
+ * array(5) {
+ *  [0]=>
+ *  float(40.33333206176758)
+ *  [1]=>
+ *  float(40.33333206176758)
+ *  [2]=>
+ *  float(40.33333206176758)
+ *  [3]=>
+ *  float(40.33333206176758)
+ *  [4]=>
+ *  float(40.33333206176758)
+ *}
+ */
+var_dump($newCa->toArray());

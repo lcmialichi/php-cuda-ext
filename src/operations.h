@@ -22,3 +22,8 @@
 #define OP_TAN 16
 #define OP_ABS 17
 #define OP_NEG 18
+
+#define SCATTER 18
+
+
+

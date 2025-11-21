@@ -15,6 +15,11 @@ extern "C"
     void launch_relu_kernel(float *a, float *result, int n);
     void launch_sigmoid_kernel(float *a, float *result, int n);
     void launch_tanh_kernel(float *a, float *result, int n);
+    void launch_scatter(float *dest_data,
+                        const float *src_data,
+                        const int *indices,
+                        size_t num_indices,
+                        size_t slice_size);
 
 #ifdef __cplusplus
 }

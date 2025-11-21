@@ -97,6 +97,7 @@ extern "C"
                                      size_t total_elements, size_t a_base_offset,
                                      size_t b_base_offset);
 
+
 #ifdef __cplusplus
 }
 #endif

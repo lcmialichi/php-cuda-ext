@@ -1025,77 +1025,80 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
 
     if (offset == NULL)
     {
-        zend_throw_error(NULL,
-                         "It is not permitted to append (operator []) to a CudaArray. ");
+        zend_throw_error(NULL, "It is not permitted to append (operator []) to a CudaArray. ");
         return;
     }
 
     slice_info_t slice_info;
-    if (!parse_slice_parameter(offset, &slice_info) || slice_info.type != SLICE_INDEX)
+    if (!parse_slice_parameter(offset, &slice_info))
     {
-        zend_throw_error(NULL, "Tensor assignment requires simple index access.");
+        zend_throw_error(NULL, "Invalid tensor index parameter.");
         return;
     }
 
-    int index = slice_info.data.index;
     tensor_t *base_tensor = this_obj->tensor_handle;
 
-    if (base_tensor->ndims == 0 || index < 0 || index >= base_tensor->shape[0])
+    if (slice_info.type == SLICE_INDEX)
     {
-        zend_throw_error(NULL, "Index out of bounds for write operation (Dim 0).");
-        return;
-    }
+        int index = slice_info.data.index;
+        size_t element_offset = (size_t)index * base_tensor->strides[0];
 
-    size_t element_offset = (size_t)index * base_tensor->strides[0];
-
-    if (Z_TYPE_P(value) == IS_DOUBLE || Z_TYPE_P(value) == IS_LONG)
-    {
-        float scalar_value = (Z_TYPE_P(value) == IS_DOUBLE) ? (float)Z_DVAL_P(value) : (float)Z_LVAL_P(value);
-
-        if (cuda_tensor_set_scalar(base_tensor, element_offset, scalar_value) != SUCCESS)
+        if (base_tensor->ndims == 0 || index < 0 || index >= base_tensor->shape[0])
         {
-            zend_throw_error(NULL, "Failed to write scalar value to GPU memory.");
-        }
-    }
-    else if (Z_TYPE_P(value) == IS_OBJECT && instanceof_function(Z_OBJCE_P(value), cuda_array_ce))
-    {
-        cuda_array_obj *src_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(value));
-        tensor_t *src_tensor = src_obj->tensor_handle;
-
-        int dest_ndims = base_tensor->ndims - 1;
-        if (src_tensor->ndims != dest_ndims)
-        {
-            zend_throw_error(NULL, "Tensor assignment requires a source with %d dimensions, but %d given.",
-                             dest_ndims, src_tensor->ndims);
+            zend_throw_error(NULL, "Index out of bounds for write operation (Dim 0).");
             return;
         }
 
-        for (int i = 0; i < dest_ndims; i++)
+        if (Z_TYPE_P(value) == IS_DOUBLE || Z_TYPE_P(value) == IS_LONG)
         {
-            if (src_tensor->shape[i] != base_tensor->shape[i + 1])
+            float scalar_value = (Z_TYPE_P(value) == IS_DOUBLE) ? (float)Z_DVAL_P(value) : (float)Z_LVAL_P(value);
+            if (cuda_tensor_set_scalar(base_tensor, element_offset, scalar_value) != SUCCESS)
             {
-                zend_throw_error(NULL, "Shape mismatch for tensor assignment at dimension %d.", i + 1);
-                return;
+                zend_throw_error(NULL, "Failed to write scalar value to GPU memory.");
             }
         }
-
-        size_t total_bytes = src_tensor->total_size * sizeof(float);
-
-        void *dest_ptr = (char *)base_tensor->data + element_offset * sizeof(float);
-
-        cudaError_t err = cudaMemcpy(dest_ptr,
-                                     src_tensor->data,
-                                     total_bytes,
-                                     cudaMemcpyDeviceToDevice);
-
-        if (err != cudaSuccess)
+        else if (Z_TYPE_P(value) == IS_OBJECT && instanceof_function(Z_OBJCE_P(value), cuda_array_ce))
         {
-            zend_throw_error(NULL, "Failed GPU memory copy during tensor assignment: %s", cudaGetErrorString(err));
+            cuda_array_obj *src_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(value));
+            tensor_t *src_tensor = src_obj->tensor_handle;
+            int dest_ndims = base_tensor->ndims - 1;
+
+            if (src_tensor->ndims != dest_ndims)
+            {
+                zend_throw_error(NULL, "Tensor assignment requires a source with %d dimensions, but %d given.", dest_ndims, src_tensor->ndims);
+                return;
+            }
+            for (int i = 0; i < dest_ndims; i++)
+            {
+                if (src_tensor->shape[i] != base_tensor->shape[i + 1])
+                {
+                    zend_throw_error(NULL, "Shape mismatch for tensor assignment at dimension %d.", i + 1);
+                    return;
+                }
+            }
+
+            size_t total_bytes = src_tensor->total_size * sizeof(float);
+            void *dest_ptr = (char *)base_tensor->data + element_offset * sizeof(float);
+
+            cudaError_t err = cudaMemcpy(dest_ptr, src_tensor->data, total_bytes, cudaMemcpyDeviceToDevice);
+            if (err != cudaSuccess)
+            {
+                zend_throw_error(NULL, "Failed GPU memory copy during tensor assignment: %s", cudaGetErrorString(err));
+            }
+        }
+        else
+        {
+             zend_throw_error(NULL, "Only scalar or CudaArray assignment is supported for single index.");
         }
     }
-    else
+    else if (slice_info.type == SLICE_RANGE)
     {
-        zend_throw_error(NULL, "Only scalar or CudaArray assignment is supported in this context for now.");
+        zend_throw_error(NULL, "SLICE_RANGE not implemented yet.");
+
+    }
+    else 
+    {
+        zend_throw_error(NULL, "Only single index, array index list, or range slice assignment is supported in this context for now.");
     }
 }
 

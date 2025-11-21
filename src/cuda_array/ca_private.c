@@ -285,6 +285,51 @@ tensor_t *cuda_unary_op(tensor_t *a, int operation_type)
     return result;
 }
 
+cudaError_t cuda_tensor_scatter(
+    tensor_t *dest_tensor, 
+    const int *indices, 
+    size_t num_indices, 
+    tensor_t *src_tensor)
+{
+    if (!dest_tensor || !src_tensor || !indices || dest_tensor->ndims == 0) {
+        return cudaErrorInvalidDevicePointer;
+    }
+
+    size_t slice_size = dest_tensor->total_size / dest_tensor->shape[0];
+    
+    if (src_tensor->total_size != num_indices * slice_size) {
+        return cudaErrorInvalidValue;
+    }
+
+    int *d_indices = NULL;
+    size_t indices_bytes = num_indices * sizeof(int);
+    cudaError_t err;
+
+    err = cudaMalloc((void**)&d_indices, indices_bytes);
+    if (err != cudaSuccess) return err;
+    
+    err = cudaMemcpy(d_indices, indices, indices_bytes, cudaMemcpyHostToDevice);
+    if (err != cudaSuccess) {
+        cudaFree(d_indices);
+        return err;
+    }
+
+    launch_scatter(
+        (float*)dest_tensor->data, 
+        (const float*)src_tensor->data,
+        d_indices,
+        num_indices,
+        slice_size);
+
+    cudaError_t status = cudaGetLastError();
+    cudaFree(d_indices);
+    if (status == cudaSuccess) {
+        status = cudaDeviceSynchronize();
+    }
+
+    return status;
+}
+
 tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
 {
     if (original == NULL || new_shape == NULL || new_ndims <= 0)
@@ -402,6 +447,7 @@ tensor_t *cuda_tensor_copy(tensor_t *tensor)
 
     return copy;
 }
+
 
 static char *tensor_shape_as_string(tensor_t *tensor)
 {

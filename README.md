@@ -2,6 +2,14 @@
 
 A native PHP extension that provides direct access to NVIDIA CUDA functionality, enabling high-performance GPU computing inside PHP applications.
 
+# ⚠️ NOTICE — Experimental Project
+
+This extension is **actively under development**.  
+It is **not production-ready**, may contain bugs, and its API may change at any time.  
+Use **only in testing or experimental environments**.
+
+---
+
 ### Requirements
 To build and run this extension, you need:
 
@@ -33,3 +41,59 @@ Verify that it loaded correctly:
 ```bash
 php -m | grep cuda
 ```
+
+
+### Quick start
+
+```php
+/**
+ * creates a CudaArray with shape of 4x4x4 full of ones
+ */
+$ca = CudaArray::ones([4, 4, 4]);
+
+/**
+ *  idx 1 * 2 (4x4), and sum with idx 2 (4x4)
+ * @var CudaArray
+ */
+$result = ($ca[1] * 2) + $ca[2];
+
+/**
+ * set at idx 0 the result (the shape remains 4x4x4)
+ * @var CudaArray
+ */
+$ca[0] = $result[0];
+
+/**
+ * get shape from the matrix
+ */
+[$x, $y, $z] = $ca->getShape();
+
+/**
+ * reshape as 1x64
+ */
+$newCa = $ca->reshape([$x * $y * $z]);
+
+/**
+ * creates a window of indices 0 to 4 (does not create a new tensor in memory)
+ */
+$newCa = clone $newCa([0, 4]);
+
+/**
+ * return to CPU as an Array
+ * array(5) {
+ *  [0]=>
+ *  float(40.33333206176758)
+ *  [1]=>
+ *  float(40.33333206176758)
+ *  [2]=>
+ *  float(40.33333206176758)
+ *  [3]=>
+ *  float(40.33333206176758)
+ *  [4]=>
+ *  float(40.33333206176758)
+ *}
+ */
+var_dump($newCa->toArray());
+```
+
+

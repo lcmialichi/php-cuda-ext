@@ -142,7 +142,7 @@ $ca->getShape();    // Returns shape (array of ints)
 $ca->getStrides();  // Returns memory strides (array of ints)
 ```
 
-### new Instance
+### New Instance
 
 ```php
 # Notice: when using the constructor, the PHP array is transferred from CPU → GPU
@@ -164,8 +164,7 @@ $ca->flatten(); // Same as reshape([n])
 ### Comparing
 All comparison methods return a new CudaArray stored on the GPU, containing 1.0 for true and 0.0 for false.
 They accept either:
- - a scalar, or
- - another CudaArray (broadcasting is automatically applied)
+ - a scalar, or another CudaArray (broadcasting is automatically applied)
 ```php
 $x->gt($y);   // greater than      (x > y)
 $y->lt($x);   // less than         (x < y)

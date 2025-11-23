@@ -39,7 +39,7 @@ $x[[0, 5]] = $x[[1, 6]];
     - Update memory allocation to match dtype size
 
 ## Conditional Operations
-- [] Implement where operation:
+- [ ] Implement where operation:
 ```php
 $z = CudaArray::where($cond, $x, $y);
 ```

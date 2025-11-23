@@ -214,12 +214,13 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
 int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value)
 {
     size_t byte_offset = element_offset * sizeof(float);
-    
+
     void *gpu_destination = (char *)tensor->data + byte_offset;
-    
+
     cudaError_t err = cudaMemcpy(gpu_destination, &scalar_value, sizeof(float), cudaMemcpyHostToDevice);
-    
-    if (err != cudaSuccess) {
+
+    if (err != cudaSuccess)
+    {
         return FAILURE;
     }
     return SUCCESS;
@@ -325,7 +326,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
     }
 
     tensor_t *view = cuda_tensor_create_view(base_tensor, view_shape, view_strides, view_ndims, element_offset, view_total);
-     if (num_slices > 0)
+    if (num_slices > 0)
     {
         view->num_slices = num_slices;
         view->slices = (slice_info_t *)emalloc(sizeof(slice_info_t) * num_slices);

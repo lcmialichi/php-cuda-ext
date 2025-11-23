@@ -129,6 +129,9 @@ $ca->log();
 $ca->cos();
 $ca->sin();
 $ca->tan();
+
+// others
+$ca->neg(); 
 ```
 
 ### Getters
@@ -157,3 +160,15 @@ $ca = CudaArray::full($shape, 1.5);
 $ca->reshape([4, 4, 4]);
 $ca->flatten(); // Same as reshape([n])
 ```
+
+### Comparising
+
+```php
+$x->gt($y);   // greater than      (x > y)
+$y->lt($x);   // less than         (x < y)
+$x->eq($y);   // equal             (x == y)
+$x->ne($y);   // not equal         (x != y)
+$x->ge($y);   // greater or equal  (x >= y)
+$x->le($y);   // less or equal     (x <= y)
+```
+

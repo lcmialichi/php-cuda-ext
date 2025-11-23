@@ -7,6 +7,10 @@
  */
 class CudaArray implements ArrayAccess
 {
+    /**
+     *
+     * @param array<int, float> $data
+     */
     public function __construct(array $data)
     {
     }
@@ -97,6 +101,25 @@ class CudaArray implements ArrayAccess
     {
     }
     public function flatten(): CudaArray
+    {
+    }
+
+    public function gt(float|CudaArray $other): CudaArray
+    {
+    }
+
+    public function lt(float|CudaArray $other): CudaArray
+    {
+    }
+
+    public function eq(float|CudaArray $other): CudaArray
+    {
+    }
+    public function ne(float|CudaArray $other): CudaArray
+    {
+    }
+
+    public function le(float|CudaArray $other): CudaArray
     {
     }
 

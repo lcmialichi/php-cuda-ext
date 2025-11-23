@@ -85,32 +85,32 @@ ZEND_METHOD(CudaArray, power)
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Power", OP_POW);
 }
 
-ZEND_METHOD(CudaArray, greater)
+ZEND_METHOD(CudaArray, gt)
 {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Greater", OP_GT);
 }
 
-ZEND_METHOD(CudaArray, less)
+ZEND_METHOD(CudaArray, lt)
 {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Less", OP_LT);
 }
 
-ZEND_METHOD(CudaArray, equal)
+ZEND_METHOD(CudaArray, eq)
 {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Equal", OP_EQ);
 }
 
-ZEND_METHOD(CudaArray, notEqual)
+ZEND_METHOD(CudaArray, ne)
 {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "NotEqual", OP_NE);
 }
 
-ZEND_METHOD(CudaArray, greaterEqual)
+ZEND_METHOD(CudaArray, ge)
 {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "GreaterEqual", OP_GE);
 }
 
-ZEND_METHOD(CudaArray, lessEqual)
+ZEND_METHOD(CudaArray, le)
 {
     binary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "LessEqual", OP_LE);
 }

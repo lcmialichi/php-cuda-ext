@@ -45,12 +45,12 @@ ZEND_METHOD(CudaArray, tan);
 ZEND_METHOD(CudaArray, abs);
 ZEND_METHOD(CudaArray, neg);
 
-ZEND_METHOD(CudaArray, greater);
-ZEND_METHOD(CudaArray, less);
-ZEND_METHOD(CudaArray, equal);
-ZEND_METHOD(CudaArray, notEqual);
-ZEND_METHOD(CudaArray, greaterEqual);
-ZEND_METHOD(CudaArray, lessEqual);
+ZEND_METHOD(CudaArray, gt);
+ZEND_METHOD(CudaArray, lt);
+ZEND_METHOD(CudaArray, eq);
+ZEND_METHOD(CudaArray, ne);
+ZEND_METHOD(CudaArray, ge);
+ZEND_METHOD(CudaArray, le);
 
 ZEND_METHOD(CudaArray, reshape);
 ZEND_METHOD(CudaArray, flatten);

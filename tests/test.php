@@ -237,4 +237,4 @@ $newCa = clone $newCa([0, 4]);
 *}
 
  */
-var_dump($newCa->toArray());
+var_dump($newCa[[0, 2]]->toArray());

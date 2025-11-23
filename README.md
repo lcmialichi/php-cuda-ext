@@ -47,54 +47,113 @@ php -m | grep cuda
 
 ```php
 /**
- * creates a CudaArray with shape of 4x4x4 full of ones
+ * Creates a CudaArray with a 4×4×4 shape filled with ones.
  */
 $ca = CudaArray::ones([4, 4, 4]);
 
 /**
- *  idx 1 * 2 (4x4), and sum with idx 2 (4x4)
- * @var CudaArray
+ * Performs:  (ca[1] * 2) + ca[2]
+ * Both slices have shape 4×4.
  */
 $result = ($ca[1] * 2) + $ca[2];
 
 /**
- * set at idx 0 the result (the shape remains 4x4x4)
- * @var CudaArray
+ * Assigns the result to index 0.
+ * The overall tensor shape remains 4×4×4.
  */
 $ca[0] = $result;
 
 /**
- * get shape from the matrix
+ * Get tensor shape.
  */
 [$x, $y, $z] = $ca->getShape();
 
 /**
- * reshape as 1x64
+ * Reshape into a flat 1D tensor of size 64.
  */
 $newCa = $ca->reshape([$x * $y * $z]);
 
 /**
- * creates a window of indices 0 to 4 (does not create a new tensor in memory)
+ * - Creates a view/window from indices 0 to 4 (no new GPU memory allocated)
+ * - clone() then forces materialization (new GPU tensor)
  */
 $newCa = clone $newCa([0, 4]);
 
 /**
- * return to CPU as an Array
+ * Transfer the result back to CPU as a PHP array.
+ *
+ * Output example:
  * array(5) {
-  * [0]=>
-  * float(3)
-  * [1]=>
-  * float(3)
-  * [2]=>
-  * float(3)
-  * [3]=>
-  * float(3)
-  * [4]=>
-  * float(3)
-*}
-
+ *   [0] => float(3)
+ *   [1] => float(3)
+ *   [2] => float(3)
+ *   [3] => float(3)
+ *   [4] => float(3)
+ * }
  */
 var_dump($newCa->toArray());
+
 ```
 
+## Methods
+### Basic math
+All methods list bellow accept an scalar value or a CudaArray instance, the shape is broadcasted automatically
 
+```php
+// Multiplication
+$ca->multiply($x);
+$ca * $x;
+
+// Addition
+$ca->add($x);
+$ca + $x;
+
+// Division
+$ca->divide($x);
+$ca / $x;
+
+// Subtraction
+$ca->subtract($x);
+$ca - $x;
+
+// Power
+$ca->power($x);
+$ca ** $x;
+
+// Exponential / Square Root / Logarithm
+$ca->exp();
+$ca->sqrt();
+$ca->log();
+
+// Trigonometry
+$ca->cos();
+$ca->sin();
+$ca->tan();
+```
+
+### Getters
+
+```php
+$ca->toArray();     // Transfer tensor to CPU as nested PHP array
+$ca->getShape();    // Returns shape (array of ints)
+$ca->getStrides();  // Returns memory strides (array of ints)
+```
+
+### new Instance
+
+```php
+# Notice: when using the constructor, the PHP array is transferred from CPU → GPU
+$ca = new CudaArray([[1, 2], [3, 4]]);
+
+# Creates a tensor directly on the GPU, without transferring data from PHP
+$ca = CudaArray::ones($shape);
+$ca = CudaArray::zeros($shape);
+$ca = CudaArray::full($shape, 1.5);
+```
+
+### Shape Manipulation
+
+```php
+$ca->reshape([4, 4, 4]);
+$ca->flatten(); // Same as reshape([n])
+```

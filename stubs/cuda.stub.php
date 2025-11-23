@@ -117,7 +117,5 @@ class CudaArray implements ArrayAccess
     {
     }
 
-    #endregion
-
 }
 

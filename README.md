@@ -161,8 +161,11 @@ $ca->reshape([4, 4, 4]);
 $ca->flatten(); // Same as reshape([n])
 ```
 
-### Comparising
-
+### Comparing
+All comparison methods return a new CudaArray stored on the GPU, containing 1.0 for true and 0.0 for false.
+They accept either:
+ - a scalar, or
+ - another CudaArray (broadcasting is automatically applied)
 ```php
 $x->gt($y);   // greater than      (x > y)
 $y->lt($x);   // less than         (x < y)

@@ -51,6 +51,10 @@
         "scalar_ops.h": "c",
         "string.h": "c",
         "stdlib.h": "c",
-        "ca_private.h": "c"
+        "ca_private.h": "c",
+        "reduction_ops.h": "c",
+        "memory_pool.h": "c",
+        "algorithm": "cpp",
+        "optional": "cpp"
     }
 }

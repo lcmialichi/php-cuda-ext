@@ -23,7 +23,11 @@
 #define OP_ABS 17
 #define OP_NEG 18
 
-#define SCATTER 18
+#define OP_REDUCE_SUM 19
+#define OP_REDUCE_MEAN 20
+#define OP_REDUCE_MAX 21
+#define OP_REDUCE_MIN 22
+#define OP_REDUCE_PROD 23
 
-
-
+#define OP_ARG_MAX 24
+#define OP_ARG_MIN 25

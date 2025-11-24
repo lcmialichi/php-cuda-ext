@@ -158,4 +158,67 @@ struct NegOp
     }
 };
 
+struct MaxOp
+{
+    __device__ __forceinline__ float operator()(float a, float b)
+    {
+        return max(a, b);
+    }
+};
+
+struct MinOp
+{
+    __device__ __forceinline__ float operator()(float a, float b)
+    {
+        return min(a, b);
+    }
+};
+
+struct ArgMaxOp
+{
+    __device__ __forceinline__ bool operator()(float a, float b)
+    {
+        return a > b;
+    }
+};
+
+struct ArgMinOp
+{
+    __device__ __forceinline__ bool operator()(float a, float b)
+    {
+        return a < b;
+    }
+};
+
+struct ZeroIdentity
+{
+    __device__ __forceinline__ float operator()() const
+    {
+        return 0.0f;
+    }
+};
+
+struct NegInfIdentity
+{
+    __device__ __forceinline__ float operator()() const
+    {
+        return -INFINITY;
+    }
+};
+
+struct InfIdentity
+{
+    __device__ __forceinline__ float operator()() const
+    {
+        return INFINITY;
+    }
+};
+
+struct OneIdentity
+{
+    __device__ __forceinline__ float operator()() const
+    {
+        return 1.0f;
+    }
+};
 #endif

@@ -123,6 +123,28 @@ class CudaArray implements ArrayAccess
     {
     }
 
+    public function sum(?int $axis = null): CudaArray
+    {
+    }
+    public function mean(?int $axis = null): CudaArray
+    {
+    }
+    public function max(?int $axis = null): CudaArray
+    {
+    }
+    public function min(?int $axis = null): CudaArray
+    {
+    }
+    public function prod(?int $axis = null): CudaArray
+    {
+    }
+    public function argMax(?int $axis = null): CudaArray
+    {
+    }
+    public function argMin(?int $axis = null): CudaArray
+    {
+    }
+
 
     function offsetExists(mixed $offset): bool
     {

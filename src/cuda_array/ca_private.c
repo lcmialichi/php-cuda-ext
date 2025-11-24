@@ -1,8 +1,9 @@
 #include "ca_private.h"
 #include "broadcast_ops.h"
+#include "reduction_ops.h"
+#include "unary_ops.h"
 #include "tensor_fabric.h"
 #include "scalar_ops.h"
-#include "unary_ops.h"
 #include "operations.h"
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +48,18 @@ UnaryDispatchEntry unary_dispatch[] = {
     {OP_TAN, launch_unary_tan_kernel},
     {OP_ABS, launch_unary_abs_kernel},
     {OP_NEG, launch_unary_neg_kernel}};
+
+ReductionDispatchEntry reduction_dispatch[] = {
+    {OP_REDUCE_SUM, launch_reduce_sum},
+    {OP_REDUCE_MAX, launch_reduce_max},
+    {OP_REDUCE_MIN, launch_reduce_min},
+    {OP_REDUCE_PROD, launch_reduce_prod},
+};
+
+ReductionArgDispatchEntry reduction_arg_dispatch[] = {
+    {OP_ARG_MAX, launch_arg_max},
+    {OP_ARG_MIN, launch_arg_min},
+};
 
 int calculate_broadcast_shape(int *a_shape, int a_dims, int *b_shape, int b_dims, int *result_shape, int *result_dims)
 {
@@ -134,6 +147,37 @@ int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
     return 1;
 }
 
+static int calculate_reduction_shape(tensor_t *input, int axis, int *result_shape, size_t *total_elements_out_ptr)
+{
+    if (axis < 0 || axis >= input->ndims)
+    {
+        zend_throw_error(NULL, "Invalid axis %d for reduction operation. Must be between 0 and %d.", axis, input->ndims - 1);
+        return 0;
+    }
+
+    size_t total_elements = 1;
+    int j = 0;
+    for (int i = 0; i < input->ndims; i++)
+    {
+        if (i != axis)
+        {
+            result_shape[j++] = input->shape[i];
+            total_elements *= input->shape[i];
+        }
+    }
+
+    *total_elements_out_ptr = total_elements;
+
+    if (j == 0)
+    {
+        j = 1;
+        result_shape[0] = 1;
+        *total_elements_out_ptr = 1;
+    }
+
+    return j;
+}
+
 scalar_fn get_scalar_fn(int op)
 {
     for (int i = 0; i < sizeof(scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
@@ -161,6 +205,24 @@ broadcast_fn get_broadcast_fn(int op)
     return NULL;
 }
 
+reduction_fn get_reduction_fn(int op)
+{
+    for (int i = 0; i < sizeof(reduction_dispatch) / sizeof(ReductionDispatchEntry); i++)
+        if (reduction_dispatch[i].op == op)
+            return reduction_dispatch[i].fn;
+
+    return NULL;
+}
+
+reduction_arg_fn get_reduction_arg_fn(int op)
+{
+    for (int i = 0; i < sizeof(reduction_arg_dispatch) / sizeof(ReductionArgDispatchEntry); i++)
+        if (reduction_arg_dispatch[i].op == op)
+            return reduction_arg_dispatch[i].fn;
+
+    return NULL;
+}
+
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
 {
     if (!cuda_initialized())
@@ -168,7 +230,6 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
         php_error_docref(NULL, E_WARNING, "CUDA not initialized");
         return NULL;
     }
-
 
     broadcast_fn func = get_broadcast_fn(operation_type);
 
@@ -285,49 +346,91 @@ tensor_t *cuda_unary_op(tensor_t *a, int operation_type)
     return result;
 }
 
-cudaError_t cuda_tensor_scatter(
-    tensor_t *dest_tensor, 
-    const int *indices, 
-    size_t num_indices, 
-    tensor_t *src_tensor)
+tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, int operation_type)
 {
-    if (!dest_tensor || !src_tensor || !indices || dest_tensor->ndims == 0) {
-        return cudaErrorInvalidDevicePointer;
+    int result_shape_arr[MAX_DIMS];
+    size_t total_elements_out;
+
+    int result_ndims = calculate_reduction_shape(input, axis, result_shape_arr, &total_elements_out);
+    if (total_elements_out == 0 && result_ndims > 0)
+    {
+        return NULL;
     }
 
-    size_t slice_size = dest_tensor->total_size / dest_tensor->shape[0];
-    
-    if (src_tensor->total_size != num_indices * slice_size) {
-        return cudaErrorInvalidValue;
+    tensor_t *result = NULL;
+    cudaError_t err = cudaSuccess;
+    result = cuda_tensor_create_int(result_shape_arr, result_ndims, NULL);
+    if (!result)
+        return NULL;
+
+    reduction_arg_fn func = get_reduction_arg_fn(operation_type);
+    func(input->data, result->data, input->shape, input->ndims, input->strides, axis, total_elements_out, input->gpu_offset);
+    if (!result)
+    {
+        zend_throw_error(NULL, "Tensor creation failed during reduction.");
+        return NULL;
     }
 
-    int *d_indices = NULL;
-    size_t indices_bytes = num_indices * sizeof(int);
-    cudaError_t err;
-
-    err = cudaMalloc((void**)&d_indices, indices_bytes);
-    if (err != cudaSuccess) return err;
-    
-    err = cudaMemcpy(d_indices, indices, indices_bytes, cudaMemcpyHostToDevice);
-    if (err != cudaSuccess) {
-        cudaFree(d_indices);
-        return err;
+    err = cudaDeviceSynchronize();
+    if (err != cudaSuccess)
+    {
+        zend_throw_error(NULL, "Failed to synchronize device after reduction: %s", cudaGetErrorString(err));
+        cuda_tensor_destroy(result);
+        return NULL;
     }
 
-    launch_scatter(
-        (float*)dest_tensor->data, 
-        (const float*)src_tensor->data,
-        d_indices,
-        num_indices,
-        slice_size);
+    return result;
+}
 
-    cudaError_t status = cudaGetLastError();
-    cudaFree(d_indices);
-    if (status == cudaSuccess) {
-        status = cudaDeviceSynchronize();
+tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, int operation_type)
+{
+    int result_shape_arr[MAX_DIMS];
+    size_t total_elements_out;
+
+    int result_ndims = calculate_reduction_shape(input, axis, result_shape_arr, &total_elements_out);
+    if (total_elements_out == 0 && result_ndims > 0)
+    {
+        return NULL;
     }
 
-    return status;
+    tensor_t *result = NULL;
+    cudaError_t err = cudaSuccess;
+
+    reduction_fn func = get_reduction_fn(operation_type);
+    if (func == NULL)
+    {
+        zend_throw_error(NULL, "Reduction operation handler not found for type %d.", operation_type);
+        return NULL;
+    }
+
+    result = cuda_tensor_create_empty(result_shape_arr, result_ndims);
+    if (!result)
+        return NULL;
+
+    func(input->data, result->data, input->shape, input->ndims,
+         result_shape_arr, input->strides, result_ndims, axis, total_elements_out, input->gpu_offset);
+
+    if (operation_type == OP_REDUCE_MEAN)
+    {
+        size_t block_size = input->shape[axis];
+        zend_throw_error(NULL, "OP_REDUCE_MEAN not implemented yet.");
+    }
+
+    if (!result)
+    {
+        zend_throw_error(NULL, "Tensor creation failed during reduction.");
+        return NULL;
+    }
+
+    err = cudaDeviceSynchronize();
+    if (err != cudaSuccess)
+    {
+        zend_throw_error(NULL, "Failed to synchronize device after reduction: %s", cudaGetErrorString(err));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
 }
 
 tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
@@ -358,16 +461,16 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
         php_error_docref(NULL, E_WARNING, "Reshape requires that the number of elements remains the same. Original: %zu, New: %zu.", original_size, new_size);
         return NULL;
     }
-    
+
     if (!is_contiguous(original))
     {
         php_error_docref(NULL, E_WARNING, "Reshape of non-contiguous tensor requires a memory copy/reorder operation, which is not yet implemented. Returning NULL.");
         return NULL;
     }
-    
+
     size_t new_strides[MAX_DIMS];
 
-    new_strides[new_ndims - 1] = 1; 
+    new_strides[new_ndims - 1] = 1;
 
     for (int i = new_ndims - 2; i >= 0; i--)
     {
@@ -380,8 +483,7 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
         new_strides,
         new_ndims,
         original->gpu_offset,
-        original->total_size
-    );
+        original->total_size);
 
     return reshaped;
 }
@@ -447,7 +549,6 @@ tensor_t *cuda_tensor_copy(tensor_t *tensor)
 
     return copy;
 }
-
 
 static char *tensor_shape_as_string(tensor_t *tensor)
 {

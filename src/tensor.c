@@ -68,6 +68,7 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     view->base_tensor = base_tensor;
     base_tensor->ref_count++;
     view->num_slices = 0;
+    view->dtype = base_tensor->dtype;
     view->slices = NULL;
 
     if (dims > 0)
@@ -225,6 +226,22 @@ int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar
     }
     return SUCCESS;
 }
+
+
+int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor)
+{
+    size_t total_bytes = tensor->total_size  * sizeof(float);
+    void *dest_ptr = (char *)base_tensor->data + element_offset * sizeof(float);
+
+    cudaError_t err = cudaMemcpy(dest_ptr, &tensor->data, total_bytes, cudaMemcpyHostToDevice);
+
+    if (err != cudaSuccess)
+    {
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
 
 tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices)
 {

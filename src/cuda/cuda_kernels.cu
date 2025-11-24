@@ -7,35 +7,6 @@
 extern "C"
 {
 
-    __global__ void scatter_write_kernel(
-        float *dest_data,
-        const float *src_data,
-        const int *indices,
-        size_t num_indices,
-        size_t slice_size)
-    {
-        int index_idx = blockIdx.x;
-        if (index_idx >= num_indices)
-            return;
-
-        int dest_dim_index = indices[index_idx];
-
-        size_t dest_offset = dest_dim_index * slice_size;
-
-        size_t src_offset = index_idx * slice_size;
-        size_t local_idx = threadIdx.x;
-
-        while (local_idx < slice_size)
-        {
-            size_t global_dest_pos = dest_offset + local_idx;
-            size_t global_src_pos = src_offset + local_idx;
-
-            dest_data[global_dest_pos] = src_data[global_src_pos];
-
-            local_idx += blockDim.x;
-        }
-    }
-
     __global__ void fill_kernel(float *data, float value, size_t size)
     {
         size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -77,50 +48,6 @@ extern "C"
         {
             result[i] = tanhf(a[i]);
         }
-    }
-
-    __global__ void scatter_copy_kernel(
-        float *dest_data,
-        const float *src_data,
-        const int *indices,
-        size_t num_indices,
-        size_t slice_size)
-    {
-        int index_idx = blockIdx.x;
-        if (index_idx >= num_indices)
-            return;
-
-        int dest_dim_index = indices[index_idx];
-        size_t dest_offset = dest_dim_index * slice_size;
-        size_t src_offset = index_idx * slice_size;
-        size_t local_idx = threadIdx.x;
-
-        while (local_idx < slice_size)
-        {
-            size_t global_dest_pos = dest_offset + local_idx;
-            size_t global_src_pos = src_offset + local_idx;
-
-            dest_data[global_dest_pos] = src_data[global_src_pos];
-
-            local_idx += blockDim.x;
-        }
-    }
-
-    void launch_scatter(float *dest_data,
-                        const float *src_data,
-                        const int *indices,
-                        size_t num_indices,
-                        size_t slice_size)
-    {
-        int threads = 256;
-        if (threads > slice_size)
-        {
-            threads = (int)slice_size;
-        }
-
-        int blocks = (int)num_indices;
-
-        scatter_copy_kernel<<<blocks, threads>>>(dest_data, src_data, indices, num_indices, slice_size);
     }
 
     void launch_fill_kernel(float *data, float value, size_t size)

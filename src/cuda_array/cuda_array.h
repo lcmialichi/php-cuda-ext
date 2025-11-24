@@ -7,6 +7,8 @@
 #include "tensor.h"
 #include "cuda.h"
 
+#define PREVIEW_COUNT 10
+
 extern zend_class_entry *cuda_array_ce;
 
 typedef struct
@@ -16,12 +18,12 @@ typedef struct
     zend_object obj;
 } cuda_array_obj;
 
-
 int cuda_array_init(size_t size);
 void cuda_array_shutdown();
 
 ZEND_METHOD(CudaArray, __construct);
 ZEND_METHOD(CudaArray, __invoke);
+ZEND_METHOD(CudaArray, __debugInfo);
 
 ZEND_METHOD(CudaArray, zeros);
 ZEND_METHOD(CudaArray, ones);
@@ -51,6 +53,15 @@ ZEND_METHOD(CudaArray, eq);
 ZEND_METHOD(CudaArray, ne);
 ZEND_METHOD(CudaArray, ge);
 ZEND_METHOD(CudaArray, le);
+
+ZEND_METHOD(CudaArray, sum);
+ZEND_METHOD(CudaArray, mean);
+ZEND_METHOD(CudaArray, max);
+ZEND_METHOD(CudaArray, min);
+ZEND_METHOD(CudaArray, prod);
+
+ZEND_METHOD(CudaArray, argMax);
+ZEND_METHOD(CudaArray, argMin);
 
 ZEND_METHOD(CudaArray, reshape);
 ZEND_METHOD(CudaArray, flatten);

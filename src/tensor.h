@@ -4,6 +4,8 @@
 #include <cuda_runtime.h>
 
 #define MAX_DIMS 10
+#define DTYPE_FLOAT 1
+#define DTYPE_INT 2
 
 typedef enum
 {
@@ -28,7 +30,8 @@ typedef struct
 
 typedef struct tensor
 {
-    float *data;
+    void *data;
+    int dtype;
     int *shape;
     size_t *strides;
     int ndims;
@@ -60,6 +63,8 @@ extern "C"
     tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
 
     int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value);
+    int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor);
+    
 #ifdef __cplusplus
 }
 #endif

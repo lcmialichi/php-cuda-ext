@@ -99,10 +99,10 @@ tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
 
 tensor_t *cuda_tensor_create_empty(const int shape[], int ndims)
 {
-    return cuda_tensor_create(shape, ndims, NULL);
+    return cuda_tensor_create_float(shape, ndims, NULL);
 }
 
-tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
+tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int dtype)
 {
     if (!tensor_init())
         return NULL;
@@ -110,6 +110,24 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
     tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
         return NULL;
+
+    size_t element_size;
+    if (dtype == DTYPE_FLOAT)
+    {
+        element_size = sizeof(float);
+    }
+    else if (dtype == DTYPE_INT)
+    {
+        element_size = sizeof(int);
+    }
+    else
+    {
+        efree(tensor);
+        zend_throw_error(NULL, "Unsupported data type for tensor creation: %d", dtype);
+        return NULL;
+    }
+
+    tensor->dtype = dtype;
 
     tensor->ndims = ndims;
     tensor->shape = (int *)emalloc(ndims * sizeof(int));
@@ -141,7 +159,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
     tensor->d_shape = d_shape;
     tensor->d_strides = d_strides;
 
-    size_t required_bytes = tensor->total_size * sizeof(float);
+    size_t required_bytes = tensor->total_size * element_size;
     tensor->allocated_size = required_bytes;
 
     tensor->data = tensor_mem_alloc(required_bytes);
@@ -152,9 +170,10 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
             efree(tensor->strides);
         if (tensor->shape)
             efree(tensor->shape);
-
+        cudaFree(d_shape);
+        cudaFree(d_strides);
         efree(tensor);
-        zend_throw_error(NULL, "Failed to allocate GPU memory...");
+        zend_throw_error(NULL, "Failed to allocate GPU memory for tensor.");
         return NULL;
     }
 
@@ -166,6 +185,8 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
         if (err != cudaSuccess)
         {
             tensor_mem_free(tensor->data);
+            cudaFree(d_shape);
+            cudaFree(d_strides);
             efree(tensor->strides);
             efree(tensor->shape);
             efree(tensor);
@@ -175,6 +196,16 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const float data[])
     }
 
     return tensor;
+}
+
+tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[])
+{
+    return cuda_tensor_create(shape, ndims, data, DTYPE_FLOAT);
+}
+
+tensor_t *cuda_tensor_create_int(const int shape[], int ndims, const int data[])
+{
+    return cuda_tensor_create(shape, ndims, data, DTYPE_INT);
 }
 
 tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
@@ -191,7 +222,7 @@ tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
         host_data[i] = value;
     }
 
-    tensor_t *tensor = cuda_tensor_create(shape, ndims, host_data);
+    tensor_t *tensor = cuda_tensor_create_float(shape, ndims, host_data);
     efree(host_data);
 
     return tensor;
@@ -349,7 +380,7 @@ tensor_t *cuda_tensor_clone(tensor_t *base_tensor)
     size_t total_elements = base_tensor->total_size;
     size_t total_bytes = total_elements * sizeof(float);
 
-    tensor_t *new_tensor = cuda_tensor_create(base_tensor->shape, base_tensor->ndims, base_tensor->data);
+    tensor_t *new_tensor = cuda_tensor_create_float(base_tensor->shape, base_tensor->ndims, base_tensor->data);
 
     if (new_tensor == NULL || new_tensor->data == NULL)
     {

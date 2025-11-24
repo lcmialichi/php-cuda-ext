@@ -6,6 +6,7 @@
 #include "tensor_fabric.h"
 #include "memory_pool.h"
 #include "cuda.h"
+#include "zend_smart_str.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -28,17 +29,14 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
 
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value);
 
-static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
-                                    const char *operation_name,
-                                    int operation_type);
-
-static void self_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
-                                   const char *operation_name,
-                                   self_operation_func tensor_func);
-
+static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type, int return_arg);
+static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type);
+static void self_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, self_operation_func tensor_func);
 static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type);
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor);
+
+#define HALF_PREVIEW_COUNT (PREVIEW_COUNT / 2)
 
 ZEND_METHOD(CudaArray, __construct)
 {
@@ -170,6 +168,41 @@ ZEND_METHOD(CudaArray, neg)
     unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Neg", OP_NEG);
 }
 
+ZEND_METHOD(CudaArray, sum)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Sum Reduction", OP_REDUCE_SUM, 0);
+}
+
+ZEND_METHOD(CudaArray, mean)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Mean Reduction", OP_REDUCE_MEAN, 0);
+}
+
+ZEND_METHOD(CudaArray, max)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Max Reduction", OP_REDUCE_MAX, 0);
+}
+
+ZEND_METHOD(CudaArray, min)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Min Reduction", OP_REDUCE_MIN, 0);
+}
+
+ZEND_METHOD(CudaArray, prod)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Product Reduction", OP_REDUCE_PROD, 0);
+}
+
+ZEND_METHOD(CudaArray, argMax)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ArgMax Reduction", OP_ARG_MAX, 1);
+}
+
+ZEND_METHOD(CudaArray, argMin)
+{
+    reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ArgMin Reduction", OP_ARG_MIN, 1);
+}
+
 ZEND_METHOD(CudaArray, matmul)
 {
     zval *other_zv;
@@ -180,12 +213,6 @@ ZEND_METHOD(CudaArray, matmul)
 
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
     cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
-
-    if (this_obj->tensor_handle == NULL || other_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Tensor not initialized");
-        RETURN_NULL();
-    }
 
     tensor_t *result_tensor = cuda_tensor_matmul(this_obj->tensor_handle, other_obj->tensor_handle);
 
@@ -248,12 +275,6 @@ ZEND_METHOD(CudaArray, reshape)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Tensor not initialized");
-        RETURN_NULL();
-    }
     int new_shape[10] = {0};
     int new_ndims = 0;
 
@@ -329,13 +350,6 @@ ZEND_METHOD(CudaArray, reshape)
 ZEND_METHOD(CudaArray, flatten)
 {
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Tensor not initialized");
-        RETURN_NULL();
-    }
-
     size_t total_size = 1;
     for (int i = 0; i < this_obj->tensor_handle->ndims; i++)
     {
@@ -358,12 +372,6 @@ ZEND_METHOD(CudaArray, flatten)
 ZEND_METHOD(CudaArray, getShape)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (obj->shape == NULL)
-    {
-        RETURN_NULL();
-    }
-
     array_init_size(return_value, zend_array_count(obj->shape));
 
     zval *current;
@@ -396,12 +404,6 @@ ZEND_METHOD(CudaArray, getStrides)
 ZEND_METHOD(CudaArray, toArray)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (!obj->tensor_handle)
-    {
-        RETURN_NULL();
-    }
-
     tensor_t *tensor = obj->tensor_handle;
 
     tensor_t *base = tensor->is_view ? tensor->base_tensor : tensor;
@@ -409,10 +411,24 @@ ZEND_METHOD(CudaArray, toArray)
 
     float *host_data = emalloc(base_total * sizeof(float));
 
+    size_t element_size;
+    if (base->dtype == DTYPE_FLOAT)
+    {
+        element_size = sizeof(float);
+    }
+    else if (base->dtype == DTYPE_INT)
+    {
+        element_size = sizeof(int);
+    }
+    else
+    {
+        element_size = 0;
+    }
+
     cudaError_t status = cudaMemcpy(
         host_data,
         base->data,
-        base_total * sizeof(float),
+        base_total * element_size,
         cudaMemcpyDeviceToHost);
 
     if (status != cudaSuccess)
@@ -424,47 +440,48 @@ ZEND_METHOD(CudaArray, toArray)
 
     void build_recursive(
         zval * result,
-        float *data,
+        void *data,
         int dim,
         tensor_t *t,
-        size_t current_offset)
+        size_t current_offset,
+        int dtype)
     {
         array_init(result);
-
-        if (dim == t->ndims)
-        {
-            zval v;
-            ZVAL_DOUBLE(&v, data[current_offset]);
-            RETVAL_ZVAL(result, 0, 0);
-            return;
-        }
 
         int size = t->shape[dim];
         size_t stride = t->strides[dim];
 
         for (int i = 0; i < size; i++)
         {
-
             size_t child_offset = current_offset + i * stride;
 
             if (dim == t->ndims - 1)
             {
                 zval val;
-                ZVAL_DOUBLE(&val, data[child_offset]);
+                if (dtype == DTYPE_FLOAT)
+                {
+                    float *float_data = (float *)data;
+                    ZVAL_DOUBLE(&val, float_data[child_offset]);
+                }
+                else if (dtype == DTYPE_INT)
+                {
+                    int *int_data = (int *)data;
+                    ZVAL_LONG(&val, int_data[child_offset]);
+                }
+
                 zend_hash_index_update(Z_ARRVAL_P(result), i, &val);
             }
             else
             {
                 zval sub;
-                build_recursive(&sub, data, dim + 1, t, child_offset);
+                build_recursive(&sub, data, dim + 1, t, child_offset, dtype);
                 zend_hash_index_update(Z_ARRVAL_P(result), i, &sub);
             }
         }
     }
 
     size_t offset_elements = tensor->gpu_offset / sizeof(float);
-    build_recursive(return_value, host_data, 0, tensor, offset_elements);
-
+    build_recursive(return_value, host_data, 0, tensor, offset_elements, tensor->dtype);
     efree(host_data);
 }
 
@@ -478,12 +495,6 @@ ZEND_METHOD(CudaArray, __invoke)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Tensor not initialized");
-        RETURN_NULL();
-    }
 
     int ndim = this_obj->tensor_handle->ndims;
     slice_info_t *slice_info = (slice_info_t *)emalloc(ndim * sizeof(slice_info_t));
@@ -527,6 +538,44 @@ ZEND_METHOD(CudaArray, __invoke)
     }
 
     create_result_object(return_value, view_tensor);
+}
+
+ZEND_METHOD(CudaArray, __debugInfo)
+{
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *tensor = obj->tensor_handle;
+
+    if (!tensor || tensor->ndims <= 0) {
+        array_init(return_value);
+        add_assoc_string(return_value, "Error", "Tensor handle is NULL or has zero dimensions");
+        return;
+    }
+
+    array_init(return_value);
+    zval shape_array;
+    array_init(&shape_array);
+
+    for (int i = 0; i < tensor->ndims; i++) {
+        add_next_index_long(&shape_array, (zend_long)tensor->shape[i]);
+    }
+    add_assoc_zval(return_value, "Shape", &shape_array);
+
+    const char *dtype_str;
+    size_t element_size;
+
+    if (tensor->dtype == DTYPE_FLOAT) {
+        dtype_str = "float32";
+        element_size = sizeof(float);
+    } else if (tensor->dtype == DTYPE_INT) {
+        dtype_str = "int32";
+        element_size = sizeof(int);
+    } else {
+        dtype_str = "unknown";
+        element_size = 0;
+    }
+
+    add_assoc_string(return_value, "Dtype", (char *)dtype_str);
+    add_assoc_long(return_value, "Elements", (zend_long)tensor->total_size);
 }
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor)
@@ -624,15 +673,15 @@ static cuda_array_obj *php_cuda_array_fetch_object(zend_object *obj)
 static cuda_array_obj *php_cuda_array_fetch_valid_object(zend_object *obj)
 {
     cuda_array_obj *this_obj = (cuda_array_obj *)((char *)obj - XtOffsetOf(cuda_array_obj, obj));
-    if (this_obj->shape == NULL)
+    if (!this_obj || this_obj->tensor_handle == NULL)
     {
-        zend_error(E_ERROR, "Attempting to access tensor with no shape!");
+        zend_error(E_ERROR, "Attempting to access uninitialized tensor!");
         return NULL;
     }
 
-    if (this_obj->tensor_handle == NULL)
+    if (this_obj->shape == NULL)
     {
-        zend_error(E_ERROR, "Attempting to access uninitialized tensor!");
+        zend_error(E_ERROR, "Attempting to access tensor with no shape!");
         return NULL;
     }
 
@@ -665,16 +714,11 @@ static zend_object *cuda_array_clone_obj(zend_object *old_object)
     zend_object *new_object = cuda_array_create_object(cuda_array_ce);
 
     cuda_array_obj *new_ca = php_cuda_array_fetch_object(new_object);
-    if (!old_ca || !new_ca)
+    if (!new_ca)
     {
         zend_throw_error(NULL, "Internal error during object cloning: cannot fetch object data.");
         zend_object_release(new_object);
         return NULL;
-    }
-
-    if (old_ca->tensor_handle == NULL)
-    {
-        return new_object;
     }
 
     zend_objects_clone_members(new_object, old_object);
@@ -789,6 +833,59 @@ static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
     if (result_tensor == NULL)
     {
         zend_throw_error(NULL, "%s failed", operation_name);
+        RETURN_NULL();
+    }
+
+    create_result_object(return_value, result_tensor);
+}
+
+static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type, int return_arg)
+{
+    zend_long axis_zv = REDUCE_GLOBAL_FLAG;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_LONG(axis_zv)
+    ZEND_PARSE_PARAMETERS_END();
+
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+
+    if (this_obj->tensor_handle == NULL)
+    {
+        zend_throw_error(NULL, "Input tensor not initialized.");
+        RETURN_NULL();
+    }
+
+    tensor_t *input_tensor = this_obj->tensor_handle;
+    int axis = (int)axis_zv;
+
+    if (axis == REDUCE_GLOBAL_FLAG)
+    {
+        size_t total_size = 1;
+        for (int i = 0; i < this_obj->tensor_handle->ndims; i++)
+        {
+            total_size *= this_obj->tensor_handle->shape[i];
+        }
+
+        int flat_shape[] = {(int)total_size};
+        input_tensor = cuda_tensor_reshape(this_obj->tensor_handle, flat_shape, 1);
+        axis = 0;
+    }
+
+    axis = axis >= 0 ? axis : input_tensor->ndims + axis;
+
+    if ((axis < 0 || axis >= input_tensor->ndims) && axis != REDUCE_GLOBAL_FLAG)
+    {
+        zend_throw_error(NULL, "Axis %d out of bounds for tensor with %d dimensions.", axis, input_tensor->ndims);
+        RETURN_NULL();
+    }
+
+    tensor_t *result_tensor = (return_arg == 1)
+                                  ? cuda_tensor_reduce_arg(input_tensor, axis, operation_type)
+                                  : cuda_tensor_reduce(input_tensor, axis, operation_type);
+
+    if (result_tensor == NULL)
+    {
         RETURN_NULL();
     }
 
@@ -910,16 +1007,7 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
     if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
     {
         cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
-
-        if (other_obj && other_obj->tensor_handle)
-        {
-            result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
-        }
-        else
-        {
-            zend_throw_error(NULL, "Other CudaArray not initialized for %s", operation_name);
-            return FAILURE;
-        }
+        result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
     }
     else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
     {
@@ -947,20 +1035,12 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
     }
 
     create_result_object(result, result_tensor);
-
     return SUCCESS;
 }
 
 static zval *cuda_array_read_dimension(zend_object *object, zval *offset, int type, zval *rv)
 {
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(object);
-
-    if (this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Tensor not initialized.");
-        return &EG(uninitialized_zval);
-    }
-
     tensor_t *base_tensor = this_obj->tensor_handle;
     int ndim = base_tensor->ndims;
 
@@ -1017,12 +1097,6 @@ static zval *cuda_array_read_dimension(zend_object *object, zval *offset, int ty
 static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *value)
 {
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(object);
-    if (!this_obj || this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Cannot write to uninitialized tensor.");
-        return;
-    }
-
     if (offset == NULL)
     {
         zend_throw_error(NULL, "It is not permitted to append (operator []) to a CudaArray. ");
@@ -1077,26 +1151,21 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
                 }
             }
 
-            size_t total_bytes = src_tensor->total_size * sizeof(float);
-            void *dest_ptr = (char *)base_tensor->data + element_offset * sizeof(float);
-
-            cudaError_t err = cudaMemcpy(dest_ptr, src_tensor->data, total_bytes, cudaMemcpyDeviceToDevice);
-            if (err != cudaSuccess)
+            if (cuda_tensor_set_tensor(base_tensor, element_offset, src_tensor) != SUCCESS)
             {
-                zend_throw_error(NULL, "Failed GPU memory copy during tensor assignment: %s", cudaGetErrorString(err));
+                zend_throw_error(NULL, "Failed GPU memory copy during tensor assignment");
             }
         }
         else
         {
-             zend_throw_error(NULL, "Only scalar or CudaArray assignment is supported for single index.");
+            zend_throw_error(NULL, "Only scalar or CudaArray assignment is supported for single index.");
         }
     }
     else if (slice_info.type == SLICE_RANGE)
     {
         zend_throw_error(NULL, "SLICE_RANGE not implemented yet.");
-
     }
-    else 
+    else
     {
         zend_throw_error(NULL, "Only single index, array index list, or range slice assignment is supported in this context for now.");
     }

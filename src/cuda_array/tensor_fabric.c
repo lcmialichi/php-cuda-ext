@@ -128,7 +128,6 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int
     }
 
     tensor->dtype = dtype;
-
     tensor->ndims = ndims;
     tensor->shape = (int *)emalloc(ndims * sizeof(int));
     memcpy(tensor->shape, shape, ndims * sizeof(int));
@@ -158,6 +157,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int
     tensor->ref_count = 1;
     tensor->d_shape = d_shape;
     tensor->d_strides = d_strides;
+    tensor->element_size = element_size;
 
     size_t required_bytes = tensor->total_size * element_size;
     tensor->allocated_size = required_bytes;
@@ -378,7 +378,7 @@ tensor_t *cuda_tensor_clone(tensor_t *base_tensor)
     }
 
     size_t total_elements = base_tensor->total_size;
-    size_t total_bytes = total_elements * sizeof(float);
+    size_t total_bytes = total_elements * base_tensor->element_size;
 
     tensor_t *new_tensor = cuda_tensor_create_float(base_tensor->shape, base_tensor->ndims, base_tensor->data);
 

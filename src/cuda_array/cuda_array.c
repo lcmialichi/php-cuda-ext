@@ -409,26 +409,12 @@ ZEND_METHOD(CudaArray, toArray)
     tensor_t *base = tensor->is_view ? tensor->base_tensor : tensor;
     size_t base_total = base->total_size;
 
-    float *host_data = emalloc(base_total * sizeof(float));
-
-    size_t element_size;
-    if (base->dtype == DTYPE_FLOAT)
-    {
-        element_size = sizeof(float);
-    }
-    else if (base->dtype == DTYPE_INT)
-    {
-        element_size = sizeof(int);
-    }
-    else
-    {
-        element_size = 0;
-    }
+    float *host_data = emalloc(base_total * tensor->element_size);
 
     cudaError_t status = cudaMemcpy(
         host_data,
         base->data,
-        base_total * element_size,
+        base_total * tensor->element_size,
         cudaMemcpyDeviceToHost);
 
     if (status != cudaSuccess)

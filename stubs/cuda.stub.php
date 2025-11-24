@@ -83,7 +83,6 @@ class CudaArray implements ArrayAccess
     {
     }
 
-
     public static function ones(array $shape): CudaArray
     {
     }

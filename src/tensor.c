@@ -53,7 +53,7 @@ int is_contiguous(tensor_t *tensor)
 
 tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size)
 {
-    size_t byte_offset = offset * sizeof(float);
+    size_t byte_offset = offset * base_tensor->element_size;
 
     tensor_t *view = (tensor_t *)emalloc(sizeof(tensor_t));
 
@@ -70,6 +70,7 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     view->num_slices = 0;
     view->dtype = base_tensor->dtype;
     view->slices = NULL;
+    view->element_size = base_tensor->element_size;
 
     if (dims > 0)
     {
@@ -214,11 +215,11 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
 
 int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value)
 {
-    size_t byte_offset = element_offset * sizeof(float);
+    size_t byte_offset = element_offset * tensor->element_size;
 
     void *gpu_destination = (char *)tensor->data + byte_offset;
 
-    cudaError_t err = cudaMemcpy(gpu_destination, &scalar_value, sizeof(float), cudaMemcpyHostToDevice);
+    cudaError_t err = cudaMemcpy(gpu_destination, &scalar_value, tensor->element_size, cudaMemcpyHostToDevice);
 
     if (err != cudaSuccess)
     {
@@ -226,22 +227,38 @@ int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar
     }
     return SUCCESS;
 }
-
 
 int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor)
 {
-    size_t total_bytes = tensor->total_size  * sizeof(float);
-    void *dest_ptr = (char *)base_tensor->data + element_offset * sizeof(float);
+    // 1. **VERIFICAÇÃO DE COMPATIBILIDADE:** Tipos de dados (tamanhos) devem ser idênticos.
+    if (base_tensor->element_size != tensor->element_size) {
+        // zend_throw_error(NULL, "Cannot set tensor: element sizes are incompatible.");
+        return FAILURE; 
+    }
 
-    cudaError_t err = cudaMemcpy(dest_ptr, &tensor->data, total_bytes, cudaMemcpyHostToDevice);
+    // 2. **DESTINO (Device):** O ponteiro base deslocado pelo offset em elementos * tamanho do elemento.
+    // Usamos (char *) para aritmética de ponteiros de byte.
+    void *dest_ptr = (char *)base_tensor->data + element_offset * base_tensor->element_size;
+
+    // 3. **TAMANHO TOTAL DE BYTES (CORREÇÃO):** Número total de elementos * tamanho de cada elemento.
+    size_t total_bytes = tensor->total_size * tensor->element_size;
+
+    // 4. **CÓPIA CUDA (CORREÇÃO):**
+    // Fonte: tensor->data (Ponteiro de memória da GPU, não o endereço do ponteiro!)
+    // Direção: cudaMemcpyDeviceToDevice (GPU -> GPU)
+    cudaError_t err = cudaMemcpy(dest_ptr, 
+                                 tensor->data, // CORREÇÃO: Removido o '&'
+                                 total_bytes,  // CORREÇÃO: Tamanho total em bytes
+                                 cudaMemcpyDeviceToDevice); // CORREÇÃO: Direção correta
 
     if (err != cudaSuccess)
     {
+        // zend_throw_error(NULL, "cudaMemcpy failed during tensor set: %s", cudaGetErrorString(err));
         return FAILURE;
     }
+    
     return SUCCESS;
 }
-
 
 tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices)
 {
@@ -268,7 +285,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
         }
     }
 
-    size_t element_offset = base_tensor->is_view ? (base_tensor->gpu_offset / sizeof(float)) : 0;
+    size_t element_offset = base_tensor->is_view ? (base_tensor->gpu_offset / base_tensor->element_size) : 0;
 
     int view_shape[MAX_DIMS];
     size_t view_strides[MAX_DIMS];

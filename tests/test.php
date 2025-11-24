@@ -187,6 +187,11 @@ class CudaBenchmark
     }
 }
 
+$ca = CudaArray::ones([4, 2]);
+[$x, $y] = $ca->getShape();
 
-$ca = CudaArray::ones([16,32, 64]);
-var_dump($ca->argMax(1));
+for ($i = 0; $i <= $x - 1; $i++) {
+    $ca[$i] = $ca[$i] + ($i + 10) ;
+}
+
+var_dump($ca);

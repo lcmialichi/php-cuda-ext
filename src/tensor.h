@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 
 #define MAX_DIMS 10
+
 #define DTYPE_FLOAT 1
 #define DTYPE_INT 2
 
@@ -33,6 +34,7 @@ typedef struct tensor
     void *data;
     int dtype;
     int *shape;
+    size_t element_size;
     size_t *strides;
     int ndims;
     size_t total_size;
@@ -64,7 +66,7 @@ extern "C"
 
     int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value);
     int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor);
-    
+
 #ifdef __cplusplus
 }
 #endif

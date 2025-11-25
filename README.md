@@ -160,6 +160,7 @@ $ca = CudaArray::rand($shape, 0, 10);
 ```php
 $ca->reshape([4, 4, 4]);
 $ca->flatten(); // Same as reshape([n])
+$ca->concat([$a, $b, $c], axis: null);
 ```
 
 ### Comparing
@@ -182,10 +183,10 @@ All reduction methods accept:
  - Positive or negative axis indices
  - If axis is not specified, the reduction is applied to the entire tensor, returning a tensor with shape [1].
 ```php
-$x->argMax($axis); // Returns the index of the maximum value along the specified axis.
-$x->argMin($axis = null); // Same behavior as argMax, but finds the index of the minimum value. flatten
-$x->sum($axis = null); // Computes the sum along the given axis.
-$x->min($axis = null); // Computes the minimum value along the axis.
-$x->max($axis = null); // Computes the maximum value along the axis.
-$x->prod($axis = null); // Computes the product of all elements along the axis.
+$x->argMax(axis: null); // Returns the index of the maximum value along the specified axis.
+$x->argMin(axis: null); // Same behavior as argMax, but finds the index of the minimum value. flatten
+$x->sum(axis: null); // Computes the sum along the given axis.
+$x->min(axis: null); // Computes the minimum value along the axis.
+$x->max(axis: null); // Computes the maximum value along the axis.
+$x->prod(axis: null); // Computes the product of all elements along the axis.
 ```

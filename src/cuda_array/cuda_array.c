@@ -21,13 +21,13 @@ static zend_object *cuda_array_create_object(zend_class_entry *class_type);
 static void cuda_array_free_object(zend_object *object);
 static void create_result_object(zval *return_value, tensor_t *result_tensor);
 static zend_object *cuda_array_clone_obj(zend_object *old_object);
-static tensor_t *get_second_tensor(zval *other_zv, cuda_array_obj *this_obj);
 static int parse_slice_parameter(zval *param, slice_info_t *slice);
 static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval *op1, zval *op2);
 static zval *cuda_array_read_dimension(zend_object *object, zval *offset, int type, zval *rv);
 static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *value);
 
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value);
+static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed);
 
 static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type, int return_arg);
 static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type);
@@ -121,6 +121,11 @@ ZEND_METHOD(CudaArray, zeros)
 ZEND_METHOD(CudaArray, ones)
 {
     static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ones", 1.0f);
+}
+
+ZEND_METHOD(CudaArray, rand)
+{
+    rand_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, 4242424242424242ULL);
 }
 
 ZEND_METHOD(CudaArray, transpose)
@@ -752,32 +757,6 @@ static void create_result_object(zval *return_value, tensor_t *result_tensor)
     sync_php_object_shape(result_obj, result_tensor);
 }
 
-static tensor_t *get_second_tensor(zval *other_zv, cuda_array_obj *this_obj)
-{
-    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
-    {
-        cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
-
-        if (other_obj->tensor_handle == NULL)
-        {
-            zend_throw_error(NULL, "Other tensor not initialized");
-            return NULL;
-        }
-
-        return other_obj->tensor_handle;
-    }
-    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
-    {
-        double scalar_value = (Z_TYPE_P(other_zv) == IS_DOUBLE) ? Z_DVAL_P(other_zv) : (double)Z_LVAL_P(other_zv);
-        return cuda_tensor_create_scalar((float)scalar_value, this_obj->tensor_handle->shape, this_obj->tensor_handle->ndims);
-    }
-    else
-    {
-        zend_throw_error(NULL, "Parameter must be CudaArray or number");
-        return NULL;
-    }
-}
-
 static void self_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
                                    const char *operation_name,
                                    self_operation_func tensor_func)
@@ -1155,6 +1134,50 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
     {
         zend_throw_error(NULL, "Only single index, array index list, or range slice assignment is supported in this context for now.");
     }
+}
+static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed)
+{
+    zval *shape_array;
+    double min = 0; 
+    double max = 100; 
+
+    ZEND_PARSE_PARAMETERS_START_EX(ZPP_ERROR_FAILURE, 1, 3)
+        Z_PARAM_ARRAY(shape_array)
+        Z_PARAM_OPTIONAL 
+        Z_PARAM_DOUBLE(min)
+        Z_PARAM_DOUBLE(max)
+    ZEND_PARSE_PARAMETERS_END();
+
+    int shape[10] = {0};
+    int ndims = 0;
+
+    zval *dim;
+    int i = 0;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(shape_array), dim)
+    {
+        if (i < 10 && Z_TYPE_P(dim) == IS_LONG)
+        {
+            shape[i++] = Z_LVAL_P(dim);
+        }
+    }
+    ZEND_HASH_FOREACH_END();
+    ndims = i;
+
+    if (ndims == 0)
+    {
+        zend_throw_error(NULL, "Invalid shape: must provide dimensions");
+        RETURN_NULL();
+    }
+
+    tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, (float)min, (float)max, seed);
+    
+    if (!tensor)
+    {
+        zend_throw_error(NULL, "Failed to create random tensor");
+        RETURN_NULL();
+    }
+
+    create_result_object(return_value, tensor);
 }
 
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value)

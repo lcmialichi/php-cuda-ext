@@ -77,6 +77,12 @@ ZEND_ARG_ARRAY_INFO(0, shape, 0)
 ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rand_tensor, 0, 0, 1)
+    ZEND_ARG_ARRAY_INFO(0, shape, 0)
+    ZEND_ARG_TYPE_INFO(0, min, IS_DOUBLE, 1)
+    ZEND_ARG_TYPE_INFO(0, max, IS_DOUBLE, 1)
+ZEND_END_ARG_INFO()
+
 static zend_function_entry cuda_array_methods[] = {
     ZEND_ME(CudaArray, __construct, arginfo_cuda_array_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
     ZEND_ME(CudaArray, __invoke, arginfo_cuda_array_invoke, ZEND_ACC_PUBLIC)
@@ -120,6 +126,7 @@ static zend_function_entry cuda_array_methods[] = {
     ZEND_ME(CudaArray, zeros, arginfo_cuda_array_zeros, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME(CudaArray, ones, arginfo_cuda_array_ones, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME(CudaArray, full, arginfo_cuda_array_full, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME(CudaArray, rand, arginfo_rand_tensor, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
 PHP_FE_END};
 
 static zend_class_entry *register_cuda_array_class(void)

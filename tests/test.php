@@ -187,11 +187,10 @@ class CudaBenchmark
     }
 }
 
-$ca = CudaArray::ones([4, 2]);
-[$x, $y] = $ca->getShape();
+$ca = CudaArray::rand([4, 4], 1, 5);
+$ca2 = CudaArray::rand([4], 1, 5);
 
-for ($i = 0; $i <= $x - 1; $i++) {
-    $ca[$i] = $ca[$i] + ($i + 10) ;
-}
+$full = ($ca * $ca2 / 10);
 
-var_dump($ca);
+var_dump($full->toArray());
+

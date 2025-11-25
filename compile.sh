@@ -46,7 +46,7 @@ if [ -f "Makefile" ]; then
 fi
 
 phpize
-./configure --with-cuda=/usr/local/cuda
+./configure --with-cuda=/usr/local/cuda 
 
 echo ""
 echo "Compiling..."

@@ -28,6 +28,7 @@ ZEND_METHOD(CudaArray, __debugInfo);
 ZEND_METHOD(CudaArray, zeros);
 ZEND_METHOD(CudaArray, ones);
 ZEND_METHOD(CudaArray, full);
+ZEND_METHOD(CudaArray, rand);
 
 ZEND_METHOD(CudaArray, matmul);
 ZEND_METHOD(CudaArray, transpose);

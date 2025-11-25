@@ -152,6 +152,7 @@ $ca = new CudaArray([[1, 2], [3, 4]]);
 $ca = CudaArray::ones($shape);
 $ca = CudaArray::zeros($shape);
 $ca = CudaArray::full($shape, 1.5);
+$ca = CudaArray::rand($shape, 0, 10);
 ```
 
 ### Shape Manipulation

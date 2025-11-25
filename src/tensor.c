@@ -230,30 +230,20 @@ int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar
 
 int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor)
 {
-    // 1. **VERIFICAÇÃO DE COMPATIBILIDADE:** Tipos de dados (tamanhos) devem ser idênticos.
     if (base_tensor->element_size != tensor->element_size) {
-        // zend_throw_error(NULL, "Cannot set tensor: element sizes are incompatible.");
         return FAILURE; 
     }
 
-    // 2. **DESTINO (Device):** O ponteiro base deslocado pelo offset em elementos * tamanho do elemento.
-    // Usamos (char *) para aritmética de ponteiros de byte.
     void *dest_ptr = (char *)base_tensor->data + element_offset * base_tensor->element_size;
-
-    // 3. **TAMANHO TOTAL DE BYTES (CORREÇÃO):** Número total de elementos * tamanho de cada elemento.
     size_t total_bytes = tensor->total_size * tensor->element_size;
 
-    // 4. **CÓPIA CUDA (CORREÇÃO):**
-    // Fonte: tensor->data (Ponteiro de memória da GPU, não o endereço do ponteiro!)
-    // Direção: cudaMemcpyDeviceToDevice (GPU -> GPU)
     cudaError_t err = cudaMemcpy(dest_ptr, 
-                                 tensor->data, // CORREÇÃO: Removido o '&'
-                                 total_bytes,  // CORREÇÃO: Tamanho total em bytes
-                                 cudaMemcpyDeviceToDevice); // CORREÇÃO: Direção correta
+                                 tensor->data,
+                                 total_bytes,
+                                 cudaMemcpyDeviceToDevice);
 
     if (err != cudaSuccess)
     {
-        // zend_throw_error(NULL, "cudaMemcpy failed during tensor set: %s", cudaGetErrorString(err));
         return FAILURE;
     }
     

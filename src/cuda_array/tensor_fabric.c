@@ -1,6 +1,8 @@
 #include "tensor_fabric.h"
 #include "cuda_kernels.h"
 #include "memory_pool.h"
+#include <time.h>
+#include <curand.h>
 
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
@@ -94,6 +96,79 @@ tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
     }
 
     launch_fill_kernel(tensor->data, value, tensor->total_size);
+    return tensor;
+}
+
+void destroy_curand_generator(curandGenerator_t generator)
+{
+    if (generator)
+    {
+        curandDestroyGenerator(generator);
+    }
+}
+
+int set_rand_tensor_data(float *data, size_t size, unsigned long long seed, float min_value, float max_value)
+{
+    curandGenerator_t generator = NULL;
+    curandStatus_t status;
+
+    status = curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT);
+    if (status != CURAND_STATUS_SUCCESS)
+        return FAILURE;
+
+    if (seed == 0)
+    {
+        seed = (unsigned long long)time(NULL);
+    }
+    status = curandSetPseudoRandomGeneratorSeed(generator, seed);
+    if (status != CURAND_STATUS_SUCCESS)
+    {
+        destroy_curand_generator(generator);
+        return FAILURE;
+    }
+
+    status = curandGenerateUniform(generator, data, size);
+    if (status != CURAND_STATUS_SUCCESS)
+    {
+        destroy_curand_generator(generator);
+        return FAILURE;
+    }
+
+    if (min_value != 0.0f || max_value != 1.0f)
+    {
+        if (launch_scale_kernel_host(data, size, min_value, max_value) != SUCCESS)
+        {
+            destroy_curand_generator(generator);
+            return FAILURE;
+        }
+    }
+    return SUCCESS;
+}
+
+tensor_t *cuda_tensor_create_rand(
+    int *shape,
+    int ndims,
+    float min_value,
+    float max_value,
+    unsigned long long seed)
+{
+    tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
+    if (!tensor)
+    {
+        return NULL;
+    }
+
+    if (set_rand_tensor_data(
+            tensor->data,
+            tensor->total_size,
+            seed,
+            min_value,
+            max_value) != SUCCESS)
+    {
+        cuda_tensor_destroy(tensor);
+        return NULL;
+    }
+
     return tensor;
 }
 
@@ -380,7 +455,7 @@ tensor_t *cuda_tensor_clone(tensor_t *base_tensor)
     size_t total_elements = base_tensor->total_size;
     size_t total_bytes = total_elements * base_tensor->element_size;
 
-    tensor_t *new_tensor = cuda_tensor_create_float(base_tensor->shape, base_tensor->ndims, base_tensor->data);
+    tensor_t *new_tensor = cuda_tensor_create(base_tensor->shape, base_tensor->ndims, base_tensor->data, base_tensor->dtype);
 
     if (new_tensor == NULL || new_tensor->data == NULL)
     {

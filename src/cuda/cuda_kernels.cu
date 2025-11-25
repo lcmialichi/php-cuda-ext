@@ -4,14 +4,29 @@
 #include <float.h>
 #include <cstdio>
 
+#define SUCCESS 0
+#define FAILURE 1
+
 extern "C"
 {
-
     __global__ void fill_kernel(float *data, float value, size_t size)
     {
         size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx < size)
             data[idx] = value;
+    }
+
+    __global__ void scale_kernel(float *data, size_t size, float min_value, float max_value)
+    {
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+        if (idx < size)
+        {
+            float raw_rand = data[idx];
+            float range = max_value - min_value;
+
+            data[idx] = min_value + range * raw_rand;
+        }
     }
 
     __global__ void clip_kernel(float *a, float min_val, float max_val, float *result, int n)
@@ -56,6 +71,29 @@ extern "C"
         int blocks = (size + threads - 1) / threads;
         fill_kernel<<<blocks, threads>>>(data, value, size);
     }
+
+    void get_grid_config(size_t size, int *grid_size, int *block_size)
+    {
+        const int max_threads = 512;
+        *block_size = (size < max_threads) ? (int)size : max_threads;
+        *grid_size = (size + *block_size - 1) / *block_size;
+    }
+
+    int launch_scale_kernel_host(float *data, size_t size, float min_value, float max_value)
+    {
+        int grid_size, block_size;
+        get_grid_config(size, &grid_size, &block_size);
+
+        scale_kernel<<<grid_size, block_size>>>(data, size, min_value, max_value);
+
+        if (cudaPeekAtLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess)
+        {
+            return FAILURE;
+        }
+
+        return SUCCESS;
+    }
+
 
     void launch_clip_kernel(float *a, float min_val, float max_val, float *result, int n)
     {

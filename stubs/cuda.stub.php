@@ -27,6 +27,7 @@ class CudaArray implements ArrayAccess
     }
 
 
+
     /**
      * @param CudaArray|float|int $other
      * @return CudaArray
@@ -91,6 +92,10 @@ class CudaArray implements ArrayAccess
     }
     public static function full(array $shape, float $value): CudaArray
     {
+    }
+
+    public static function rand(array $shape, ?float $min = null, ?float $max = null): CudaArray{
+        
     }
 
     public function transpose(?int $axis = null): CudaArray

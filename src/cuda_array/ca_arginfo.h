@@ -77,6 +77,11 @@ ZEND_ARG_ARRAY_INFO(0, shape, 0)
 ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_concat, 0, 0, 1)
+    ZEND_ARG_ARRAY_INFO(0, tensors, 0) 
+    ZEND_ARG_INFO(0, axis)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rand_tensor, 0, 0, 1)
     ZEND_ARG_ARRAY_INFO(0, shape, 0)
     ZEND_ARG_TYPE_INFO(0, min, IS_DOUBLE, 1)
@@ -88,6 +93,7 @@ static zend_function_entry cuda_array_methods[] = {
     ZEND_ME(CudaArray, __invoke, arginfo_cuda_array_invoke, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, __debugInfo, arginfo_CudaArray___debugInfo, ZEND_ACC_PUBLIC)
 
+    ZEND_ME(CudaArray, concat, arginfo_cuda_array_concat, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, multiply, arginfo_cuda_array_multiply, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, divide, arginfo_cuda_array_divide, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, add, arginfo_cuda_array_add, ZEND_ACC_PUBLIC)

@@ -58,19 +58,7 @@ int cuda_tensor_get_scalar_value(tensor_t *scalar_tensor, float *result_val)
 
     void *gpu_source_ptr;
 
-    if (scalar_tensor->is_view)
-    {
-        if (!scalar_tensor->base_tensor)
-        {
-            zend_error(E_WARNING, "Scalar view has no base tensor.");
-            return FAILURE;
-        }
-        gpu_source_ptr = (char *)scalar_tensor->base_tensor->data + scalar_tensor->gpu_offset;
-    }
-    else
-    {
-        gpu_source_ptr = scalar_tensor->data;
-    }
+    gpu_source_ptr = scalar_tensor->data;
 
     cudaError_t status = cudaMemcpy(
         result_val,
@@ -302,6 +290,7 @@ tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
 
     return tensor;
 }
+
 
 tensor_t *resolve_result_tensor(tensor_t *t)
 {

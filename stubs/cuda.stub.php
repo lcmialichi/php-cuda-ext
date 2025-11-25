@@ -127,6 +127,10 @@ class CudaArray implements ArrayAccess
     {
     }
 
+     public function neg(): CudaArray
+    {
+    }
+
     public function sum(?int $axis = null): CudaArray
     {
     }
@@ -149,6 +153,14 @@ class CudaArray implements ArrayAccess
     {
     }
 
+    /**
+     * @param array[CudaArray] $tensors
+     * @param mixed $axis
+     * @return void
+     */
+    public function concat(array $tensors, ?int $axis = null): CudaArray
+    {
+    }
 
     function offsetExists(mixed $offset): bool
     {

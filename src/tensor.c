@@ -262,7 +262,6 @@ int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_
 
     return SUCCESS;
 }
-
 tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices)
 {
     if (!base_tensor || !slices)
@@ -289,7 +288,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
     }
 
     size_t element_offset = base_tensor->is_view ? (base_tensor->gpu_offset / base_tensor->element_size) : 0;
-
+    
     int view_shape[MAX_DIMS];
     size_t view_strides[MAX_DIMS];
     int view_ndims = 0;
@@ -309,6 +308,11 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
         case SLICE_INDEX:
         {
             int index = slice.data.index;
+
+            if (index < 0){
+                index = base_tensor->shape[i] + index; 
+            }
+
             if (index < 0 || index >= base_tensor->shape[i])
             {
                 zend_throw_error(NULL, "Index %d out of bounds for dimension %d (size %d)",
@@ -316,7 +320,8 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
                 return NULL;
             }
 
-            element_offset += (size_t)index * base_strides[i];
+            size_t offset_increment = (size_t)index * base_strides[i];
+            element_offset += offset_increment;           
             break;
         }
 
@@ -324,6 +329,10 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
         {
             int start = slice.data.range.start;
             int end = slice.data.range.end;
+
+            if (start < 0) start = base_tensor->shape[i] + start;
+            if (end < 0) end = base_tensor->shape[i] + end;
+
             if (start < 0 || end < start || end >= base_tensor->shape[i])
             {
                 zend_throw_error(NULL, "Range [%d:%d] out of bounds for dimension %d (size %d)",
@@ -331,8 +340,11 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
                 return NULL;
             }
             int len = (end - start + 1);
-            element_offset += (size_t)start * base_strides[i];
+            
+            size_t offset_increment = (size_t)start * base_strides[i];
 
+            element_offset += offset_increment;
+            
             view_shape[view_ndims] = len;
             view_strides[view_ndims] = base_strides[i];
             view_ndims++;

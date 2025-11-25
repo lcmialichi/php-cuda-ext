@@ -1,15 +1,8 @@
 #ifndef REDUCTION_OPS_H
 #define REDUCTION_OPS_H
 
-#include <stddef.h> // Para size_t
+#include <stddef.h>
 
-// Definição do tipo de função para o wrapper de redução
-// O wrapper de redução precisa:
-// - Acessar o tensor de entrada (input)
-// - Acessar o tensor de saída (result)
-// - Saber qual é o eixo (axis)
-// - Saber o tamanho do bloco de elementos a serem reduzidos (block_size)
-// - Saber o número total de elementos no tensor de saída (total_elements)
 #ifdef __cplusplus
 extern "C"
 {

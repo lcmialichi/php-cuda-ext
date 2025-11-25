@@ -3,7 +3,7 @@
 define('N_POINTS', 500);
 define('WIDTH', 100);
 define('HEIGHT', 25);
-define('FRAMES', 150);
+define('FRAMES', 500);
 define('SCALE', 14.0);
 define('N_TURNS', 1.5);
 define('N_POINTS_PER_STRAND', N_POINTS / 2);
@@ -20,14 +20,20 @@ $T_half = new CudaArray($t_values_half);
 $R = SCALE * 0.5;
 $PITCH_SCALE = HEIGHT / (1.5 * M_PI * N_TURNS) * 0.8;
 
-$X_1_php = $T_half->cos()->multiply($R);
-$Z_1_php = $T_half->sin()->multiply($R);
-$Y_1_php = $T_half * $PITCH_SCALE  - (HEIGHT / 2.0);
 
-$X_2_php = $T_half->cos()->neg()->multiply($R);
-$Z_2_php = $T_half->sin()->neg()->multiply($R);
+$X_1_php = $T_half->cos() * $R;
+$Z_1_php = $T_half->sin() * $R;
+$Y_1_php = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
+
+$X_2_php = $T_half->cos()->neg() * $R;
+$Z_2_php = $T_half->sin()->neg() * $R;
 $Y_2_php = $Y_1_php;
 
+/**
+ * @var CudaArray $X_1_php
+ * @var CudaArray $Y_1_php
+ * @var CudaArray $Z_1_php
+ */
 $X_base = $X_1_php->concat([$X_2_php]);
 $Y_base = $Y_1_php->concat([$Y_2_php]);
 $Z_base = $Z_1_php->concat([$Z_2_php]);
@@ -48,7 +54,7 @@ for ($t = 0; $t < FRAMES; $t++) {
 
     $X_final = $X_final + (WIDTH / 2.0);
     $Y_final = $Y_base + (HEIGHT / 2.0);
-  
+
 
     $grid = array_fill(0, HEIGHT, array_fill(0, WIDTH, ['char' => ' ', 'depth' => -INF]));
 
@@ -58,7 +64,7 @@ for ($t = 0; $t < FRAMES; $t++) {
 
     $Z_Normalized = ($Z_final - $z_min) / $z_range;
 
-      /**
+    /**
      * @var CudaArray $X_final
      * @var CudaArray $Y_final
      * @var CudaArray $Z_final

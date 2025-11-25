@@ -413,32 +413,33 @@ ZEND_METHOD(CudaArray, concat)
     zend_long axis_long = 0;
 
     ZEND_PARSE_PARAMETERS_START(1, 2)
-        Z_PARAM_ARRAY(input_tensors_array) 
-        Z_PARAM_OPTIONAL
-        Z_PARAM_LONG(axis_long)
+    Z_PARAM_ARRAY(input_tensors_array)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_LONG(axis_long)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     int axis = (int)axis_long;
 
     zval full_tensors_list;
     array_init(&full_tensors_list);
 
     zend_hash_next_index_insert(Z_ARRVAL(full_tensors_list), this_ptr);
-    
+
     HashTable *input_ht = Z_ARRVAL_P(input_tensors_array);
     zval *pzval;
 
     ZEND_HASH_FOREACH_VAL(input_ht, pzval)
     {
         zend_hash_next_index_insert(Z_ARRVAL(full_tensors_list), pzval);
-    } ZEND_HASH_FOREACH_END();
+    }
+    ZEND_HASH_FOREACH_END();
 
     tensor_t *new_tensor = cuda_tensor_concat(&full_tensors_list, axis);
     zend_array_destroy(Z_ARRVAL(full_tensors_list));
 
     if (!new_tensor)
     {
-        RETURN_THROWS(); 
+        RETURN_THROWS();
     }
 
     create_result_object(return_value, new_tensor);
@@ -574,7 +575,8 @@ ZEND_METHOD(CudaArray, __debugInfo)
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
     tensor_t *tensor = obj->tensor_handle;
 
-    if (!tensor || tensor->ndims <= 0) {
+    if (!tensor || tensor->ndims <= 0)
+    {
         array_init(return_value);
         add_assoc_string(return_value, "Error", "Tensor handle is NULL or has zero dimensions");
         return;
@@ -584,7 +586,8 @@ ZEND_METHOD(CudaArray, __debugInfo)
     zval shape_array;
     array_init(&shape_array);
 
-    for (int i = 0; i < tensor->ndims; i++) {
+    for (int i = 0; i < tensor->ndims; i++)
+    {
         add_next_index_long(&shape_array, (zend_long)tensor->shape[i]);
     }
     add_assoc_zval(return_value, "Shape", &shape_array);
@@ -592,13 +595,18 @@ ZEND_METHOD(CudaArray, __debugInfo)
     const char *dtype_str;
     size_t element_size;
 
-    if (tensor->dtype == DTYPE_FLOAT) {
+    if (tensor->dtype == DTYPE_FLOAT)
+    {
         dtype_str = "float32";
         element_size = sizeof(float);
-    } else if (tensor->dtype == DTYPE_INT) {
+    }
+    else if (tensor->dtype == DTYPE_INT)
+    {
         dtype_str = "int32";
         element_size = sizeof(int);
-    } else {
+    }
+    else
+    {
         dtype_str = "unknown";
         element_size = 0;
     }
@@ -949,13 +957,25 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
 {
     zend_bool define_value = 0;
     float op_value = 0.0f;
+    zval *obj_p;
+    zval *val_s;
 
-    if (Z_TYPE_P(op1) != IS_OBJECT || Z_OBJCE_P(op1) != cuda_array_ce)
+    if (Z_TYPE_P(op1) == IS_OBJECT && Z_OBJCE_P(op1) == cuda_array_ce)
+    {
+        obj_p = op1;
+        val_s = op2;
+    }
+    else if (Z_TYPE_P(op2) == IS_OBJECT && Z_OBJCE_P(op2) == cuda_array_ce)
+    {
+        obj_p = op2;
+        val_s = op1;
+    }
+    else
     {
         return FAILURE;
     }
 
-    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op1));
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(obj_p));
     if (!this_obj || this_obj->tensor_handle == NULL)
     {
         return FAILURE;
@@ -1005,7 +1025,7 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
     }
 
     tensor_t *result_tensor = NULL;
-    zval *other_zv = op2;
+    zval *other_zv = val_s;
 
     if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
     {
@@ -1032,7 +1052,7 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
         return FAILURE;
     }
 
-    if (result == op1)
+    if (result == obj_p)
     {
         zval_ptr_dtor(result);
     }
@@ -1176,14 +1196,14 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
 static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed)
 {
     zval *shape_array;
-    double min = 0; 
-    double max = 100; 
+    double min = 0;
+    double max = 100;
 
     ZEND_PARSE_PARAMETERS_START_EX(ZPP_ERROR_FAILURE, 1, 3)
-        Z_PARAM_ARRAY(shape_array)
-        Z_PARAM_OPTIONAL 
-        Z_PARAM_DOUBLE(min)
-        Z_PARAM_DOUBLE(max)
+    Z_PARAM_ARRAY(shape_array)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_DOUBLE(min)
+    Z_PARAM_DOUBLE(max)
     ZEND_PARSE_PARAMETERS_END();
 
     int shape[10] = {0};
@@ -1208,7 +1228,7 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
     }
 
     tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, (float)min, (float)max, seed);
-    
+
     if (!tensor)
     {
         zend_throw_error(NULL, "Failed to create random tensor");
@@ -1257,21 +1277,25 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
     create_result_object(return_value, tensor);
 }
 
-static void* get_gpu_source_pointer(tensor_t *t, size_t *out_size_elements) {
-    
-    if (t->is_view && t->base_tensor) {
+static void *get_gpu_source_pointer(tensor_t *t, size_t *out_size_elements)
+{
+
+    if (t->is_view && t->base_tensor)
+    {
         tensor_t *root = t->base_tensor;
-        while (root->is_view && root->base_tensor) {
+        while (root->is_view && root->base_tensor)
+        {
             root = root->base_tensor;
         }
         *out_size_elements = t->total_size;
         return (char *)root->data + t->gpu_offset;
-    } else {
+    }
+    else
+    {
         *out_size_elements = t->total_size;
         return t->data;
     }
 }
-
 
 static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 {
@@ -1282,17 +1306,19 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
     int i = 0;
 
     int list_count = zend_hash_num_elements(ht);
-    
-    if (list_count == 0) {
+
+    if (list_count == 0)
+    {
         zend_throw_error(NULL, "Concat requires at least one tensor.");
         return NULL;
     }
 
     tensor_t **tensor_list = (tensor_t **)emalloc(sizeof(tensor_t *) * list_count);
-    
+
     ZEND_HASH_FOREACH_VAL(ht, pzval)
     {
-        if (Z_TYPE_P(pzval) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(pzval), cuda_array_ce)) {
+        if (Z_TYPE_P(pzval) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(pzval), cuda_array_ce))
+        {
             zend_throw_error(NULL, "All elements must be CudaArray objects.");
             efree(tensor_list);
             return NULL;
@@ -1300,41 +1326,50 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 
         cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(pzval));
         tensor_t *current_tensor = other_obj->tensor_handle;
-        
-        if (!is_contiguous(current_tensor)) {
+
+        if (!is_contiguous(current_tensor))
+        {
             zend_throw_error(NULL, "Cannot concatenate non-contiguous tensor (e.g., transposed or non-contiguous slice).");
             efree(tensor_list);
             return NULL;
         }
-        
+
         tensor_list[i] = current_tensor;
-        
-        if (i == 0) {
+
+        if (i == 0)
+        {
             first_ndims = current_tensor->ndims;
-            if (axis < 0 || axis >= first_ndims) {
-                 zend_throw_error(NULL, "Axis %d is out of bounds for the first tensor (dims: %d).", axis, first_ndims);
-                 efree(tensor_list);
-                 return NULL;
+            if (axis < 0 || axis >= first_ndims)
+            {
+                zend_throw_error(NULL, "Axis %d is out of bounds for the first tensor (dims: %d).", axis, first_ndims);
+                efree(tensor_list);
+                return NULL;
             }
-        } else {
-            if (current_tensor->ndims != first_ndims) {
-                zend_throw_error(NULL, "All tensors must have the same number of dimensions (%d != %d).", 
+        }
+        else
+        {
+            if (current_tensor->ndims != first_ndims)
+            {
+                zend_throw_error(NULL, "All tensors must have the same number of dimensions (%d != %d).",
                                  current_tensor->ndims, first_ndims);
                 efree(tensor_list);
                 return NULL;
             }
-            for (int d = 0; d < first_ndims; d++) {
-                if (d != axis && current_tensor->shape[d] != tensor_list[0]->shape[d]) {
+            for (int d = 0; d < first_ndims; d++)
+            {
+                if (d != axis && current_tensor->shape[d] != tensor_list[0]->shape[d])
+                {
                     zend_throw_error(NULL, "Shapes must match along non-concatenated axis %d.", d);
                     efree(tensor_list);
                     return NULL;
                 }
             }
         }
-        
+
         total_length_on_axis += current_tensor->shape[axis];
         i++;
-    } ZEND_HASH_FOREACH_END();
+    }
+    ZEND_HASH_FOREACH_END();
 
     int *new_shape = (int *)emalloc(sizeof(int) * first_ndims);
     memcpy(new_shape, tensor_list[0]->shape, sizeof(int) * first_ndims);
@@ -1342,19 +1377,21 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 
     tensor_t *new_tensor = cuda_tensor_create_empty(new_shape, first_ndims);
     efree(new_shape);
-    
-    if (!new_tensor) {
+
+    if (!new_tensor)
+    {
         zend_throw_error(NULL, "Failed to allocate memory for concatenated tensor.");
         efree(tensor_list);
         return NULL;
     }
 
-    size_t current_offset_bytes = 0; 
-    
-    for (i = 0; i < list_count; i++) {
+    size_t current_offset_bytes = 0;
+
+    for (i = 0; i < list_count; i++)
+    {
         tensor_t *current = tensor_list[i];
         size_t tensor_size_elements;
-        
+
         void *gpu_source_ptr = get_gpu_source_pointer(current, &tensor_size_elements);
         size_t tensor_size_bytes = tensor_size_elements * new_tensor->element_size;
 
@@ -1364,10 +1401,10 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
             gpu_dest_ptr,
             gpu_source_ptr,
             tensor_size_bytes,
-            cudaMemcpyDeviceToDevice
-        );
+            cudaMemcpyDeviceToDevice);
 
-        if (status != cudaSuccess) {
+        if (status != cudaSuccess)
+        {
             zend_throw_error(NULL, "CUDA copy failed during concat (%s).", cudaGetErrorString(status));
             efree(tensor_list);
             return NULL;
@@ -1375,7 +1412,7 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 
         current_offset_bytes += tensor_size_bytes;
     }
-    
+
     efree(tensor_list);
     return new_tensor;
 }

@@ -51,8 +51,10 @@ void launch_unary_op(
     int blocks = (total_size + threads - 1) / threads;
 
     UnaryParams h_params;
-    memcpy(h_params.shape, shape, ndims * sizeof(int));
-    memcpy(h_params.strides, strides, ndims * sizeof(size_t));
+
+    cudaMemcpy(h_params.shape, shape, ndims * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_params.strides, strides, ndims * sizeof(size_t), cudaMemcpyDeviceToHost);
+
     h_params.ndims = ndims;
 
     cudaMemcpyToSymbol(d_unary_params, &h_params, sizeof(UnaryParams));

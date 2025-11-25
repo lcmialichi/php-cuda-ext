@@ -207,11 +207,7 @@ class CudaBenchmark
                 continue;
             }
             foreach ($matrix as $row) {
-                if (is_array($row)) {
-                    $all_rows[] = $row;
-                } else {
-                    $all_rows[] = [$row];
-                }
+                $all_rows[] = is_array($row) ? $row : [$row];
             }
         }
 
@@ -225,6 +221,7 @@ class CudaBenchmark
         } elseif (str_contains($op_name, 'Max')) {
             return max($flat);
         }
+        
         return null;
     }
     public static function generateRandomArray($rows, $cols, $depth, $min_val, $max_val)

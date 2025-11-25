@@ -20,7 +20,6 @@ $T_half = new CudaArray($t_values_half);
 $R = SCALE * 0.5;
 $PITCH_SCALE = HEIGHT / (1.5 * M_PI * N_TURNS) * 0.8;
 
-
 $X_1_php = $T_half->cos() * $R;
 $Z_1_php = $T_half->sin() * $R;
 $Y_1_php = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
@@ -54,7 +53,6 @@ for ($t = 0; $t < FRAMES; $t++) {
 
     $X_final = $X_final + (WIDTH / 2.0);
     $Y_final = $Y_base + (HEIGHT / 2.0);
-
 
     $grid = array_fill(0, HEIGHT, array_fill(0, WIDTH, ['char' => ' ', 'depth' => -INF]));
 

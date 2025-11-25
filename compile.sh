@@ -3,7 +3,7 @@ set -e
 
 EXT_NAME="cuda"
 SRC_DIR="$(pwd)"
-BUILD_DIR="/tmp/${EXT_NAME}_build"
+BUILD_DIR="./${EXT_NAME}_build"
 INSTALL_EXT_DIR=$(php-config --extension-dir)
 
 echo ""
@@ -28,15 +28,20 @@ if [ ! -d "/usr/local/cuda" ]; then
     exit 1
 fi
 
+
 echo "✔ CUDA Toolkit found."
 
 echo ""
 echo "Preparing build directory..."
-rm -rf "$BUILD_DIR"
+if [ ! -d "$BUILD_DIR" ]; then
+   rm -rf "$BUILD_DIR"
+fi
+
 mkdir -p "$BUILD_DIR"
 
+cp config.m4 Makefile Makefile.frag "$BUILD_DIR"
+cp -R src/ tests/ "$BUILD_DIR"
 cd "$BUILD_DIR"
-cp -R "$SRC_DIR"/* ./
 
 echo ""
 echo "Building PHP extension: $EXT_NAME"

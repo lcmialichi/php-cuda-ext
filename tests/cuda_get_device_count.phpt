@@ -1,4 +1,3 @@
-# tests/001.phpt
 --TEST--
 CUDA Basic Test
 --SKIPIF--

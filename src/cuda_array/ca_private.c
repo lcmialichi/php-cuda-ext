@@ -446,19 +446,47 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
         original_size *= original->shape[i];
     }
 
-    size_t new_size = 1;
+    size_t new_size_known = 1;
+    int wildcard_index = -1;
+    int final_shape[MAX_DIMS];
+
     for (int i = 0; i < new_ndims; i++)
     {
-        if (new_shape[i] <= 0)
+        final_shape[i] = new_shape[i];
+
+        if (new_shape[i] < 0)
         {
+            if (wildcard_index != -1) {
+                php_error_docref(NULL, E_WARNING, "Reshape allows only one wildcard dimension (-1) in the new shape.");
+                return NULL;
+            }
+            wildcard_index = i;
+        }
+        else if (new_shape[i] == 0)
+        {
+            php_error_docref(NULL, E_WARNING, "Reshape dimension cannot be 0.");
             return NULL;
         }
-        new_size *= new_shape[i];
+        else
+        {
+            new_size_known *= new_shape[i];
+        }
     }
 
-    if (original_size != new_size)
+    if (wildcard_index != -1)
     {
-        php_error_docref(NULL, E_WARNING, "Reshape requires that the number of elements remains the same. Original: %zu, New: %zu.", original_size, new_size);
+        if (original_size % new_size_known != 0)
+        {
+            php_error_docref(NULL, E_WARNING, "Cannot reshape array of size %zu into shape with known elements %zu.", original_size, new_size_known);
+            return NULL;
+        }
+        final_shape[wildcard_index] = original_size / new_size_known;
+        new_size_known = original_size; 
+    }
+
+    if (original_size != new_size_known)
+    {
+        php_error_docref(NULL, E_WARNING, "Reshape requires that the number of elements remains the same. Original: %zu, New: %zu.", original_size, new_size_known);
         return NULL;
     }
 
@@ -469,17 +497,15 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
     }
 
     size_t new_strides[MAX_DIMS];
-
     new_strides[new_ndims - 1] = 1;
-
     for (int i = new_ndims - 2; i >= 0; i--)
     {
-        new_strides[i] = new_strides[i + 1] * new_shape[i + 1];
+        new_strides[i] = new_strides[i + 1] * final_shape[i + 1];
     }
 
     tensor_t *reshaped = cuda_tensor_create_view(
         original,
-        new_shape,
+        final_shape,
         new_strides,
         new_ndims,
         original->gpu_offset,

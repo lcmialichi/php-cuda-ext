@@ -71,23 +71,28 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     view->dtype = base_tensor->dtype;
     view->slices = NULL;
     view->element_size = base_tensor->element_size;
+    view->allocated_size = base_tensor->allocated_size;
 
     if (dims > 0)
     {
-        int *d_shape;
-        size_t *d_strides;
-
         view->shape = (int *)emalloc(sizeof(int) * dims);
         memcpy(view->shape, shape, sizeof(int) * dims);
 
         view->strides = (size_t *)emalloc(sizeof(size_t) * dims);
         memcpy(view->strides, strides, sizeof(size_t) * dims);
 
-        cudaMemcpy(d_shape, view->shape, dims * sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(d_strides, view->strides, dims * sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaError_t err_shape = cudaMalloc((void **)&view->d_shape, dims * sizeof(int));
+        cudaError_t err_strides = cudaMalloc((void **)&view->d_strides, dims * sizeof(size_t));
+        if (err_shape != cudaSuccess || err_strides != cudaSuccess)
+        {
+            zend_throw_error(NULL, "CUDA allocation failed for d_shape/d_strides: %s",
+                             cudaGetErrorString(err_shape != cudaSuccess ? err_shape : err_strides));
+            return NULL;
+        }
 
-        view->d_shape = d_shape;
-        view->d_strides = d_strides;
+        cudaMemcpy(view->d_shape, view->shape, dims * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(view->d_strides, view->strides, dims * sizeof(size_t), cudaMemcpyHostToDevice);
+ 
     }
     else
     {
@@ -95,6 +100,13 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
         view->strides = NULL;
         view->d_strides = NULL;
         view->d_shape = NULL;
+    }
+
+    cudaError_t err_copy = cudaGetLastError();
+    if (err_copy != cudaSuccess)
+    {
+        zend_throw_error(NULL, "CUDA copy failed during view creation: %s", cudaGetErrorString(err_copy));
+        return NULL;
     }
 
     return view;
@@ -230,14 +242,15 @@ int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar
 
 int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor)
 {
-    if (base_tensor->element_size != tensor->element_size) {
-        return FAILURE; 
+    if (base_tensor->element_size != tensor->element_size)
+    {
+        return FAILURE;
     }
 
     void *dest_ptr = (char *)base_tensor->data + element_offset * base_tensor->element_size;
     size_t total_bytes = tensor->total_size * tensor->element_size;
 
-    cudaError_t err = cudaMemcpy(dest_ptr, 
+    cudaError_t err = cudaMemcpy(dest_ptr,
                                  tensor->data,
                                  total_bytes,
                                  cudaMemcpyDeviceToDevice);
@@ -246,7 +259,7 @@ int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_
     {
         return FAILURE;
     }
-    
+
     return SUCCESS;
 }
 

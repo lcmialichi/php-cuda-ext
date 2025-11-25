@@ -7,7 +7,7 @@
 extern "C"
 {
 
-#define DEFINE_REDUCTION_WRAPPER(name, Op, identity)    \
+#define DEFINE_REDUCTION_WRAPPER(name, Op)              \
     void name(float *input, float *result,              \
               int *input_shape, int input_ndims,        \
               int *result_shape, size_t *input_strides, \
@@ -15,7 +15,7 @@ extern "C"
               int axis, size_t total_elements,          \
               size_t input_base_offset)                 \
     {                                                   \
-        launch_reduce_op<Op, identity>(                 \
+        launch_reduce_op<Op>(                           \
             input, result,                              \
             input_shape, input_ndims,                   \
             result_shape, input_strides, result_ndims,  \
@@ -38,10 +38,10 @@ extern "C"
             input_base_offset);                                \
     }
 
-    DEFINE_REDUCTION_WRAPPER(launch_reduce_sum, AddOp, ZeroIdentity)
-    DEFINE_REDUCTION_WRAPPER(launch_reduce_max, MaxOp, NegInfIdentity)
-    DEFINE_REDUCTION_WRAPPER(launch_reduce_min, MinOp, InfIdentity)
-    DEFINE_REDUCTION_WRAPPER(launch_reduce_prod, MulOp, OneIdentity)
+    DEFINE_REDUCTION_WRAPPER(launch_reduce_sum, AddOp)
+    DEFINE_REDUCTION_WRAPPER(launch_reduce_max, MaxOp)
+    DEFINE_REDUCTION_WRAPPER(launch_reduce_min, MinOp)
+    DEFINE_REDUCTION_WRAPPER(launch_reduce_prod, MulOp)
 
     DEFINE_ARG_REDUCTION_WRAPPER(launch_arg_min, ArgMinOp)
     DEFINE_ARG_REDUCTION_WRAPPER(launch_arg_max, ArgMaxOp)

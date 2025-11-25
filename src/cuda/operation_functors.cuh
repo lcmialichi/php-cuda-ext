@@ -190,35 +190,28 @@ struct ArgMinOp
     }
 };
 
-struct ZeroIdentity
+template <typename Op>
+struct ArgIdentity
 {
-    __device__ __forceinline__ float operator()() const
-    {
-        return 0.0f;
-    }
+    __device__ __forceinline__ float get_init_val() { return 0.0f; } // Default
 };
 
-struct NegInfIdentity
+template <>
+struct ArgIdentity<ArgMaxOp>
 {
-    __device__ __forceinline__ float operator()() const
-    {
-        return -INFINITY;
-    }
+    __device__ __forceinline__ float get_init_val() { return -INFINITY; }
 };
 
-struct InfIdentity
+template <>
+struct ArgIdentity<ArgMinOp>
 {
-    __device__ __forceinline__ float operator()() const
-    {
-        return INFINITY;
-    }
+    __device__ __forceinline__ float get_init_val() { return INFINITY; }
 };
 
-struct OneIdentity
+template <>
+struct ArgIdentity<MulOp>
 {
-    __device__ __forceinline__ float operator()() const
-    {
-        return 1.0f;
-    }
+   __device__ __forceinline__ float get_init_val(){return 1.0f;}
 };
+
 #endif

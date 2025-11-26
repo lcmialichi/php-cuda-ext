@@ -90,7 +90,15 @@ for ($t = 0; $t < FRAMES; $t++) {
         }
     }
 
-    echo "\033[2J\033[H";
+    echo "\033[?25l";
+    drawGrid($grid);
+    echo "\033[?25h";
+}
+
+function drawGrid($grid)
+{
+    echo "\033[1;1H";
+
     foreach ($grid as $row) {
         $line = '|';
         foreach ($row as $cell) {
@@ -101,3 +109,4 @@ for ($t = 0; $t < FRAMES; $t++) {
     echo str_repeat('-', WIDTH) . "\n";
     usleep(40000);
 }
+

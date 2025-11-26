@@ -1,5 +1,19 @@
 #ifndef CUDA_KERNELS_H
 #define CUDA_KERNELS_H
+#include "../tensor.h"
+
+typedef struct ConcatParams
+{
+    void *input_ptrs[MAX_CONCAT_TENSORS];
+    int input_axis_sizes[MAX_CONCAT_TENSORS];
+    size_t input_axis_offsets[MAX_CONCAT_TENSORS];
+    size_t input_strides_axis[MAX_CONCAT_TENSORS];
+    int num_tensors;
+    size_t outer_dims;
+    size_t inner_dims;
+    size_t output_stride;
+    int output_axis_size;
+} ConcatParams;
 
 #ifdef __cplusplus
 extern "C"
@@ -12,6 +26,17 @@ extern "C"
     void launch_relu_kernel(float *a, float *result, int n);
     void launch_sigmoid_kernel(float *a, float *result, int n);
     void launch_tanh_kernel(float *a, float *result, int n);
+    int launch_concat_kernel_host(
+        tensor_t **input_tensors,
+        int num_tensors,
+        tensor_t *output_tensor,
+        int axis,
+        size_t *input_axis_offsets,
+        size_t *input_strides_axis,
+        size_t output_stride_axis,
+        size_t outer_dims,
+        size_t inner_dims,
+        int output_axis_size);
 
 #ifdef __cplusplus
 }

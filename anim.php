@@ -15,63 +15,56 @@ $t_values_half = [];
 for ($i = 0; $i < N_POINTS_PER_STRAND; $i++) {
     $t_values_half[] = floatval($i / N_POINTS_PER_STRAND * 2 * M_PI * N_TURNS);
 }
-$T_half = new CudaArray($t_values_half);
+
+$T_half = CudaArray::ones([FRAMES, count($t_values_half)]) * new CudaArray($t_values_half);
 
 $R = SCALE * 0.5;
 $PITCH_SCALE = HEIGHT / (1.5 * M_PI * N_TURNS) * 0.8;
 
-$X_1_php = $T_half->cos() * $R;
-$Z_1_php = $T_half->sin() * $R;
-$Y_1_php = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
+$t_cos = $T_half->cos();
+$t_sin = $T_half->sin();
 
-$X_2_php = $T_half->cos()->neg() * $R;
-$Z_2_php = $T_half->sin()->neg() * $R;
-$Y_2_php = $Y_1_php;
+$x = $t_cos * $R;
+$z = $t_sin * $R;
+$y = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
 
 /**
- * @var CudaArray $X_1_php
- * @var CudaArray $Y_1_php
- * @var CudaArray $Z_1_php
+ * @var CudaArray $x
+ * @var CudaArray $y
+ * @var CudaArray $z
  */
-$X_base = $X_1_php->concat([$X_2_php]);
-$Y_base = $Y_1_php->concat([$Y_2_php]);
-$Z_base = $Z_1_php->concat([$Z_2_php]);
+$x = $x->concat([$t_cos->neg() * $R], axis: 1);
+$y = $y->concat([$y], axis: 1);
+$z = $z->concat([$t_sin->neg() * $R], axis: 1);
+
+$angles = (new CudaArray(range(0, FRAMES - 1)))->reshape([FRAMES, 1]) * 0.05;
+
+$cos_a = $angles->cos();
+$sin_a = $angles->sin();
+
+$z_min = -SCALE * 1.5;
+$z_max = SCALE * 1.5;
+$z_range = $z_max - $z_min;
+
+$t = $x * $cos_a;
+
+$X_final = ($x * $cos_a) - ($z * $sin_a) + (WIDTH / 2.0);
+$Z_final = ($x * $sin_a) - ($z * $cos_a);
+$Y_final = $y + (HEIGHT / 2.0);
+$Z_Normalized = ($Z_final - $z_min) / $z_range;
+
+$X_final = $X_final->toArray();
+$Y_final = $Y_final->toArray();
+$Z_final = $Z_final->toArray();
+$Z_Normalized = $Z_Normalized->toArray();
 
 for ($t = 0; $t < FRAMES; $t++) {
-
-    $angle = $t * 0.05;
-    $cos_a = cos($angle);
-    $sin_a = sin($angle);
-
-    $X_rot_part1 = $X_base * $cos_a;
-    $X_rot_part2 = $Z_base * $sin_a;
-    $X_final = $X_rot_part1 - $X_rot_part2;
-
-    $Z_rot_part1 = $X_base * $sin_a;
-    $Z_rot_part2 = $Z_base * $cos_a;
-    $Z_final = $Z_rot_part1 + $Z_rot_part2;
-
-    $X_final = $X_final + (WIDTH / 2.0);
-    $Y_final = $Y_base + (HEIGHT / 2.0);
-
     $grid = array_fill(0, HEIGHT, array_fill(0, WIDTH, ['char' => ' ', 'depth' => -INF]));
 
-    $z_min = -SCALE * 1.5;
-    $z_max = SCALE * 1.5;
-    $z_range = $z_max - $z_min;
-
-    $Z_Normalized = ($Z_final - $z_min) / $z_range;
-
-    /**
-     * @var CudaArray $X_final
-     * @var CudaArray $Y_final
-     * @var CudaArray $Z_final
-     * @var CudaArray $Z_Normalized
-     */
-    $X_proj = $X_final->toArray();
-    $Y_proj = $Y_final->toArray();
-    $Z_depth = $Z_final->toArray();
-    $Z_Normalized = $Z_Normalized->toArray();
+    $X_proj = $X_final[$t];
+    $Y_proj = $Y_final[$t];
+    $Z_depth = $Z_final[$t];
+    $Z_Norm = $Z_Normalized[$t];
 
     for ($i = 0; $i < N_POINTS; $i++) {
         $x = $X_proj[$i];
@@ -82,7 +75,7 @@ for ($t = 0; $t < FRAMES; $t++) {
         $ty = floor($y);
 
         if ($tx >= 0 && $tx < WIDTH && $ty >= 0 && $ty < HEIGHT) {
-            $normalized_z = $Z_Normalized[$i];
+            $normalized_z = $Z_Norm[$i];
             $is_strand_1 = ($i < N_POINTS_PER_STRAND);
             $char_set = $is_strand_1 ? $STRAND_1_CHARS : $STRAND_2_CHARS;
 
@@ -106,7 +99,6 @@ for ($t = 0; $t < FRAMES; $t++) {
     }
 
     echo "\033[2J\033[H";
-
     foreach ($grid as $row) {
         $line = '|';
         foreach ($row as $cell) {

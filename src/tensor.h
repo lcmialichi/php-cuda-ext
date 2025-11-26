@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 
 #define MAX_DIMS 10
-
+#define MAX_CONCAT_TENSORS 10
 #define DTYPE_FLOAT 1
 #define DTYPE_INT 2
 

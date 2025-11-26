@@ -109,18 +109,21 @@ static void calculate_tensor_strides(tensor_t *tensor,
                                      int result_dims,
                                      int *tensor_strides)
 {
-    for (int i = 0; i < tensor->ndims; i++)
+    long internal_stride = 1; 
+    for (int i = tensor->ndims - 1; i >= 0; i--)
     {
         if (tensor->is_view)
         {
             tensor_strides[i] = (int)tensor->strides[i];
-            continue;
+            
+        } else if (tensor->shape[i] == 1) 
+        {
+            tensor_strides[i] = 0;
+            
+        } else {
+            tensor_strides[i] = (int)internal_stride;
+            internal_stride *= tensor->shape[i]; 
         }
-
-        int result_dim_idx = result_dims - tensor->ndims + i;
-        tensor_strides[i] = result_dim_idx >= 0 && tensor->shape[i] != 1
-                                ? calculate_broadcast_stride(result_shape, result_dims, result_dim_idx)
-                                : 0;
     }
 }
 

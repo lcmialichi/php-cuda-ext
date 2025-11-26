@@ -110,11 +110,11 @@ class CudaBenchmark
             $op_gpu = $functions['gpu'];
             $start_gpu = microtime(true);
             for ($i = 0; $i < $runs; $i++) {
-                $result = $op_gpu($a);
+                $op_gpu($a);
+               
             }
+            
             $gpu_time_total = (microtime(true) - $start_gpu) * 1000 / $runs;
-
-            $result->toArray();
 
         } catch (Exception $e) {
             $gpu_time_total = 0;

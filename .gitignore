@@ -1,2 +1,3 @@
 cuda_build
 cuda_build/**
+.vscode

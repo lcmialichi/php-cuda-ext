@@ -222,7 +222,7 @@ $x->prod(axis: null); // Computes the product of all elements along the axis.
   -  PHP internals developers and community
   - Contributors and early testers
 
----
+## Support
 Star this repository if you find it interesting!
 
 Follow development progress and report issues on GitHub

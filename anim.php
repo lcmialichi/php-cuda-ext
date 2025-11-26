@@ -28,11 +28,6 @@ $x = $t_cos * $R;
 $z = $t_sin * $R;
 $y = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
 
-/**
- * @var CudaArray $x
- * @var CudaArray $y
- * @var CudaArray $z
- */
 $x = $x->concat([$t_cos->neg() * $R], axis: 1);
 $y = $y->concat([$y], axis: 1);
 $z = $z->concat([$t_sin->neg() * $R], axis: 1);
@@ -45,8 +40,6 @@ $sin_a = $angles->sin();
 $z_min = -SCALE * 1.5;
 $z_max = SCALE * 1.5;
 $z_range = $z_max - $z_min;
-
-$t = $x * $cos_a;
 
 $X_final = ($x * $cos_a) - ($z * $sin_a) + (WIDTH / 2.0);
 $Z_final = ($x * $sin_a) - ($z * $cos_a);

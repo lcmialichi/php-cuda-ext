@@ -1,5 +1,6 @@
 <?php
 
+
 /**
  * <psalm
  * disallowLiteralKeysOnUnshapedArrays="[bool]"
@@ -94,8 +95,9 @@ class CudaArray implements ArrayAccess
     {
     }
 
-    public static function rand(array $shape, ?float $min = null, ?float $max = null): CudaArray{
-        
+    public static function rand(array $shape, ?float $min = null, ?float $max = null): CudaArray
+    {
+
     }
 
     public function transpose(?int $axis = null): CudaArray
@@ -127,7 +129,7 @@ class CudaArray implements ArrayAccess
     {
     }
 
-     public function neg(): CudaArray
+    public function neg(): CudaArray
     {
     }
 

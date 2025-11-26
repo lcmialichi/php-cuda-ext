@@ -176,7 +176,22 @@ extern "C"
         *grid_size = (size + *block_size - 1) / *block_size;
     }
 
-     void launch_fill_kernel(float *data, float value, size_t size)
+    int launch_scale_kernel_host(float *data, size_t size, float min_value, float max_value)
+    {
+        int grid_size, block_size;
+        get_grid_config(size, &grid_size, &block_size);
+
+        scale_kernel<<<grid_size, block_size>>>(data, size, min_value, max_value);
+
+        if (cudaPeekAtLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess)
+        {
+            return FAILURE;
+        }
+
+        return SUCCESS;
+    }
+
+    void launch_fill_kernel(float *data, float value, size_t size)
     {
         int threads = 256;
         int blocks = (size + threads - 1) / threads;

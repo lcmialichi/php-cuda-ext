@@ -33,8 +33,8 @@ echo "✔ CUDA Toolkit found."
 
 echo ""
 echo "Preparing build directory..."
-if [ ! -d "$BUILD_DIR" ]; then
-   rm -rf "$BUILD_DIR"
+if [ -d "$BUILD_DIR" ]; then
+   rm -rf -rf "$BUILD_DIR"
 fi
 
 mkdir -p "$BUILD_DIR"

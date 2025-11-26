@@ -7,19 +7,6 @@ define('FRAMES', 500);
 define('SCALE', 14.0);
 define('N_TURNS', 1.5);
 define('N_POINTS_PER_STRAND', N_POINTS / 2);
-$a = new CudaArray([4, 1, 2, 3]);
-$b = new CudaArray([[4, 1, 2, 3], [6, 7, 8, 9]]);
-$result = $a / $b;
-var_dump($result->toArray());
-
-$a = new CudaArray([[22, 32], [47, 61]]);
-$b = new CudaArray([[[4, 1],[ 2, 3]], [[6, 7], [8, 9]]]);
-$result = $a / $b;
-var_dump($result->toArray());
-
-$result = $a / 11;
-var_dump($result->toArray());
-exit;
 
 $STRAND_1_CHARS = ['#', '@', 'O', '.'];
 $STRAND_2_CHARS = ['*', '&', 'o', ':'];

@@ -13,7 +13,7 @@ A native PHP extension that provides direct access to NVIDIA CUDA functionality,
   <img src="https://img.shields.io/badge/Platform-Linux-red">
 </div>
 
-# ⚠️ NOTICE — Experimental Project
+# ⚠️ NOTICE — Under Development
 
 This extension is **actively under development**.  
 It is **not production-ready**, may contain bugs, and its API may change at any time.  
@@ -53,8 +53,49 @@ Verify that it loaded correctly:
 php -m | grep cuda
 ```
 
-
 ## Quick start
+### Operator Overloading
+CudaArray supports native PHP operator overloading, providing an intuitive syntax for GPU-accelerated tensor operations. This allows you to write mathematical expressions that look like standard PHP code but execute entirely on the NVIDIA GPU.
+```php
+$a = CudaArray::ones([3, 3]);
+$b = CudaArray::full([3, 3], 2.0);
+$scalar = 5.0;
+
+// Addition
+$result = $a + $b;      // Element-wise addition
+$result = $a + $scalar; // Broadcasting: adds 5.0 to every element
+$result = $a++;        // same as $a + 1 
+
+// Subtraction  
+$result = $a - $b;      // Element-wise subtraction
+$result = $a - 2.0;     // Broadcasting: subtracts 2.0 from every element
+$result = $a--;         // same as $a - 1 
+
+// Multiplication
+$result = $a * $b;      // Element-wise multiplication (Hadamard product)
+$result = $a * 3.0;     // Broadcasting: multiplies every element by 3.0
+
+// Division
+$result = $a / $b;      // Element-wise division
+$result = $a / 2.0;     // Broadcasting: divides every element by 2.0
+
+// Exponentiation
+$result = $a ** $b;     // Element-wise power: aᵢⱼ ^ bᵢⱼ
+$result = $a ** 2;      // Broadcasting: squares every element
+```
+Operator overloading enables complex mathematical expressions that execute efficiently on the ``GPU``:
+
+```php
+// Complex GPU-accelerated expression
+$result = ($a * 2.0 + $b) ** ($c / 3.0) - $d;
+
+// Equivalent to:
+$temp1 = $a->multiply(2.0);
+$temp2 = $temp1->add($b);
+$temp3 = $c->divide(3.0);
+$temp4 = $temp2->power($temp3);
+$result = $temp4->subtract($d);
+```
 
 ### Basic Tensor Operations
 ```php
@@ -145,7 +186,6 @@ $ca->tan();
 // others
 $ca->neg(); 
 ```
-
 ### Getters
 
 ```php

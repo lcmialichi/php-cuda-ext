@@ -6,11 +6,12 @@ A native PHP extension that provides direct access to NVIDIA CUDA functionality,
   <img src="https://i.imgur.com/EqIDkTp.gif" width="300px" height="170px" alt="GIF demonstrativo">
 </div>
 
+
 <div align="center">
-<img src="https://img.shields.io/badge/PHP-8.0+-purple.svg?style=for-the-badge&logo=php" width="90px" height="20px" max-height="20px">
-<img src="https://img.shields.io/badge/CUDA-11.0+-76B900.svg?style=for-the-badge&logo=nvidia"width="90px" height="20px" max-height="20px">
-<img src="https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge"width="90px" height="20px" max-height="20px">
-<img src="https://img.shields.io/badge/Platform-Linux-important.svg?style=for-the-badge"width="90px" height="20px" max-height="20px">
+  <img src="https://img.shields.io/badge/PHP-8.0+-purple?logo=php">
+  <img src="https://img.shields.io/badge/CUDA-11.0%2B-76B900?logo=nvidia">  
+  <img src="https://img.shields.io/badge/License-MIT-blue">
+  <img src="https://img.shields.io/badge/Platform-Linux-red">
 </div>
 # ⚠️ NOTICE — Experimental Project
 

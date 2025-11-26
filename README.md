@@ -21,7 +21,7 @@ Use **only in testing or experimental environments**.
 
 ---
 
-### Requirements
+## Requirements
 To build and run this extension, you need:
 
 - NVIDIA CUDA Toolkit (12.x recommended)
@@ -32,7 +32,7 @@ To build and run this extension, you need:
 - Linux (Ubuntu, Debian, CentOS, Arch, etc.)
 
 
-### How to Compile
+## How to Compile
 ```bash
 git clone https://github.com/lcmialichi/php-cuda-ext.git/
 cd php-cuda-ext
@@ -54,8 +54,9 @@ php -m | grep cuda
 ```
 
 
-### Quick start
+## Quick start
 
+### Basic Tensor Operations
 ```php
 /**
  * Creates a CudaArray with a 4×4×4 shape filled with ones.
@@ -108,7 +109,7 @@ var_dump($newCa->toArray());
 
 ## Methods
 ### Basic math
-All methods list bellow accept an scalar value or a CudaArray instance, the shape is broadcasted automatically
+All operations support automatic shape broadcasting and accept both CudaArray instances and scalar values.
 
 ```php
 // Multiplication
@@ -201,3 +202,30 @@ $x->min(axis: null); // Computes the minimum value along the axis.
 $x->max(axis: null); // Computes the maximum value along the axis.
 $x->prod(axis: null); // Computes the product of all elements along the axis.
 ```
+
+## Use Cases
+ - Machine Learning & AI: GPU-accelerated model inference and preprocessing
+ - Data Science & Analytics: Large-scale numerical computations
+ - Image & Video Processing: Real-time filtering and transformations
+ - Scientific Computing: Complex mathematical simulations
+ - Game Development: Physics engines and procedural generation
+ - Financial Modeling: Risk analysis and quantitative finance
+
+ ## Contributing
+ We welcome contributions from the community!
+ 
+ ##  License
+ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+ ## Acknowledgments
+  - NVIDIA for the CUDA parallel computing platform
+  -  PHP internals developers and community
+  - Contributors and early testers
+
+---
+Star this repository if you find it interesting!
+
+Follow development progress and report issues on GitHub
+
+Keywords: PHP CUDA extension, GPU computing PHP, NVIDIA PHP, tensor operations, machine learning PHP, high-performance computing, GPU acceleration, scientific computing PHP, CUDA tensor, PHP extension development
+</div>

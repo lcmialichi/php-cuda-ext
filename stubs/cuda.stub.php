@@ -27,8 +27,6 @@ class CudaArray implements ArrayAccess
     {
     }
 
-
-
     /**
      * @param CudaArray|float|int $other
      * @return CudaArray
@@ -182,3 +180,10 @@ class CudaArray implements ArrayAccess
 
 }
 
+
+/**
+ * @var cudaArray $cudaArray
+ * @var cudaArray $result
+ * @psalm-assert cudaArray $result
+ */
+$result = $cudaArray * $cudaArray;

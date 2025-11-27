@@ -11,6 +11,7 @@ class CudaBenchmark
     private array $slowestOp = [];
     private int $totalElements = 0;
     private int $totalOp = 0;
+    private float $totalTime = 0;
 
     public function run()
     {
@@ -43,7 +44,6 @@ class CudaBenchmark
             ],
         ];
 
-        $start = microtime(true);
         foreach ($tests as $suiteName => $dims) {
             echo "\n=== SUITE: $suiteName ===\n";
             $this->suiteElementWise($dims);
@@ -53,7 +53,7 @@ class CudaBenchmark
             $this->suiteComparison($dims);
         }
 
-        $time = round(microtime(true) - $start, 3);
+        $time = round($this->totalTime, 3);
         $elements = number_format($this->totalElements);
 
         echo "\n\nOVERVIEW: \n\tTotal time: {$time} s\n\tFastest op: \033[32m{$this->fastestOp['op']}\033[0m\n\tSlowest op: \033[91m{$this->slowestOp['op']}\033[0m";
@@ -200,14 +200,24 @@ class CudaBenchmark
         echo " - {$nameFormatted} | {$labelFormatted} | {$elemFormatted} elems | ";
 
         try {
+
             $A = CudaArray::rand($dims, 0.0, 1.0);
             $B = ($binary) ? CudaArray::rand($dims, 0.0, 1.0) : null;
+
+            # WARMUP
+            for ($i = 0; $i < self::RUNS; $i++) {
+                $binary ? $gpuFn($A, $B) : $gpuFn($A);
+            }
 
             $t0 = microtime(true);
             for ($i = 0; $i < self::RUNS; $i++) {
                 $binary ? $gpuFn($A, $B) : $gpuFn($A);
             }
-            $gpuTime = (microtime(true) - $t0) * 1000 / self::RUNS;
+
+            $time = microtime(true) - $t0;
+            $this->totalTime += $time;
+
+            $gpuTime = $time * 1000 / self::RUNS;
 
             $time = round($gpuTime, 3);
             $gpuFormatted = str_pad("{$time} ms", 10, " ", STR_PAD_LEFT);
@@ -225,7 +235,7 @@ class CudaBenchmark
                     "op" => "$opName ({$time} ms)"
                 ];
             }
-            
+
             $color = "\033[32m";
             if ($time < 1) {
                 $color = "\033[32m";

@@ -179,7 +179,7 @@ extern "C"
     void launch_fill_kernel(float *data, float value, size_t size)
     {
         int threads = 256;
-        int blocks = (size + threads - 1) / threads;
+        int blocks = min(32, (int)((size + threads - 1) / threads));
         fill_kernel<<<blocks, threads>>>(data, value, size);
     }
 
@@ -265,28 +265,28 @@ extern "C"
     void launch_clip_kernel(float *a, float min_val, float max_val, float *result, int n)
     {
         int threads = 256;
-        int blocks = (n + threads - 1) / threads;
+        int blocks = min(32, (n + threads - 1) / threads);
         clip_kernel<<<blocks, threads>>>(a, min_val, max_val, result, n);
     }
 
     void launch_relu_kernel(float *a, float *result, int n)
     {
         int threads = 256;
-        int blocks = (n + threads - 1) / threads;
+        int blocks = min(32, (n + threads - 1) / threads);
         relu_kernel<<<blocks, threads>>>(a, result, n);
     }
 
     void launch_sigmoid_kernel(float *a, float *result, int n)
     {
         int threads = 256;
-        int blocks = (n + threads - 1) / threads;
+        int blocks = min(32, (n + threads - 1) / threads);
         sigmoid_kernel<<<blocks, threads>>>(a, result, n);
     }
 
     void launch_tanh_kernel(float *a, float *result, int n)
     {
         int threads = 256;
-        int blocks = (n + threads - 1) / threads;
+        int blocks = min(32, (n + threads - 1) / threads);
         tanh_kernel<<<blocks, threads>>>(a, result, n);
     }
 }

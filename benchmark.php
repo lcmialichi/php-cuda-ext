@@ -225,8 +225,17 @@ class CudaBenchmark
                     "op" => "$opName ({$time} ms)"
                 ];
             }
+            
+            $color = "\033[32m";
+            if ($time < 1) {
+                $color = "\033[32m";
+            } elseif ($time < 5) {
+                $color = "\033[33m";
+            } else {
+                $color = "\033[31m";
+            }
 
-            echo "GPU: \033[32m{$gpuFormatted}\033[0m\n";
+            echo "GPU: {$color}{$gpuFormatted}\033[0m\n";
         } catch (Throwable $e) {
             echo "GPU: FAILED\n";
         }

@@ -24,6 +24,11 @@ $x = $t_cos * $R;
 $z = $t_sin * $R;
 $y = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
 
+/**
+ * @var CudaArray $x
+ * @var CudaArray $y
+ * @var CudaArray $z
+ */
 $x = $x->concat([$t_cos->neg() * $R], axis: 1);
 $y = $y->concat([$y], axis: 1);
 $z = $z->concat([$t_sin->neg() * $R], axis: 1);

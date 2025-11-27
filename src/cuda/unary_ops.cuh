@@ -4,7 +4,8 @@
 #include <cuda_runtime.h>
 
 #define MAX_DIMS 10
-struct UnaryParams {
+struct UnaryParams
+{
     int shape[MAX_DIMS];
     size_t strides[MAX_DIMS];
     int ndims;
@@ -19,7 +20,7 @@ __global__ void unary_kernel_strided(
     size_t base_offset,
     size_t total_size)
 {
-   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= total_size)
         return;
 
@@ -48,7 +49,7 @@ void launch_unary_op(
     size_t total_size)
 {
     int threads = 256;
-    int blocks = (total_size + threads - 1) / threads;
+    int blocks = min(32, (int)((total_size + threads - 1) / threads));
 
     UnaryParams h_params;
 

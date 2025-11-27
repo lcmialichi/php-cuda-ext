@@ -29,7 +29,6 @@ __device__ size_t get_linear_index(const int *coords)
     return index;
 }
 
-
 template <typename Op>
 __global__ void reduce_kernel_parallel(
     const float *__restrict__ input,
@@ -39,7 +38,8 @@ __global__ void reduce_kernel_parallel(
     extern __shared__ float sdata[];
 
     Op op;
-    ArgIdentity<Op> arg_identity; ;
+    ArgIdentity<Op> arg_identity;
+    ;
 
     size_t idx_out = blockIdx.x;
     if (idx_out >= d_reduce_params.total_elements_out)
@@ -113,7 +113,7 @@ __global__ void arg_reduce_kernel_parallel(
     Op op;
     ArgIdentity<Op> arg_identity;
 
-    size_t idx_out = blockIdx.x; 
+    size_t idx_out = blockIdx.x;
     if (idx_out >= d_reduce_params.total_elements_out)
         return;
 
@@ -162,7 +162,7 @@ __global__ void arg_reduce_kernel_parallel(
         size_t flat_index = get_linear_index(coords) + input_base_offset;
         float current_val = input[flat_index];
 
-        if (op(current_val, best_val)) 
+        if (op(current_val, best_val))
 
         {
             best_val = current_val;
@@ -196,7 +196,6 @@ __global__ void arg_reduce_kernel_parallel(
     }
 }
 
-
 template <typename Op>
 void launch_reduce_op(float *input, float *result,
                       int *input_shape, int input_ndims,
@@ -219,7 +218,7 @@ void launch_reduce_op(float *input, float *result,
     cudaMemcpyToSymbol(d_reduce_params, &h_params, sizeof(ReductionParams));
 
     int threads = REDUCTION_BLOCK_SIZE;
-    int blocks = total_elements_out;
+    int blocks = min(32, (int)((total_elements_out + threads - 1) / threads));
 
     size_t shared_mem_size = threads * sizeof(float);
 
@@ -249,7 +248,7 @@ void launch_arg_reduce(float *input, int *result_idx,
     cudaMemcpyToSymbol(d_reduce_params, &h_params, sizeof(ReductionParams));
 
     int threads = REDUCTION_BLOCK_SIZE;
-    int blocks = total_elements_out;
+    int blocks = min(32, (int)((total_elements_out + threads - 1) / threads));
 
     size_t shared_mem_size = threads * (sizeof(float) + sizeof(int));
 

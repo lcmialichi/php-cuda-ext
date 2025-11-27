@@ -8,6 +8,8 @@ if test "$PHP_CUDA" != "no"; then
         AC_MSG_ERROR([nvcc not found - please install CUDA toolkit])
     fi
 
+    NVCCFLAGS="$NVCCFLAGS -use_fast_math"
+
     PHP_ADD_INCLUDE(/usr/local/cuda/include)
     PHP_ADD_INCLUDE([src])
     PHP_ADD_INCLUDE([src/cuda])

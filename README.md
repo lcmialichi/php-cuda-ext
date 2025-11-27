@@ -243,6 +243,12 @@ $x->max(axis: null); // Computes the maximum value along the axis.
 $x->prod(axis: null); // Computes the product of all elements along the axis.
 ```
 
+## Run Benchmark
+You can run benchmark script to see real execution time
+```bash
+php benchmark.php
+```
+
 ## Use Cases
  - Machine Learning & AI: GPU-accelerated model inference and preprocessing
  - Data Science & Analytics: Large-scale numerical computations

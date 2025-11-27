@@ -75,8 +75,8 @@ extern "C"
         }
 
         size_t outer_idx = idx / (params->output_axis_size * params->inner_dims);
-        size_t inner_idx = idx % params->inner_dims;
         size_t axis_idx = (idx / params->inner_dims) % params->output_axis_size;
+        size_t inner_idx = idx % params->inner_dims;
 
         int tensor_idx = 0;
         size_t current_offset = 0;
@@ -98,23 +98,16 @@ extern "C"
 
         size_t local_axis_idx = axis_idx - current_offset;
         int *input_tensor = (int *)params->input_ptrs[tensor_idx];
-        size_t input_stride = params->input_strides_axis[tensor_idx];
 
         size_t input_offset = outer_idx * params->input_axis_sizes[tensor_idx] * params->inner_dims;
         input_offset += local_axis_idx * params->inner_dims;
         input_offset += inner_idx;
-        input_offset *= input_stride;
 
         size_t output_offset = outer_idx * params->output_axis_size * params->inner_dims;
         output_offset += axis_idx * params->inner_dims;
         output_offset += inner_idx;
-        output_offset *= params->output_stride;
 
-        if (input_offset < params->input_axis_sizes[tensor_idx] * params->outer_dims * params->inner_dims * input_stride &&
-            output_offset < params->output_axis_size * params->outer_dims * params->inner_dims * params->output_stride)
-        {
-            output[output_offset] = input_tensor[input_offset];
-        }
+        output[output_offset] = input_tensor[input_offset];
     }
 
     __global__ void concat_kernel_float(ConcatParams *params, float *output)
@@ -127,8 +120,8 @@ extern "C"
         }
 
         size_t outer_idx = idx / (params->output_axis_size * params->inner_dims);
-        size_t inner_idx = idx % params->inner_dims;
         size_t axis_idx = (idx / params->inner_dims) % params->output_axis_size;
+        size_t inner_idx = idx % params->inner_dims;
 
         int tensor_idx = 0;
         size_t current_offset = 0;
@@ -150,29 +143,21 @@ extern "C"
 
         size_t local_axis_idx = axis_idx - current_offset;
         float *input_tensor = (float *)params->input_ptrs[tensor_idx];
-        size_t input_stride = params->input_strides_axis[tensor_idx];
 
         size_t input_offset = outer_idx * params->input_axis_sizes[tensor_idx] * params->inner_dims;
         input_offset += local_axis_idx * params->inner_dims;
         input_offset += inner_idx;
-        input_offset *= input_stride;
 
         size_t output_offset = outer_idx * params->output_axis_size * params->inner_dims;
         output_offset += axis_idx * params->inner_dims;
         output_offset += inner_idx;
-        output_offset *= params->output_stride;
 
-        if (input_offset < params->input_axis_sizes[tensor_idx] * params->outer_dims * params->inner_dims * input_stride &&
-            output_offset < params->output_axis_size * params->outer_dims * params->inner_dims * params->output_stride)
-        {
-            output[output_offset] = input_tensor[input_offset];
-        }
+        output[output_offset] = input_tensor[input_offset];
     }
 
     void get_grid_config(size_t size, int *grid_size, int *block_size)
     {
-        const int max_threads = 512;
-        *block_size = (size < max_threads) ? (int)size : max_threads;
+        *block_size = 256;
         *grid_size = (size + *block_size - 1) / *block_size;
     }
 
@@ -277,7 +262,6 @@ extern "C"
         cudaFree(d_params);
         return SUCCESS;
     }
-
     void launch_clip_kernel(float *a, float min_val, float max_val, float *result, int n)
     {
         int threads = 256;

@@ -1315,7 +1315,8 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
         return NULL;
     }
 
-    if (list_count > MAX_CONCAT_TENSORS) {
+    if (list_count > MAX_CONCAT_TENSORS)
+    {
         zend_throw_error(NULL, "Too many tensors to concatenate. Maximum is %d.", MAX_CONCAT_TENSORS);
         return NULL;
     }
@@ -1335,13 +1336,6 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 
         cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(pzval));
         tensor_t *current_tensor = other_obj->tensor_handle;
-
-        if (!is_contiguous(current_tensor))
-        {
-            zend_throw_error(NULL, "Cannot concatenate non-contiguous tensor.");
-            efree(tensor_list);
-            return NULL;
-        }
 
         tensor_list[i] = current_tensor;
 
@@ -1380,12 +1374,11 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
     }
     ZEND_HASH_FOREACH_END();
 
-    // Criar novo tensor para o resultado
     int *new_shape = (int *)emalloc(sizeof(int) * first_ndims);
     memcpy(new_shape, tensor_list[0]->shape, sizeof(int) * first_ndims);
     new_shape[axis] = (int)total_length_on_axis;
-
     tensor_t *new_tensor = cuda_tensor_create_empty(new_shape, first_ndims);
+
     efree(new_shape);
 
     if (!new_tensor)
@@ -1395,42 +1388,43 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
         return NULL;
     }
 
-
     void *input_ptrs[MAX_CONCAT_TENSORS];
     int input_axis_sizes[MAX_CONCAT_TENSORS];
     size_t input_strides_axis[MAX_CONCAT_TENSORS];
     size_t input_axis_offsets[MAX_CONCAT_TENSORS];
 
-
     size_t current_offset = 0;
     size_t output_stride_axis = 1;
 
-    for (int d = axis + 1; d < new_tensor->ndims; d++) {
+    for (int d = axis + 1; d < new_tensor->ndims; d++)
+    {
         output_stride_axis *= new_tensor->shape[d];
     }
-
-    for (i = 0; i < list_count; i++) {
+    for (i = 0; i < list_count; i++)
+    {
         tensor_t *current = tensor_list[i];
         input_ptrs[i] = current->data;
         input_axis_sizes[i] = current->shape[axis];
         input_axis_offsets[i] = current_offset;
-        
+
         size_t input_stride_axis = 1;
-        for (int d = axis + 1; d < current->ndims; d++) {
+        for (int d = axis + 1; d < current->ndims; d++)
+        {
             input_stride_axis *= current->shape[d];
         }
         input_strides_axis[i] = input_stride_axis;
-        
         current_offset += input_axis_sizes[i];
     }
 
     size_t outer_dims = 1;
-    for (int d = 0; d < axis; d++) {
+    for (int d = 0; d < axis; d++)
+    {
         outer_dims *= new_tensor->shape[d];
     }
 
     size_t inner_dims = 1;
-    for (int d = axis + 1; d < new_tensor->ndims; d++) {
+    for (int d = axis + 1; d < new_tensor->ndims; d++)
+    {
         inner_dims *= new_tensor->shape[d];
     }
 
@@ -1444,12 +1438,12 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
         output_stride_axis,
         outer_dims,
         inner_dims,
-        (int)total_length_on_axis
-    );
+        (int)total_length_on_axis);
 
     efree(tensor_list);
 
-    if (result != SUCCESS) {
+    if (result != SUCCESS)
+    {
         zend_throw_error(NULL, "CUDA concat kernel failed.");
         return NULL;
     }

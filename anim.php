@@ -10,12 +10,9 @@ define('N_POINTS_PER_STRAND', N_POINTS / 2);
 
 $STRAND_1_CHARS = ['#', '@', 'O', '.'];
 $STRAND_2_CHARS = ['*', '&', 'o', ':'];
-$t_values_half = [];
-for ($i = 0; $i < N_POINTS_PER_STRAND; $i++) {
-    $t_values_half[] = floatval($i / N_POINTS_PER_STRAND * 2 * M_PI * N_TURNS);
-}
 
-$T_half = CudaArray::ones([FRAMES, count($t_values_half)]) * new CudaArray($t_values_half);
+$t_vals = new CudaArray(range(0, N_POINTS_PER_STRAND - 1)) / N_POINTS_PER_STRAND * 2 * M_PI * N_TURNS;
+$T_half = CudaArray::ones([FRAMES, N_POINTS_PER_STRAND]) * $t_vals;
 
 $R = SCALE * 0.5;
 $PITCH_SCALE = HEIGHT / (1.5 * M_PI * N_TURNS) * 0.8;

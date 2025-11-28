@@ -8,6 +8,7 @@
 
 #define MAX_DIMS 10
 #define REDUCTION_BLOCK_SIZE 256
+#define WARP_SIZE 32
 
 struct ReductionParams
 {
@@ -17,6 +18,8 @@ struct ReductionParams
     size_t reduce_dim_size;
     int d_shape[MAX_DIMS];
     size_t d_strides[MAX_DIMS];
+    size_t output_offsets[MAX_DIMS];
+    size_t output_strides[MAX_DIMS];
 };
 
 __constant__ ReductionParams d_reduce_params;
@@ -32,12 +35,12 @@ __device__ size_t get_linear_index(const int *coords)
 }
 
 template <typename Op>
-__global__ void reduce_kernel_optimized(
+__global__ void reduce_kernel(
     const float *__restrict__ input,
     float *__restrict__ result,
     size_t input_base_offset)
 {
-    extern __shared__ float sdata[];
+    extern __shared__ float sdata[]; 
 
     Op op;
     ArgIdentity<Op> arg_identity;
@@ -48,10 +51,10 @@ __global__ void reduce_kernel_optimized(
 
     int tid = threadIdx.x;
     int reduce_dim_size = d_reduce_params.reduce_dim_size;
-
+    size_t axis_stride = d_reduce_params.d_strides[d_reduce_params.reduce_axis];
+    
     int coords[MAX_DIMS] = {0};
     size_t temp_idx = idx_out;
-
     for (int i = d_reduce_params.ndims - 1; i >= 0; --i)
     {
         if (i != d_reduce_params.reduce_axis)
@@ -61,21 +64,20 @@ __global__ void reduce_kernel_optimized(
         }
     }
 
+    size_t base_flat_index = get_linear_index(coords) + input_base_offset;
     float accumulator = arg_identity.get_init_val();
 
     for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x)
     {
-        coords[d_reduce_params.reduce_axis] = current_idx;
-        size_t flat_index = get_linear_index(coords) + input_base_offset;
-
+        size_t flat_index = base_flat_index + (size_t)current_idx * axis_stride;
         float current_val = input[flat_index];
         accumulator = op(accumulator, current_val);
     }
-
+    
     sdata[tid] = accumulator;
-    __syncthreads();
+    __syncthreads(); 
 
-    for (int s = blockDim.x / 2; s > 32; s >>= 1)
+    for (int s = blockDim.x / 2; s > WARP_SIZE; s >>= 1)
     {
         if (tid < s)
         {
@@ -84,77 +86,48 @@ __global__ void reduce_kernel_optimized(
         __syncthreads();
     }
 
-    if (tid < 32)
+    if (blockDim.x > WARP_SIZE)
     {
-        volatile float *vsdata = sdata;
-        for (int s = 16; s > 0; s >>= 1)
+        if (tid < WARP_SIZE)
         {
-            if (tid < s)
+            accumulator = sdata[tid];
+        }
+        __syncthreads(); 
+        
+        if (tid < WARP_SIZE)
+        {
+            for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
             {
-                vsdata[tid] = op(vsdata[tid], vsdata[tid + s]);
+                accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
+            }
+            if (tid == 0)
+            {
+                result[idx_out] = accumulator;
             }
         }
     }
-
-    if (tid == 0)
+    else
     {
-        result[idx_out] = sdata[0];
-    }
-}
-
-template <typename Op, int BLOCK_SIZE>
-__global__ void reduce_contiguous_fast(
-    const float *__restrict__ input,
-    float *__restrict__ output,
-    size_t reduction_size,
-    size_t outer_size)
-{
-    const int tid = threadIdx.x;
-    const int outer_idx = blockIdx.x;
-
-    if (outer_idx >= outer_size)
-        return;
-
-    Op op;
-    ArgIdentity<Op> identity;
-
-    __shared__ float smem[BLOCK_SIZE];
-
-    float thread_val = identity.get_init_val();
-    const size_t base_idx = outer_idx * reduction_size;
-
-    for (size_t i = tid; i < reduction_size; i += BLOCK_SIZE)
-    {
-        thread_val = op(thread_val, input[base_idx + i]);
-    }
-
-    smem[tid] = thread_val;
-    __syncthreads();
-
-    for (int s = BLOCK_SIZE / 2; s > 0; s >>= 1)
-    {
-        if (tid < s)
+        for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
         {
-            smem[tid] = op(smem[tid], smem[tid + s]);
+            accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
         }
-        __syncthreads();
-    }
-
-    if (tid == 0)
-    {
-        output[outer_idx] = smem[0];
+        if (tid == 0)
+        {
+            result[idx_out] = accumulator;
+        }
     }
 }
 
 template <typename Op>
-__global__ void arg_reduce_optimized(
+__global__ void arg_reduce_kernel(
     const float *__restrict__ input,
     int *__restrict__ result_idx,
     size_t input_base_offset)
 {
-    extern __shared__ float sdata_vals_and_indices[];
-    float *sdata_vals = sdata_vals_and_indices;
-    int *sdata_indices = (int *)&sdata_vals_and_indices[blockDim.x];
+    extern __shared__ char sdata_shared[]; 
+    float *sdata_vals = (float *)sdata_shared;
+    int *sdata_indices = (int *)&sdata_vals[blockDim.x];
 
     Op op;
     ArgIdentity<Op> arg_identity;
@@ -165,10 +138,10 @@ __global__ void arg_reduce_optimized(
 
     int tid = threadIdx.x;
     int reduce_dim_size = d_reduce_params.reduce_dim_size;
+    size_t axis_stride = d_reduce_params.d_strides[d_reduce_params.reduce_axis];
 
     int coords[MAX_DIMS] = {0};
     size_t temp_idx = idx_out;
-
     for (int i = d_reduce_params.ndims - 1; i >= 0; --i)
     {
         if (i != d_reduce_params.reduce_axis)
@@ -177,27 +150,23 @@ __global__ void arg_reduce_optimized(
             temp_idx /= d_reduce_params.d_shape[i];
         }
     }
+    size_t base_flat_index = get_linear_index(coords) + input_base_offset;
 
     float best_val = arg_identity.get_init_val();
-    int best_idx = -1;
+    int best_idx = -1; 
 
-    if (tid < reduce_dim_size)
+    for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x)
     {
-        coords[d_reduce_params.reduce_axis] = tid;
-        size_t flat_index = get_linear_index(coords) + input_base_offset;
-        best_val = input[flat_index];
-        best_idx = tid;
-    }
-
-    for (int current_idx = tid + blockDim.x; current_idx < reduce_dim_size; current_idx += blockDim.x)
-    {
-        coords[d_reduce_params.reduce_axis] = current_idx;
-        size_t flat_index = get_linear_index(coords) + input_base_offset;
+        size_t flat_index = base_flat_index + (size_t)current_idx * axis_stride;
         float current_val = input[flat_index];
 
         if (op(current_val, best_val))
         {
             best_val = current_val;
+            best_idx = current_idx;
+        }
+        else if (current_val == best_val && current_idx < best_idx)
+        {
             best_idx = current_idx;
         }
     }
@@ -213,6 +182,10 @@ __global__ void arg_reduce_optimized(
             if (op(sdata_vals[tid + s], sdata_vals[tid]))
             {
                 sdata_vals[tid] = sdata_vals[tid + s];
+                sdata_indices[tid] = sdata_indices[tid + s];
+            }
+            else if (sdata_vals[tid + s] == sdata_vals[tid] && sdata_indices[tid + s] < sdata_indices[tid])
+            {
                 sdata_indices[tid] = sdata_indices[tid + s];
             }
         }
@@ -250,7 +223,7 @@ void launch_reduce_op(float *input, float *result,
     int blocks = total_elements_out;
     size_t shared_mem_size = threads * sizeof(float);
 
-    reduce_kernel_optimized<Op><<<blocks, threads, shared_mem_size>>>(
+    reduce_kernel<Op><<<blocks, threads, shared_mem_size>>>(
         input, result, input_base_offset);
 }
 
@@ -279,6 +252,6 @@ void launch_arg_reduce(float *input, int *result_idx,
     int blocks = total_elements_out;
     size_t shared_mem_size = threads * (sizeof(float) + sizeof(int));
 
-    arg_reduce_optimized<Op><<<blocks, threads, shared_mem_size>>>(
+    arg_reduce_kernel<Op><<<blocks, threads, shared_mem_size>>>(
         input, result_idx, input_base_offset);
 }

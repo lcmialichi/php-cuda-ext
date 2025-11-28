@@ -57,7 +57,7 @@ void launch_broadcast_op(float *a, float *b, float *result,
                          size_t b_base_offset)
 {
     int threads = 256;
-    int blocks = min(32, (int)((total_elements + threads - 1) / threads));
+    int blocks = (total_elements + threads - 1) / threads;
 
     std::vector<int> a_strides_full(result_dims, 0);
     std::vector<int> b_strides_full(result_dims, 0);

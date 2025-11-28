@@ -44,7 +44,7 @@ void launch_scalar_op(
     size_t total_size)
 {
     int threads = 256;
-    int blocks = min(32, (int)((total_size + threads - 1) / threads));
+    int blocks = (total_size + threads - 1) / threads;
 
     int *d_shape;
     size_t *d_strides;

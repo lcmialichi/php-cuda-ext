@@ -247,6 +247,8 @@ class CudaBenchmark
 
             echo "GPU: {$color}{$gpuFormatted}\033[0m\n";
         } catch (Throwable $e) {
+            var_dump($e);
+            exit;
             echo "GPU: FAILED\n";
         }
 

@@ -49,7 +49,7 @@ void launch_unary_op(
     size_t total_size)
 {
     int threads = 256;
-    int blocks = min(32, (int)((total_size + threads - 1) / threads));
+    int blocks = (total_size + threads - 1) / threads;
 
     UnaryParams h_params;
 

@@ -8,6 +8,14 @@ define('SCALE', 14.0);
 define('N_TURNS', 1.5);
 define('N_POINTS_PER_STRAND', N_POINTS / 2);
 
+$ca = new CudaArray([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
+var_dump($ca->min(1)->toArray());
+var_dump($ca->min(0)->toArray());
+var_dump($ca->min(2)->toArray());
+var_dump($ca->min()->toArray());
+exit;
+
+
 $STRAND_1_CHARS = ['#', '@', 'O', '.'];
 $STRAND_2_CHARS = ['*', '&', 'o', ':'];
 

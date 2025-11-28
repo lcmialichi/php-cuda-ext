@@ -32,7 +32,7 @@ extern "C"
     tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b);
     tensor_t *perform_broadcast_operation(tensor_t *a, tensor_t *b, int operation_type);
 
-    tensor_t *cuda_tensor_transpose(tensor_t *tensor);
+    tensor_t *cuda_tensor_transpose(tensor_t *tensor, int *axis, int axis_len);
 
     tensor_t *cuda_tensor_copy(tensor_t *tensor);
     size_t cuda_tensor_size(tensor_t *tensor);

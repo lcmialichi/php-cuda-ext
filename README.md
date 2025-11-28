@@ -213,6 +213,7 @@ $ca = CudaArray::rand($shape, 0, 10);
 $ca->reshape([4, 4, 4]);
 $ca->flatten(); // Same as reshape([n])
 $ca->concat([$a, $b, $c], axis: null);
+$ca->transpose([0, 2, 1]); // returns a view/window
 ```
 
 ### Comparing

@@ -109,20 +109,21 @@ static void calculate_tensor_strides(tensor_t *tensor,
                                      int result_dims,
                                      int *tensor_strides)
 {
-    long internal_stride = 1; 
+    long internal_stride = 1;
     for (int i = tensor->ndims - 1; i >= 0; i--)
     {
         if (tensor->is_view)
         {
             tensor_strides[i] = (int)tensor->strides[i];
-            
-        } else if (tensor->shape[i] == 1) 
+        }
+        else if (tensor->shape[i] == 1)
         {
             tensor_strides[i] = 0;
-            
-        } else {
+        }
+        else
+        {
             tensor_strides[i] = (int)internal_stride;
-            internal_stride *= tensor->shape[i]; 
+            internal_stride *= tensor->shape[i];
         }
     }
 }
@@ -459,7 +460,8 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
 
         if (new_shape[i] < 0)
         {
-            if (wildcard_index != -1) {
+            if (wildcard_index != -1)
+            {
                 php_error_docref(NULL, E_WARNING, "Reshape allows only one wildcard dimension (-1) in the new shape.");
                 return NULL;
             }
@@ -484,7 +486,7 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
             return NULL;
         }
         final_shape[wildcard_index] = original_size / new_size_known;
-        new_size_known = original_size; 
+        new_size_known = original_size;
     }
 
     if (original_size != new_size_known)
@@ -517,16 +519,24 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
     return reshaped;
 }
 
-tensor_t *cuda_tensor_transpose(tensor_t *tensor)
+tensor_t *cuda_tensor_transpose(tensor_t *tensor, int *axis, int axis_len)
 {
-    if (!cuda_initialized() || tensor == NULL)
+    if (!cuda_initialized() || tensor == NULL || axis == NULL)
     {
         return NULL;
     }
 
-    if (tensor->ndims <= 1)
+    if (axis_len != tensor->ndims)
     {
-        return cuda_tensor_copy(tensor);
+        return NULL;
+    }
+
+    for (int i = 0; i < axis_len; i++)
+    {
+        if (axis[i] < 0 || axis[i] >= tensor->ndims)
+        {
+            return NULL;
+        }
     }
 
     int new_shape[MAX_DIMS];
@@ -535,9 +545,8 @@ tensor_t *cuda_tensor_transpose(tensor_t *tensor)
 
     for (int i = 0; i < ndims; i++)
     {
-        int original_idx = ndims - 1 - i;
-        new_shape[i] = tensor->shape[original_idx];
-        new_strides[i] = tensor->strides[original_idx];
+        new_shape[i] = tensor->shape[axis[i]];
+        new_strides[i] = tensor->strides[axis[i]];
     }
 
     tensor_t *transposed = cuda_tensor_create_view(

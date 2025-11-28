@@ -98,7 +98,7 @@ class CudaArray implements ArrayAccess
 
     }
 
-    public function transpose(?int $axis = null): CudaArray
+    public function transpose(?array $axis = null): CudaArray
     {
     }
     public function reshape(array $newShape): CudaArray

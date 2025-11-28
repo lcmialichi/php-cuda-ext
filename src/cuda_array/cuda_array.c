@@ -130,7 +130,93 @@ ZEND_METHOD(CudaArray, rand)
 
 ZEND_METHOD(CudaArray, transpose)
 {
-    self_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Transpose", cuda_tensor_transpose);
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *tensor = this_obj->tensor_handle;
+
+    zval *dims_array = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_ARRAY_OR_NULL(dims_array)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (dims_array == NULL)
+    {
+        int default_axis[MAX_DIMS];
+        for (int i = 0; i < tensor->ndims; i++)
+        {
+            default_axis[i] = tensor->ndims - 1 - i;
+        }
+
+        tensor_t *result_tensor = cuda_tensor_transpose(tensor, default_axis, tensor->ndims);
+        if (result_tensor == NULL)
+        {
+            zend_throw_error(NULL, "transpose failed");
+            RETURN_NULL();
+        }
+        create_result_object(return_value, result_tensor);
+        return;
+    }
+
+    int axis[MAX_DIMS] = {0};
+    int naxis = tensor->ndims;
+    int i = 0;
+
+    for (i = 0; i < naxis; i++)
+    {
+        axis[i] = i;
+    }
+
+    zval *dim;
+    int j = 0;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(dims_array), dim)
+    {
+        if (j >= MAX_DIMS)
+        {
+            zend_throw_error(NULL, "too many dimensions in transpose argument (max %d)", MAX_DIMS);
+            RETURN_NULL();
+        }
+
+        if (Z_TYPE_P(dim) != IS_LONG)
+        {
+            zend_throw_error(NULL, "invalid argument for 'transpose' - expected integer dimensions");
+            RETURN_NULL();
+        }
+
+        axis[j++] = Z_LVAL_P(dim);
+    }
+    ZEND_HASH_FOREACH_END();
+
+    if (tensor->ndims != j)
+    {
+        zend_throw_error(NULL, "transpose expects %d dimensions, got %d", tensor->ndims, j);
+        RETURN_NULL();
+    }
+
+    bool axis_used[MAX_DIMS] = {false};
+    for (i = 0; i < naxis; i++)
+    {
+        if (axis[i] < 0 || axis[i] >= naxis)
+        {
+            zend_throw_error(NULL, "invalid axis %d for tensor with %d dimensions", axis[i], naxis);
+            RETURN_NULL();
+        }
+        if (axis_used[axis[i]])
+        {
+            zend_throw_error(NULL, "duplicate axis %d in transpose", axis[i]);
+            RETURN_NULL();
+        }
+        axis_used[axis[i]] = true;
+    }
+
+    tensor_t *result_tensor = cuda_tensor_transpose(tensor, axis, naxis);
+    if (result_tensor == NULL)
+    {
+        zend_throw_error(NULL, "transpose operation failed");
+        RETURN_NULL();
+    }
+
+    create_result_object(return_value, result_tensor);
 }
 
 ZEND_METHOD(CudaArray, sqrt)

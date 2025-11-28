@@ -6,6 +6,20 @@
 
 #define SUCCESS 0
 #define FAILURE 1
+struct MatMulParams {
+    const float* A;
+    const float* B;
+    float* C;
+
+    int batch;
+    int M;
+    int K;
+    int N;
+
+    size_t strideA;
+    size_t strideB;
+    size_t strideC;
+};
 
 extern "C"
 {
@@ -262,6 +276,126 @@ extern "C"
         cudaFree(d_params);
         return SUCCESS;
     }
+
+    __device__ int compute_batch_index(int batch_idx, int *final_shape, int *broadcast_flags,
+                                       int max_ndims, int tensor_ndims)
+    {
+        int result = 0;
+        int stride = 1;
+
+        for (int i = max_ndims - 3; i >= 0; i--)
+        {
+            int dim_size = final_shape[i];
+            int coord = (batch_idx / stride) % dim_size;
+
+            if (!broadcast_flags[i])
+            {
+                result += coord * stride;
+            }
+
+            stride *= dim_size;
+        }
+
+        return result;
+    }
+
+    __global__ void matmul_kernel(float *a, float *b, float *c,
+                                  int m, int n, int k,
+                                  size_t a_stride0, size_t a_stride1,
+                                  size_t b_stride0, size_t b_stride1,
+                                  size_t c_stride0, size_t c_stride1)
+    {
+        int row = blockIdx.y * blockDim.y + threadIdx.y;
+        int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+        if (row < m && col < k)
+        {
+            float sum = 0.0f;
+            for (int i = 0; i < n; i++)
+            {
+                size_t a_idx = row * a_stride0 + i * a_stride1;
+                size_t b_idx = i * b_stride0 + col * b_stride1;
+                sum += a[a_idx] * b[b_idx];
+            }
+
+            size_t c_idx = row * c_stride0 + col * c_stride1;
+            c[c_idx] = sum;
+        }
+    }
+
+    __global__ void matmul_batched_kernel(MatMulParams p)
+    {
+        int batch_id = blockIdx.z;
+        int row = blockIdx.y * blockDim.y + threadIdx.y;
+        int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+        if (batch_id >= p.batch || row >= p.M || col >= p.N)
+            return;
+
+        const float *A = p.A + batch_id * p.strideA;
+        const float *B = p.B + batch_id * p.strideB;
+        float *C = p.C + batch_id * p.strideC;
+
+        float sum = 0.0f;
+
+        for (int k = 0; k < p.K; k++)
+            sum += A[row * p.K + k] * B[k * p.N + col];
+
+        C[row * p.N + col] = sum;
+    }
+
+    int cuda_batched_matmul_launcher(
+        float *a, float *b, float *c,
+        int *a_shape, size_t *a_strides,
+        int *b_shape, size_t *b_strides,
+        int *c_shape, size_t *c_strides,
+        int a_ndims, int b_ndims)
+    {
+        MatMulParams p;
+
+        p.A = a;
+        p.B = b;
+        p.C = c;
+
+        p.batch = a_shape[0];
+        p.M = a_shape[1];
+        p.K = a_shape[2];
+        p.N = b_shape[2];
+
+        p.strideA = a_strides[0];
+        p.strideB = b_strides[0];
+        p.strideC = c_strides[0];
+
+        // Grid / block
+        dim3 block(16, 16);
+        dim3 grid(
+            (p.N + block.x - 1) / block.x,
+            (p.M + block.y - 1) / block.y,
+            p.batch);
+
+        // Lançar kernel
+        matmul_batched_kernel<<<grid, block>>>(p);
+
+        return cudaGetLastError() == cudaSuccess ? 1 : 0;
+    }
+
+    int cuda_matmul_launcher(float *a, float *b, float *c,
+                             int m, int n, int k,
+                             size_t a_stride0, size_t a_stride1,
+                             size_t b_stride0, size_t b_stride1,
+                             size_t c_stride0, size_t c_stride1)
+    {
+        dim3 blocks((k + 31) / 32, (m + 31) / 32);
+        dim3 threads(32, 32);
+
+        matmul_kernel<<<blocks, threads>>>(a, b, c, m, n, k,
+                                           a_stride0, a_stride1,
+                                           b_stride0, b_stride1,
+                                           c_stride0, c_stride1);
+
+        return cudaGetLastError() == cudaSuccess ? 1 : 0;
+    }
+
     void launch_clip_kernel(float *a, float min_val, float max_val, float *result, int n)
     {
         int threads = 256;

@@ -560,9 +560,133 @@ tensor_t *cuda_tensor_transpose(tensor_t *tensor, int *axis, int axis_len)
     return transposed ? transposed : NULL;
 }
 
+tensor_t *cuda_tensor_matmul_nd(tensor_t *a, tensor_t *b)
+{
+    if (!cuda_initialized() || a == NULL || b == NULL)
+    {
+        return NULL;
+    }
+
+    int max_ndims = (a->ndims > b->ndims) ? a->ndims : b->ndims;
+    int a_inner = a->shape[a->ndims - 1];
+    int b_inner = b->shape[b->ndims - 2];
+
+    if (a_inner != b_inner)
+    {
+        return NULL;
+    }
+
+    int result_ndims = max_ndims;
+    int result_shape[MAX_DIMS];
+
+    for (int i = 0; i < max_ndims - 2; i++)
+    {
+        int a_idx = a->ndims - max_ndims + i;
+        int b_idx = b->ndims - max_ndims + i;
+
+        int a_dim = (a_idx < 0) ? 1 : a->shape[a_idx];
+        int b_dim = (b_idx < 0) ? 1 : b->shape[b_idx];
+
+        if (a_dim == b_dim)
+        {
+            result_shape[i] = a_dim;
+        }
+        else if (a_dim == 1)
+        {
+            result_shape[i] = b_dim;
+        }
+        else if (b_dim == 1)
+        {
+            result_shape[i] = a_dim;
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+
+    result_shape[max_ndims - 2] = a->shape[a->ndims - 2];
+    result_shape[max_ndims - 1] = b->shape[b->ndims - 1];
+
+    tensor_t *result = cuda_tensor_create_empty(result_shape, result_ndims);
+    if (result == NULL)
+    {
+        return NULL;
+    }
+
+    int status = cuda_batched_matmul_launcher(
+        a->data, b->data, result->data,
+        a->shape, a->strides,
+        b->shape, b->strides,
+        result->shape, result->strides,
+        a->ndims, b->ndims);
+
+    if (status == 0)
+    {
+        efree(result);
+        return NULL;
+    }
+
+    return result;
+}
+
 tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
 {
-    php_error_docref(NULL, E_ERROR, "Matmul not implemented yet.");
+    if (!cuda_initialized() || a == NULL || b == NULL)
+    {
+        return NULL;
+    }
+
+    if(a->ndims != b->ndims)
+    {
+        return NULL;
+    }
+
+    for (int i = 0; i < a->ndims - 2; i++)
+    {
+        if (a->shape[i] != b->shape[i])
+        {
+            return NULL;
+        }
+    }
+
+    if (a->shape[a->ndims - 1] != b->shape[b->ndims - 2])
+    {
+        return NULL;
+    }
+
+    if (a->ndims != 2 || b->ndims != 2)
+    {
+        return cuda_tensor_matmul_nd(a, b);
+    }
+
+    if (a->shape[1] != b->shape[0])
+    {
+        return NULL;
+    }
+
+    int result_shape[2] = {a->shape[0], b->shape[1]};
+
+    tensor_t *result = cuda_tensor_create_empty(result_shape, 2);
+    if (result == NULL)
+    {
+        return NULL;
+    }
+
+    int status = cuda_matmul_launcher(
+        a->data, b->data, result->data,
+        a->shape[0], a->shape[1], b->shape[1],
+        a->strides[0], a->strides[1],
+        b->strides[0], b->strides[1],
+        result->strides[0], result->strides[1]);
+
+    if (status == 0)
+    {
+        efree(result);
+        return NULL;
+    }
+
+    return result;
 }
 
 tensor_t *cuda_tensor_copy(tensor_t *tensor)

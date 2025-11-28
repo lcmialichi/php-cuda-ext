@@ -219,6 +219,36 @@ ZEND_METHOD(CudaArray, transpose)
     create_result_object(return_value, result_tensor);
 }
 
+ZEND_METHOD(CudaArray, matmul)
+{
+    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *tensor_a = this_obj->tensor_handle;
+
+    zval *other_array = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_OBJECT(other_array)
+    ZEND_PARSE_PARAMETERS_END();
+
+    cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_array));
+    if (!other_obj)
+    {
+        zend_throw_error(NULL, "Invalid tensor object for matrix multiplication");
+        RETURN_NULL();
+    }
+
+    tensor_t *tensor_b = other_obj->tensor_handle;
+
+    tensor_t *result_tensor = cuda_tensor_matmul(tensor_a, tensor_b);
+    if (result_tensor == NULL)
+    {
+        zend_throw_error(NULL, "Matrix multiplication failed - incompatible dimensions");
+        RETURN_NULL();
+    }
+
+    create_result_object(return_value, result_tensor);
+}
+
 ZEND_METHOD(CudaArray, sqrt)
 {
     unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Sqrt", OP_SQRT);
@@ -292,28 +322,6 @@ ZEND_METHOD(CudaArray, argMax)
 ZEND_METHOD(CudaArray, argMin)
 {
     reduction_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ArgMin Reduction", OP_ARG_MIN, 1);
-}
-
-ZEND_METHOD(CudaArray, matmul)
-{
-    zval *other_zv;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-    Z_PARAM_OBJECT_OF_CLASS(other_zv, cuda_array_ce)
-    ZEND_PARSE_PARAMETERS_END();
-
-    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-    cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
-
-    tensor_t *result_tensor = cuda_tensor_matmul(this_obj->tensor_handle, other_obj->tensor_handle);
-
-    if (result_tensor == NULL)
-    {
-        zend_throw_error(NULL, "Matmul failed - incompatible shapes");
-        RETURN_NULL();
-    }
-
-    create_result_object(return_value, result_tensor);
 }
 
 ZEND_METHOD(CudaArray, full)

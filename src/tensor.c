@@ -51,6 +51,7 @@ int is_contiguous(tensor_t *tensor)
     return 1;
 }
 
+
 tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size)
 {
     size_t byte_offset = offset * base_tensor->element_size;

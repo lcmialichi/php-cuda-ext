@@ -614,14 +614,13 @@ tensor_t *cuda_tensor_matmul_nd(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    int status = cuda_batched_matmul_launcher(
+    int status = cuda_batched_matmul_nd_launcher(
         a->data, b->data, result->data,
-        a->shape, a->strides,
-        b->shape, b->strides,
-        result->shape, result->strides,
-        a->ndims, b->ndims);
+        a->d_shape, a->d_strides, a->ndims,
+        b->d_shape, b->d_strides, b->ndims,
+        result->d_shape, result->d_strides, result->ndims);
 
-    if (status == 0)
+    if (status == 0 || !result->data)
     {
         efree(result);
         return NULL;
@@ -637,27 +636,14 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    if(a->ndims != b->ndims)
-    {
-        return NULL;
-    }
-
-    for (int i = 0; i < a->ndims - 2; i++)
-    {
-        if (a->shape[i] != b->shape[i])
-        {
-            return NULL;
-        }
-    }
-
-    if (a->shape[a->ndims - 1] != b->shape[b->ndims - 2])
-    {
-        return NULL;
-    }
-
     if (a->ndims != 2 || b->ndims != 2)
     {
         return cuda_tensor_matmul_nd(a, b);
+    }
+
+    if (a->ndims < 2 || b->ndims < 2)
+    {
+        return NULL;
     }
 
     if (a->shape[1] != b->shape[0])

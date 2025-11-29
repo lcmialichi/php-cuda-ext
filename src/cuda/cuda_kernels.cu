@@ -6,20 +6,16 @@
 
 #define SUCCESS 0
 #define FAILURE 1
-struct MatMulParams {
-    const float* A;
-    const float* B;
-    float* C;
 
-    int batch;
-    int M;
-    int K;
-    int N;
-
-    size_t strideA;
-    size_t strideB;
-    size_t strideC;
-};
+typedef struct
+{
+    float *A, *B, *C;
+    int *shapeA, *shapeB, *shapeC;
+    size_t *strideA, *strideB, *strideC;
+    int ndA, ndB, ndC;
+    int M, N, K;
+    int total_batches;
+} MatMulParamsND;
 
 extern "C"
 {
@@ -323,62 +319,157 @@ extern "C"
         }
     }
 
-    __global__ void matmul_batched_kernel(MatMulParams p)
+    __device__ __forceinline__ size_t index_from_strides(
+        const int *shape, const size_t *strides,
+        int ndims, size_t linear_idx)
+    {
+        size_t offset = 0;
+
+        for (int i = 0; i < ndims; i++)
+        {
+            size_t idx = linear_idx % shape[i];
+            offset += idx * strides[i];
+            linear_idx /= shape[i];
+        }
+
+        return offset;
+    }
+
+    __device__ size_t linear_index(int *coords, size_t *strides, int ndims)
+    {
+        size_t idx = 0;
+        for (int i = 0; i < ndims; i++)
+        {
+            idx += coords[i] * strides[i];
+        }
+        return idx;
+    }
+
+    __global__ void matmul_nd_kernel(MatMulParamsND p)
     {
         int batch_id = blockIdx.z;
         int row = blockIdx.y * blockDim.y + threadIdx.y;
         int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-        if (batch_id >= p.batch || row >= p.M || col >= p.N)
+        if (row >= p.M || col >= p.N || batch_id >= p.total_batches)
+        {
             return;
+        }
 
-        const float *A = p.A + batch_id * p.strideA;
-        const float *B = p.B + batch_id * p.strideB;
-        float *C = p.C + batch_id * p.strideC;
+        int coordsC[16] = {0};
+        int batch_dims = p.ndC - 2;
+        int tmp = batch_id;
+        for (int i = batch_dims - 1; i >= 0; i--)
+        {
+            coordsC[i] = tmp % p.shapeC[i];
+            tmp /= p.shapeC[i];
+        }
+
+        coordsC[p.ndC - 2] = row;
+        coordsC[p.ndC - 1] = col;
+        size_t idxC = 0;
+        for (int i = 0; i < p.ndC; i++)
+            idxC += (size_t)coordsC[i] * p.strideC[i];
 
         float sum = 0.0f;
-
         for (int k = 0; k < p.K; k++)
-            sum += A[row * p.K + k] * B[k * p.N + col];
+        {
+            size_t idxA = 0;
+            size_t idxB = 0;
 
-        C[row * p.N + col] = sum;
+            for (int i = 0; i < batch_dims; i++)
+            {
+
+                if (i < p.ndA - 2 && p.shapeA[i] > 1)
+                {
+                    idxA += (size_t)coordsC[i] * p.strideA[i];
+                }
+
+                if (i < p.ndB - 2 && p.shapeB[i] > 1)
+                {
+                    idxB += (size_t)coordsC[i] * p.strideB[i];
+                }
+            }
+
+            if (p.ndA >= 2)
+                idxA += (size_t)row * p.strideA[p.ndA - 2];
+            if (p.ndA >= 2)
+                idxA += (size_t)k * p.strideA[p.ndA - 1];
+
+            if (p.ndB >= 2)
+                idxB += (size_t)k * p.strideB[p.ndB - 2];
+            if (p.ndB >= 2)
+                idxB += (size_t)col * p.strideB[p.ndB - 1];
+
+            sum += p.A[idxA] * p.B[idxB];
+        }
+
+        p.C[idxC] = sum;
     }
 
-    int cuda_batched_matmul_launcher(
-        float *a, float *b, float *c,
-        int *a_shape, size_t *a_strides,
-        int *b_shape, size_t *b_strides,
-        int *c_shape, size_t *c_strides,
-        int a_ndims, int b_ndims)
+    int cuda_batched_matmul_nd_launcher(
+        float *A, float *B, float *C,
+        int *d_shapeA, size_t *d_strideA, int ndA,
+        int *d_shapeB, size_t *d_strideB, int ndB,
+        int *d_shapeC, size_t *d_strideC, int ndC)
     {
-        MatMulParams p;
+        if (ndC < 2 || ndA < 2 || ndB < 2)
+        {
+            return 0;
+        }
 
-        p.A = a;
-        p.B = b;
-        p.C = c;
+        int h_shapeA[16], h_shapeB[16], h_shapeC[16];
 
-        p.batch = a_shape[0];
-        p.M = a_shape[1];
-        p.K = a_shape[2];
-        p.N = b_shape[2];
+        cudaMemcpy(h_shapeA, d_shapeA, ndA * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_shapeB, d_shapeB, ndB * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_shapeC, d_shapeC, ndC * sizeof(int), cudaMemcpyDeviceToHost);
 
-        p.strideA = a_strides[0];
-        p.strideB = b_strides[0];
-        p.strideC = c_strides[0];
+        if (h_shapeA[ndA - 1] != h_shapeB[ndB - 2])
+        {
+            return 0;
+        }
 
-        // Grid / block
+        int M = h_shapeA[ndA - 2];
+        int N = h_shapeB[ndB - 1];
+        int K = h_shapeA[ndA - 1];
+
+        if (h_shapeC[ndC - 2] != M || h_shapeC[ndC - 1] != N)
+        {
+            return 0;
+        }
+
+        int total_batches = 1;
+        for (int i = 0; i < ndC - 2; i++)
+        {
+            total_batches *= h_shapeC[i];
+        }
+
+        MatMulParamsND p_host;
+        p_host.A = A;
+        p_host.B = B;
+        p_host.C = C;
+        p_host.ndA = ndA;
+        p_host.ndB = ndB;
+        p_host.ndC = ndC;
+        p_host.M = M;
+        p_host.N = N;
+        p_host.K = K;
+        p_host.total_batches = total_batches;
+        p_host.shapeA = d_shapeA;
+        p_host.strideA = d_strideA;
+        p_host.shapeB = d_shapeB;
+        p_host.strideB = d_strideB;
+        p_host.shapeC = d_shapeC;
+        p_host.strideC = d_strideC;
+
         dim3 block(16, 16);
-        dim3 grid(
-            (p.N + block.x - 1) / block.x,
-            (p.M + block.y - 1) / block.y,
-            p.batch);
+        dim3 grid((N + 15) / 16, (M + 15) / 16, total_batches);
 
-        // Lançar kernel
-        matmul_batched_kernel<<<grid, block>>>(p);
+        matmul_nd_kernel<<<grid, block>>>(p_host);
+        cudaError_t err = cudaGetLastError();
 
-        return cudaGetLastError() == cudaSuccess ? 1 : 0;
+        return err == cudaSuccess;
     }
-
     int cuda_matmul_launcher(float *a, float *b, float *c,
                              int m, int n, int k,
                              size_t a_stride0, size_t a_stride1,

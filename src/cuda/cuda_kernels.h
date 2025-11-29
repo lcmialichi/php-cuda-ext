@@ -32,11 +32,12 @@ extern "C"
                              size_t b_stride0, size_t b_stride1,
                              size_t c_stride0, size_t c_stride1);
 
-    int cuda_batched_matmul_launcher(float *a, float *b, float *c,
-                                     int *a_shape, size_t *a_strides,
-                                     int *b_shape, size_t *b_strides,
-                                     int *c_shape, size_t *c_strides,
-                                     int a_ndims, int b_ndims);
+    int cuda_batched_matmul_nd_launcher(
+        float *A, float *B, float *C,
+        int *shapeA, size_t *strideA, int ndA,
+        int *shapeB, size_t *strideB, int ndB,
+        int *shapeC, size_t *strideC, int ndC);
+        
     int launch_concat_kernel_host(
         tensor_t **input_tensors,
         int num_tensors,

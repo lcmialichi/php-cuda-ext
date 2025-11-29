@@ -53,6 +53,7 @@ class CudaBenchmark
             $this->suiteReduction($dims);
             $this->suiteConcat($dims);
             $this->suiteComparison($dims);
+            $this->suiteToArray($dims);
         }
 
         $time = round($this->totalTime, 3);
@@ -125,6 +126,24 @@ class CudaBenchmark
             'MATMUL' => function ($a, $b) {
 
                 return $b->matmul($a);
+            }
+
+        ];
+
+        foreach ($ops as $name => $gpuFn)
+            foreach ($tests as $label => $dims)
+                $this->runOp($name, $label, $dims, $gpuFn, null);
+
+    }
+
+    private function suiteToArray($tests)
+    {
+        echo "\n[ GPU to CPU transfer ]\n";
+
+        $ops = [
+            'toArray' => function ($a) {
+
+                return $a->toArray();
             }
 
         ];

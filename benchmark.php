@@ -12,6 +12,7 @@ class CudaBenchmark
     private int $totalElements = 0;
     private int $totalOp = 0;
     private float $totalTime = 0;
+    private float $tbeMinGlobal = INF;
 
     public function run()
     {
@@ -224,7 +225,7 @@ class CudaBenchmark
             $A = CudaArray::rand($dims, 0.0, 1.0);
             $B = CudaArray::rand($dims, 0.0, 1.0);
 
-            if($opName === "MATMUL"){
+            if ($opName === "MATMUL") {
                 $B = $B->transpose([0, 2, 1]);
             }
 
@@ -260,10 +261,25 @@ class CudaBenchmark
                 ];
             }
 
-            $color = "\033[32m";
-            if ($time < 1) {
+            $tbe = ($gpuTime / $count) * 1000000;
+
+            $yellowLimit = $this->tbeMinGlobal * 1.25;
+
+            $redLimit = $this->tbeMinGlobal * 2.0;
+
+            $color = "\033[31m";
+
+            if ($tbe <= $yellowLimit) {
                 $color = "\033[32m";
-            } elseif ($time < 5) {
+            } elseif ($tbe <= $redLimit) {
+                $color = "\033[33m";
+            }
+            $this->tbeMinGlobal = min($this->tbeMinGlobal, $tbe);
+
+            $color = "\033[32m";
+            if ($tbe < 1.25) {
+                $color = "\033[32m";
+            } elseif ($tbe < 2.0) {
                 $color = "\033[33m";
             } else {
                 $color = "\033[31m";
@@ -280,4 +296,3 @@ class CudaBenchmark
 
 $benchmark = new CudaBenchmark();
 $benchmark->run();
-

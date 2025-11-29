@@ -10,6 +10,7 @@
 #define REDUCTION_BLOCK_SIZE 256
 #define WARP_SIZE 32
 
+
 struct ReductionParams
 {
     int ndims;
@@ -74,50 +75,46 @@ __global__ void reduce_kernel(
         accumulator = op(accumulator, current_val);
     }
     
-    sdata[tid] = accumulator;
-    __syncthreads(); 
-
-    for (int s = blockDim.x / 2; s > WARP_SIZE; s >>= 1)
+    for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
     {
-        if (tid < s)
-        {
-            sdata[tid] = op(sdata[tid], sdata[tid + s]);
-        }
-        __syncthreads();
+        accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
     }
 
-    if (blockDim.x > WARP_SIZE)
+    int warp_id = tid / WARP_SIZE;
+    int lane_id = tid % WARP_SIZE;
+
+    if (lane_id == 0)
     {
-        if (tid < WARP_SIZE)
+        sdata[warp_id] = accumulator;
+    }
+
+    __syncthreads(); 
+    
+    if (warp_id == 0)
+    {
+        int num_warps = blockDim.x / WARP_SIZE;
+
+        if (tid < num_warps)
         {
             accumulator = sdata[tid];
         }
-        __syncthreads(); 
-        
-        if (tid < WARP_SIZE)
+        else 
         {
-            for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
-            {
-                accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
-            }
-            if (tid == 0)
-            {
-                result[idx_out] = accumulator;
-            }
+            accumulator = arg_identity.get_init_val();
         }
-    }
-    else
-    {
+
         for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
         {
             accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
         }
+
         if (tid == 0)
         {
             result[idx_out] = accumulator;
         }
     }
 }
+
 
 template <typename Op>
 __global__ void arg_reduce_kernel(
@@ -179,14 +176,17 @@ __global__ void arg_reduce_kernel(
     {
         if (tid < s)
         {
-            if (op(sdata_vals[tid + s], sdata_vals[tid]))
+            float val_s = sdata_vals[tid + s];
+            int idx_s = sdata_indices[tid + s];
+            
+            if (op(val_s, sdata_vals[tid]))
             {
-                sdata_vals[tid] = sdata_vals[tid + s];
-                sdata_indices[tid] = sdata_indices[tid + s];
+                sdata_vals[tid] = val_s;
+                sdata_indices[tid] = idx_s;
             }
-            else if (sdata_vals[tid + s] == sdata_vals[tid] && sdata_indices[tid + s] < sdata_indices[tid])
+            else if (val_s == sdata_vals[tid] && idx_s < sdata_indices[tid])
             {
-                sdata_indices[tid] = sdata_indices[tid + s];
+                sdata_indices[tid] = idx_s;
             }
         }
         __syncthreads();
@@ -221,10 +221,12 @@ void launch_reduce_op(float *input, float *result,
 
     int threads = REDUCTION_BLOCK_SIZE;
     int blocks = total_elements_out;
-    size_t shared_mem_size = threads * sizeof(float);
+    size_t shared_mem_size = threads * sizeof(float) / WARP_SIZE;
 
     reduce_kernel<Op><<<blocks, threads, shared_mem_size>>>(
         input, result, input_base_offset);
+    
+    cudaDeviceSynchronize();
 }
 
 template <typename Op>
@@ -254,4 +256,6 @@ void launch_arg_reduce(float *input, int *result_idx,
 
     arg_reduce_kernel<Op><<<blocks, threads, shared_mem_size>>>(
         input, result_idx, input_base_offset);
+
+    cudaDeviceSynchronize();
 }

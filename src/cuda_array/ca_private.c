@@ -607,7 +607,7 @@ tensor_t *cuda_tensor_matmul_nd(tensor_t *a, tensor_t *b)
 
     result_shape[max_ndims - 2] = a->shape[a->ndims - 2];
     result_shape[max_ndims - 1] = b->shape[b->ndims - 1];
-
+    
     tensor_t *result = cuda_tensor_create_empty(result_shape, result_ndims);
     if (result == NULL)
     {
@@ -636,14 +636,14 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    if (a->ndims != 2 || b->ndims != 2)
-    {
-        return cuda_tensor_matmul_nd(a, b);
-    }
-
     if (a->ndims < 2 || b->ndims < 2)
     {
         return NULL;
+    }
+
+    if (a->ndims != 2 || b->ndims != 2)
+    {
+        return cuda_tensor_matmul_nd(a, b);
     }
 
     if (a->shape[1] != b->shape[0])

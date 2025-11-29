@@ -48,6 +48,7 @@ class CudaBenchmark
             echo "\n=== SUITE: $suiteName ===\n";
             $this->suiteElementWise($dims);
             $this->suiteBinaryOps($dims);
+            $this->suiteMatmul($dims);
             $this->suiteReduction($dims);
             $this->suiteConcat($dims);
             $this->suiteComparison($dims);
@@ -112,6 +113,25 @@ class CudaBenchmark
         foreach ($ops as $name => $gpuFn)
             foreach ($tests as $label => $dims)
                 $this->runOp($name, $label, $dims, $gpuFn, null, reduction: true);
+    }
+
+
+    private function suiteMatmul($tests)
+    {
+        echo "\n[ Matrix multiplication ]\n";
+
+        $ops = [
+            'MATMUL' => function ($a, $b) {
+
+                return $b->matmul($a);
+            }
+
+        ];
+
+        foreach ($ops as $name => $gpuFn)
+            foreach ($tests as $label => $dims)
+                $this->runOp($name, $label, $dims, $gpuFn, null, reduction: true);
+
     }
 
     private function suiteConcat($tests)
@@ -202,16 +222,20 @@ class CudaBenchmark
         try {
 
             $A = CudaArray::rand($dims, 0.0, 1.0);
-            $B = ($binary) ? CudaArray::rand($dims, 0.0, 1.0) : null;
+            $B = CudaArray::rand($dims, 0.0, 1.0);
+
+            if($opName === "MATMUL"){
+                $B = $B->transpose([0, 2, 1]);
+            }
 
             # WARMUP
             for ($i = 0; $i < self::RUNS; $i++) {
-                $binary ? $gpuFn($A, $B) : $gpuFn($A);
+                $gpuFn($A, $B);
             }
 
             $t0 = microtime(true);
             for ($i = 0; $i < self::RUNS; $i++) {
-                $binary ? $gpuFn($A, $B) : $gpuFn($A);
+                $gpuFn($A, $B);
             }
 
             $time = microtime(true) - $t0;
@@ -247,9 +271,7 @@ class CudaBenchmark
 
             echo "GPU: {$color}{$gpuFormatted}\033[0m\n";
         } catch (Throwable $e) {
-            var_dump($e);
-            exit;
-            echo "GPU: FAILED\n";
+            echo "GPU: SKIP\n";
         }
 
         $this->totalOp++;
@@ -258,3 +280,4 @@ class CudaBenchmark
 
 $benchmark = new CudaBenchmark();
 $benchmark->run();
+

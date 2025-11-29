@@ -153,6 +153,9 @@ class CudaArray implements ArrayAccess
     {
     }
 
+    public function matmul(CudaArray $other): CudaArray{
+    }
+
     /**
      * @param array[CudaArray] $tensors
      * @param mixed $axis

@@ -183,8 +183,10 @@ $ca->cos();
 $ca->sin();
 $ca->tan();
 
-// others
+// other operations
+$ca->matmul($other);
 $ca->neg(); 
+
 ```
 ### Getters
 

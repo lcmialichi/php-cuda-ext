@@ -57,8 +57,8 @@ php -m | grep cuda
 ### Operator Overloading
 CudaArray supports native PHP operator overloading, providing an intuitive syntax for GPU-accelerated tensor operations. This allows you to write mathematical expressions that look like standard PHP code but execute entirely on the NVIDIA GPU.
 ```php
-$a = CudaArray::ones([3, 3]);
-$b = CudaArray::full([3, 3], 2.0);
+$a = Cuda\CudaArray::ones([3, 3]);
+$b = Cuda\CudaArray::full([3, 3], 2.0);
 $scalar = 5.0;
 
 // Addition
@@ -97,12 +97,12 @@ $temp4 = $temp2->power($temp3);
 $result = $temp4->subtract($d);
 ```
 
-### Basic Tensor Operations
+### Basic Cuda\CudaArray Operations
 ```php
 /**
  * Creates a CudaArray with a 4×4×4 shape filled with ones.
  */
-$ca = CudaArray::ones([4, 4, 4]);
+$ca = Cuda\CudaArray::ones([4, 4, 4]);
 
 /**
  * Performs:  (ca[1] * 2) + ca[2]
@@ -150,7 +150,7 @@ var_dump($newCa->toArray());
 
 ## Methods
 ### Basic math
-All operations support automatic shape broadcasting and accept both CudaArray instances and scalar values.
+All operations support automatic shape broadcasting and accept both Cuda\CudaArray instances and scalar values.
 
 ```php
 // Multiplication
@@ -200,13 +200,13 @@ $ca->getStrides();  // Returns memory strides (array of ints)
 
 ```php
 # Notice: when using the constructor, the PHP array is transferred from CPU → GPU
-$ca = new CudaArray([[1, 2], [3, 4]]);
+$ca = new Cuda\CudaArray([[1, 2], [3, 4]]);
 
 # Creates a tensor directly on the GPU, without transferring data from PHP
-$ca = CudaArray::ones($shape);
-$ca = CudaArray::zeros($shape);
-$ca = CudaArray::full($shape, 1.5);
-$ca = CudaArray::rand($shape, 0, 10);
+$ca = Cuda\CudaArray::ones($shape);
+$ca = Cuda\CudaArray::zeros($shape);
+$ca = Cuda\CudaArray::full($shape, 1.5);
+$ca = Cuda\CudaArray::rand($shape, 0, 10);
 ```
 
 ### Shape Manipulation
@@ -219,9 +219,9 @@ $ca->transpose([0, 2, 1]); // returns a view/window
 ```
 
 ### Comparing
-All comparison methods return a new CudaArray stored on the GPU, containing 1.0 for true and 0.0 for false.
+All comparison methods return a new Cuda\CudaArray stored on the GPU, containing 1.0 for true and 0.0 for false.
 They accept either:
- - a scalar, or another CudaArray (broadcasting is automatically applied)
+ - a scalar, or another Cuda\CudaArray (broadcasting is automatically applied)
 ```php
 $x->gt($y);   // greater than      (x > y)
 $y->lt($x);   // less than         (x < y)

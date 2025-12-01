@@ -29,14 +29,11 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis);
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value);
 static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed);
 
-static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type, int return_arg);
-static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type);
-static void self_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, self_operation_func tensor_func);
-static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type);
+static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type, int return_arg);
+static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type);
+static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type);
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor);
-
-#define HALF_PREVIEW_COUNT (PREVIEW_COUNT / 2)
 
 ZEND_METHOD(CudaArray, __construct)
 {
@@ -238,6 +235,12 @@ ZEND_METHOD(CudaArray, matmul)
     }
 
     tensor_t *tensor_b = other_obj->tensor_handle;
+
+    if (tensor_a == NULL || tensor_b == NULL)
+    {
+        zend_throw_error(NULL, "Both operands must be valid tensor objects.");
+        RETURN_NULL();
+    }
 
     tensor_t *result_tensor = cuda_tensor_matmul(tensor_a, tensor_b);
     if (result_tensor == NULL)
@@ -676,7 +679,7 @@ ZEND_METHOD(CudaArray, __debugInfo)
     if (!tensor || tensor->ndims <= 0)
     {
         array_init(return_value);
-        add_assoc_string(return_value, "Error", "Tensor handle is NULL or has zero dimensions");
+        add_assoc_string(return_value, "Error", "CudaArray handle is NULL or has zero dimensions");
         return;
     }
 
@@ -901,39 +904,15 @@ static void create_result_object(zval *return_value, tensor_t *result_tensor)
     sync_php_object_shape(result_obj, result_tensor);
 }
 
-static void self_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
-                                   const char *operation_name,
-                                   self_operation_func tensor_func)
-{
-
-    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "Tensor not initialized");
-        RETURN_NULL();
-    }
-
-    tensor_t *result_tensor = tensor_func(this_obj->tensor_handle);
-
-    if (result_tensor == NULL)
-    {
-        zend_throw_error(NULL, "%s failed", operation_name);
-        RETURN_NULL();
-    }
-
-    create_result_object(return_value, result_tensor);
-}
-
 static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
                                     const char *operation_name,
-                                    int operation_type)
+                                    operation_type_t operation_type)
 {
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
 
     if (this_obj->tensor_handle == NULL)
     {
-        zend_throw_error(NULL, "Tensor not initialized");
+        zend_throw_error(NULL, "CudaArray not initialized");
         RETURN_NULL();
     }
 
@@ -948,7 +927,7 @@ static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS,
     create_result_object(return_value, result_tensor);
 }
 
-static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type, int return_arg)
+static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type, int return_arg)
 {
     zend_long axis_zv = REDUCE_GLOBAL_FLAG;
 
@@ -1001,7 +980,7 @@ static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char
     create_result_object(return_value, result_tensor);
 }
 
-static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, int operation_type)
+static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type)
 {
     zval *other_zv;
 
@@ -1013,7 +992,7 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
 
     if (this_obj->tensor_handle == NULL)
     {
-        zend_throw_error(NULL, "Tensor not initialized");
+        zend_throw_error(NULL, "CudaArray not initialized");
         RETURN_NULL();
     }
 
@@ -1146,7 +1125,7 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
 
     if (result_tensor == NULL)
     {
-        zend_throw_error(NULL, "Tensor operation %s failed (incompatible shapes or internal error)", operation_name);
+        zend_throw_error(NULL, "CudaArray operation %s failed (incompatible shapes or internal error)", operation_name);
         return FAILURE;
     }
 
@@ -1179,6 +1158,19 @@ static zval *cuda_array_read_dimension(zend_object *object, zval *offset, int ty
         return &EG(uninitialized_zval);
     }
 
+    if (base_tensor->ndims == 1 && slice_info_array[0].type == SLICE_INDEX)
+    {
+        float result_val;
+        if (cuda_tensor_get_scalar_value(base_tensor, &result_val, slice_info_array[0].data.index) != SUCCESS)
+        {
+            zend_throw_error(NULL, "Failed to extract scalar value from GPU.");
+            return &EG(uninitialized_zval);
+        }
+
+        ZVAL_DOUBLE(rv, (double)result_val);
+        return rv;
+    }
+
     for (int i = 1; i < ndim; i++)
     {
         slice_info_array[i].type = SLICE_ALL;
@@ -1189,26 +1181,10 @@ static zval *cuda_array_read_dimension(zend_object *object, zval *offset, int ty
         slice_info_array,
         ndim);
 
-    if (!view_tensor)
+    if (view_tensor == NULL)
     {
         zend_throw_error(NULL, "Failed to create tensor view during array access.");
         return &EG(uninitialized_zval);
-    }
-
-    if (view_tensor->ndims == 0)
-    {
-        float result_val;
-
-        if (cuda_tensor_get_scalar_value(view_tensor, &result_val) != SUCCESS)
-        {
-            zend_throw_error(NULL, "Failed to extract scalar value from GPU.");
-            cuda_tensor_destroy(view_tensor);
-            return &EG(uninitialized_zval);
-        }
-
-        cuda_tensor_destroy(view_tensor);
-        ZVAL_DOUBLE(rv, (double)result_val);
-        return rv;
     }
 
     create_result_object(rv, view_tensor);
@@ -1260,7 +1236,7 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
 
             if (src_tensor->ndims != dest_ndims)
             {
-                zend_throw_error(NULL, "Tensor assignment requires a source with %d dimensions, but %d given.", dest_ndims, src_tensor->ndims);
+                zend_throw_error(NULL, "CudaArray assignment requires a source with %d dimensions, but %d given.", dest_ndims, src_tensor->ndims);
                 return;
             }
             for (int i = 0; i < dest_ndims; i++)

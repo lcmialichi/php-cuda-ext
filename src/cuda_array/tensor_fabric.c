@@ -49,21 +49,20 @@ tensor_t *create_tensor_from_php_array(zval *data)
     return tensor;
 }
 
-int cuda_tensor_get_scalar_value(tensor_t *scalar_tensor, float *result_val)
+int cuda_tensor_get_scalar_value(tensor_t *t, float *result_val, int index)
 {
-    if (scalar_tensor->ndims != 0)
+    size_t byte_offset = (size_t)index * t->element_size;
+    void *gpu_source_ptr = (void *)((char *)t->data + byte_offset);
+    if (byte_offset >= (size_t)t->total_size * t->element_size)
     {
+        zend_error(E_WARNING, "Index out of bounds.");
         return FAILURE;
     }
-
-    void *gpu_source_ptr;
-
-    gpu_source_ptr = scalar_tensor->data;
 
     cudaError_t status = cudaMemcpy(
         result_val,
         gpu_source_ptr,
-        sizeof(float),
+        t->element_size,
         cudaMemcpyDeviceToHost);
 
     if (status != cudaSuccess)
@@ -290,7 +289,6 @@ tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)
 
     return tensor;
 }
-
 
 tensor_t *resolve_result_tensor(tensor_t *t)
 {

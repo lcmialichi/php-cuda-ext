@@ -11,8 +11,8 @@ define('N_POINTS_PER_STRAND', N_POINTS / 2);
 $STRAND_1_CHARS = ['#', '@', 'O', '.'];
 $STRAND_2_CHARS = ['*', '&', 'o', ':'];
 
-$t_vals = new CudaArray(range(0, N_POINTS_PER_STRAND - 1)) / N_POINTS_PER_STRAND * 2 * M_PI * N_TURNS;
-$T_half = CudaArray::ones([FRAMES, N_POINTS_PER_STRAND]) * $t_vals;
+$t_vals = new Cuda\CudaArray(range(0, N_POINTS_PER_STRAND - 1)) / N_POINTS_PER_STRAND * 2 * M_PI * N_TURNS;
+$T_half = Cuda\CudaArray::ones([FRAMES, N_POINTS_PER_STRAND]) * $t_vals;
 
 $R = SCALE * 0.5;
 $PITCH_SCALE = HEIGHT / (1.5 * M_PI * N_TURNS) * 0.8;
@@ -25,15 +25,15 @@ $z = $t_sin * $R;
 $y = $T_half * $PITCH_SCALE - (HEIGHT / 2.0);
 
 /**
- * @var CudaArray $x
- * @var CudaArray $y
- * @var CudaArray $z
+ * @var Cuda\CudaArray $x
+ * @var Cuda\CudaArray $y
+ * @var Cuda\CudaArray $z
  */
 $x = $x->concat([$t_cos->neg() * $R], axis: 1);
 $y = $y->concat([$y], axis: 1);
 $z = $z->concat([$t_sin->neg() * $R], axis: 1);
 
-$angles = (new CudaArray(range(0, FRAMES - 1)))->reshape([FRAMES, 1]) * 0.05;
+$angles = (new Cuda\CudaArray(range(0, FRAMES - 1)))->reshape([FRAMES, 1]) * 0.05;
 
 $cos_a = $angles->cos();
 $sin_a = $angles->sin();

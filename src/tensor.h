@@ -54,11 +54,42 @@ extern "C"
 {
 #endif
 
+#define CUDA_CHECK_AND_RETURN_NULL(__tensor__)                                           \
+    do                                                                                   \
+    {                                                                                    \
+        if (UNEXPECTED(!cuda_initialized() || (__tensor__) == NULL))                     \
+        {                                                                                \
+            php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL"); \
+            return NULL;                                                                 \
+        }                                                                                \
+    } while (0)
+
+#define CUDA_CHECK_AND_RETURN_FAILURE(__tensor__)                                        \
+    do                                                                                   \
+    {                                                                                    \
+        if (UNEXPECTED(!cuda_initialized() || (__tensor__) == NULL))                     \
+        {                                                                                \
+            php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL"); \
+            return 0;                                                                    \
+        }                                                                                \
+    } while (0)
+
+#define LAZY_COPY_METADATA(__tensor__)                                    \
+    do                                                                    \
+    {                                                                     \
+        if (__tensor__->d_shape == NULL || __tensor__->d_strides == NULL) \
+        {                                                                 \
+            lazy_copy_metadata_to_gpu(__tensor__);                        \
+        }                                                                 \
+    } while (0)
+
     int tensor_init();
     int cuda_initialized();
     void cuda_set_initialized(int status);
     void cuda_tensor_destroy(tensor_t *tensor);
     int is_contiguous(tensor_t *tensor);
+    void lazy_copy_metadata_to_gpu(tensor_t *t);
+    char *tensor_shape_as_string(tensor_t *tensor);
 
     tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
     tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size);

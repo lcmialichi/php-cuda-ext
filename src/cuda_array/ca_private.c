@@ -10,8 +10,6 @@
 #include "php.h"
 #include "tensor.h"
 
-static char *tensor_shape_as_string(tensor_t *tensor);
-
 ScalarDispatchEntry scalar_dispatch[] = {
     {OP_ADD, launch_scalar_add_kernel},
     {OP_SUB, launch_scalar_subtract_kernel},
@@ -61,128 +59,7 @@ ReductionArgDispatchEntry reduction_arg_dispatch[] = {
     {OP_ARG_MIN, launch_arg_min},
 };
 
-int calculate_broadcast_shape(int *a_shape, int a_dims, int *b_shape, int b_dims, int *result_shape, int *result_dims)
-{
-    *result_dims = (a_dims > b_dims) ? a_dims : b_dims;
-
-    int offset_a = *result_dims - a_dims;
-    int offset_b = *result_dims - b_dims;
-
-    for (int i = 0; i < *result_dims; i++)
-    {
-        int a_dim = (i < offset_a) ? 1 : a_shape[i - offset_a];
-        int b_dim = (i < offset_b) ? 1 : b_shape[i - offset_b];
-
-        if (a_dim == b_dim)
-        {
-            result_shape[i] = a_dim;
-        }
-        else if (a_dim == 1)
-        {
-            result_shape[i] = b_dim;
-        }
-        else if (b_dim == 1)
-        {
-            result_shape[i] = a_dim;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
-int calculate_broadcast_stride(int *result_shape, int result_dims, int dim_idx)
-{
-    int stride = 1;
-    for (int i = result_dims - 1; i > dim_idx; i--)
-    {
-        stride *= result_shape[i];
-    }
-    return stride;
-}
-
-static void calculate_tensor_strides(tensor_t *tensor,
-                                     int *result_shape,
-                                     int result_dims,
-                                     int *tensor_strides)
-{
-    long internal_stride = 1;
-    for (int i = tensor->ndims - 1; i >= 0; i--)
-    {
-        if (tensor->is_view)
-        {
-            tensor_strides[i] = (int)tensor->strides[i];
-        }
-        else if (tensor->shape[i] == 1)
-        {
-            tensor_strides[i] = 0;
-        }
-        else
-        {
-            tensor_strides[i] = (int)internal_stride;
-            internal_stride *= tensor->shape[i];
-        }
-    }
-}
-
-int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
-                                int *result_shape, int *result_dims,
-                                int *a_strides, int *b_strides,
-                                size_t *total_elements)
-{
-    if (!calculate_broadcast_shape(a->shape, a->ndims, b->shape, b->ndims,
-                                   result_shape, result_dims))
-    {
-        return 0;
-    }
-
-    *total_elements = 1;
-    for (int i = 0; i < *result_dims; i++)
-    {
-        *total_elements *= result_shape[i];
-    }
-
-    calculate_tensor_strides(a, result_shape, *result_dims, a_strides);
-    calculate_tensor_strides(b, result_shape, *result_dims, b_strides);
-
-    return 1;
-}
-
-static int calculate_reduction_shape(tensor_t *input, int axis, int *result_shape, size_t *total_elements_out_ptr)
-{
-    if (axis < 0 || axis >= input->ndims)
-    {
-        zend_throw_error(NULL, "Invalid axis %d for reduction operation. Must be between 0 and %d.", axis, input->ndims - 1);
-        return 0;
-    }
-
-    size_t total_elements = 1;
-    int j = 0;
-    for (int i = 0; i < input->ndims; i++)
-    {
-        if (i != axis)
-        {
-            result_shape[j++] = input->shape[i];
-            total_elements *= input->shape[i];
-        }
-    }
-
-    *total_elements_out_ptr = total_elements;
-
-    if (j == 0)
-    {
-        j = 1;
-        result_shape[0] = 1;
-        *total_elements_out_ptr = 1;
-    }
-
-    return j;
-}
-
-scalar_fn get_scalar_fn(int op)
+scalar_fn get_scalar_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
         if (scalar_dispatch[i].op == op)
@@ -191,7 +68,7 @@ scalar_fn get_scalar_fn(int op)
     return NULL;
 }
 
-unary_fn get_unary_fn(int op)
+unary_fn get_unary_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(unary_dispatch) / sizeof(UnaryDispatchEntry); i++)
         if (unary_dispatch[i].op == op)
@@ -200,7 +77,7 @@ unary_fn get_unary_fn(int op)
     return NULL;
 }
 
-broadcast_fn get_broadcast_fn(int op)
+broadcast_fn get_broadcast_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(broadcast_dispatch) / sizeof(BroadcastDispatchEntry); i++)
         if (broadcast_dispatch[i].op == op)
@@ -209,7 +86,7 @@ broadcast_fn get_broadcast_fn(int op)
     return NULL;
 }
 
-reduction_fn get_reduction_fn(int op)
+reduction_fn get_reduction_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(reduction_dispatch) / sizeof(ReductionDispatchEntry); i++)
         if (reduction_dispatch[i].op == op)
@@ -218,7 +95,7 @@ reduction_fn get_reduction_fn(int op)
     return NULL;
 }
 
-reduction_arg_fn get_reduction_arg_fn(int op)
+reduction_arg_fn get_reduction_arg_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(reduction_arg_dispatch) / sizeof(ReductionArgDispatchEntry); i++)
         if (reduction_arg_dispatch[i].op == op)
@@ -227,13 +104,9 @@ reduction_arg_fn get_reduction_arg_fn(int op)
     return NULL;
 }
 
-tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
+tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type)
 {
-    if (!cuda_initialized())
-    {
-        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
-        return NULL;
-    }
+    CUDA_CHECK_AND_RETURN_NULL(a);
 
     broadcast_fn func = get_broadcast_fn(operation_type);
 
@@ -281,13 +154,9 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, int operation_type)
     return (status == cudaSuccess) ? result : NULL;
 }
 
-tensor_t *cuda_scalar_op(tensor_t *a, float scalar, int operation_type)
+tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type)
 {
-    if (!cuda_initialized())
-    {
-        php_error_docref(NULL, E_WARNING, "CUDA not initialized");
-        return NULL;
-    }
+    CUDA_CHECK_AND_RETURN_NULL(a);
 
     tensor_t *result = resolve_result_tensor(a);
     if (!result)
@@ -316,14 +185,9 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, int operation_type)
     return result;
 }
 
-tensor_t *cuda_unary_op(tensor_t *a, int operation_type)
+tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
 {
-    if (!cuda_initialized() || a == NULL)
-    {
-        php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL");
-        return NULL;
-    }
-
+    CUDA_CHECK_AND_RETURN_NULL(a);
     unary_fn func = get_unary_fn(operation_type);
     if (func == NULL)
     {
@@ -350,7 +214,7 @@ tensor_t *cuda_unary_op(tensor_t *a, int operation_type)
     return result;
 }
 
-tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, int operation_type)
+tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, operation_type_t operation_type)
 {
     int result_shape_arr[MAX_DIMS];
     size_t total_elements_out;
@@ -371,7 +235,7 @@ tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, int operation_type)
     func(input->data, result->data, input->shape, input->ndims, input->strides, axis, total_elements_out, input->gpu_offset);
     if (!result)
     {
-        zend_throw_error(NULL, "Tensor creation failed during reduction.");
+        zend_throw_error(NULL, "CudaArray creation failed during reduction.");
         return NULL;
     }
 
@@ -386,7 +250,7 @@ tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, int operation_type)
     return result;
 }
 
-tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, int operation_type)
+tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operation_type)
 {
     int result_shape_arr[MAX_DIMS];
     size_t total_elements_out;
@@ -422,7 +286,7 @@ tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, int operation_type)
 
     if (!result)
     {
-        zend_throw_error(NULL, "Tensor creation failed during reduction.");
+        zend_throw_error(NULL, "CudaArray creation failed during reduction.");
         return NULL;
     }
 
@@ -562,52 +426,21 @@ tensor_t *cuda_tensor_transpose(tensor_t *tensor, int *axis, int axis_len)
 
 tensor_t *cuda_tensor_matmul_nd(tensor_t *a, tensor_t *b)
 {
-    if (!cuda_initialized() || a == NULL || b == NULL)
-    {
-        return NULL;
-    }
+    CUDA_CHECK_AND_RETURN_NULL(a);
 
-    int max_ndims = (a->ndims > b->ndims) ? a->ndims : b->ndims;
-    int a_inner = a->shape[a->ndims - 1];
-    int b_inner = b->shape[b->ndims - 2];
-
-    if (a_inner != b_inner)
-    {
-        return NULL;
-    }
-
-    int result_ndims = max_ndims;
+    int result_ndims;
     int result_shape[MAX_DIMS];
-
-    for (int i = 0; i < max_ndims - 2; i++)
+    if (prepare_matmul_result_shape(
+            a->ndims,
+            a->shape,
+            b->ndims,
+            b->shape,
+            &result_ndims,
+            result_shape) == 0)
     {
-        int a_idx = a->ndims - max_ndims + i;
-        int b_idx = b->ndims - max_ndims + i;
-
-        int a_dim = (a_idx < 0) ? 1 : a->shape[a_idx];
-        int b_dim = (b_idx < 0) ? 1 : b->shape[b_idx];
-
-        if (a_dim == b_dim)
-        {
-            result_shape[i] = a_dim;
-        }
-        else if (a_dim == 1)
-        {
-            result_shape[i] = b_dim;
-        }
-        else if (b_dim == 1)
-        {
-            result_shape[i] = a_dim;
-        }
-        else
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
-    result_shape[max_ndims - 2] = a->shape[a->ndims - 2];
-    result_shape[max_ndims - 1] = b->shape[b->ndims - 1];
-    
     tensor_t *result = cuda_tensor_create_empty(result_shape, result_ndims);
     if (result == NULL)
     {
@@ -622,7 +455,7 @@ tensor_t *cuda_tensor_matmul_nd(tensor_t *a, tensor_t *b)
 
     if (status == 0 || !result->data)
     {
-        efree(result);
+        cuda_tensor_destroy(result);
         return NULL;
     }
 
@@ -631,15 +464,14 @@ tensor_t *cuda_tensor_matmul_nd(tensor_t *a, tensor_t *b)
 
 tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
 {
-    if (!cuda_initialized() || a == NULL || b == NULL)
-    {
-        return NULL;
-    }
-
+    CUDA_CHECK_AND_RETURN_NULL(a);
     if (a->ndims < 2 || b->ndims < 2)
     {
         return NULL;
     }
+
+    LAZY_COPY_METADATA(a);
+    LAZY_COPY_METADATA(b);
 
     if (a->ndims != 2 || b->ndims != 2)
     {
@@ -696,35 +528,4 @@ tensor_t *cuda_tensor_copy(tensor_t *tensor)
     }
 
     return copy;
-}
-
-static char *tensor_shape_as_string(tensor_t *tensor)
-{
-    if (tensor->ndims == 0)
-    {
-        char *result = (char *)emalloc(8);
-        strcpy(result, "scalar");
-        return result;
-    }
-
-    int buffer_size = tensor->ndims * 12 + 2;
-    char *result = (char *)emalloc(buffer_size);
-
-    char *ptr = result;
-    *ptr++ = '(';
-
-    for (int i = 0; i < tensor->ndims; i++)
-    {
-        if (i > 0)
-        {
-            *ptr++ = ',';
-            *ptr++ = ' ';
-        }
-        ptr += sprintf(ptr, "%d", tensor->shape[i]);
-    }
-
-    *ptr++ = ')';
-    *ptr = '\0';
-
-    return result;
 }

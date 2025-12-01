@@ -28,7 +28,7 @@ typedef void (*scalar_fn)(float *base, float scalar, float *result, size_t base_
 
 typedef struct
 {
-    int op;
+    operation_type_t op;
     scalar_fn fn;
 } ScalarDispatchEntry;
 

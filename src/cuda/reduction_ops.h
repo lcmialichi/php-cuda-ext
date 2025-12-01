@@ -2,6 +2,7 @@
 #define REDUCTION_OPS_H
 
 #include <stddef.h>
+#include "../operations.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -11,7 +12,7 @@ extern "C"
     typedef void (*reduction_fn)(float *input, float *result, int *input_shape, int input_ndims, int *result_shape, size_t *input_strides, int result_ndims, int axis, size_t total_elements, size_t input_base_offset);
     typedef struct
     {
-        int op;
+        operation_type_t op;
         reduction_fn fn;
     } ReductionDispatchEntry;
 

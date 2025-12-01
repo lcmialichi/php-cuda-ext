@@ -7,8 +7,6 @@
 #include "tensor.h"
 #include "cuda.h"
 
-#define PREVIEW_COUNT 10
-
 extern zend_class_entry *cuda_array_ce;
 
 typedef struct

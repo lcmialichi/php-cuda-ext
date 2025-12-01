@@ -1,6 +1,6 @@
 <?php
 
-
+namespace Cuda;
 /**
  * <psalm
  * disallowLiteralKeysOnUnshapedArrays="[bool]"
@@ -185,8 +185,8 @@ class CudaArray implements ArrayAccess
 
 
 /**
- * @var cudaArray $cudaArray
- * @var cudaArray $result
- * @psalm-assert cudaArray $result
+ * @var CudaArray $CudaArray
+ * @var CudaArray $result
+ * @psalm-assert CudaArray $result
  */
-$result = $cudaArray * $cudaArray;
+$result = $CudaArray * $CudaArray;

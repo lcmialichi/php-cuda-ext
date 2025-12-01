@@ -45,7 +45,8 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda_array/ca_private.c \
     src/tensor.c \
     src/cuda/memory_pool.c \
-    src/cuda_array/tensor_fabric.c"
+    src/cuda_array/tensor_fabric.c \
+    src/operations.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
     PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)

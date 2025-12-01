@@ -2,7 +2,6 @@
 #include "operation_functors.cuh"
 #include "reduction_ops.cuh"
 #include "reduction_ops.h"
-#include "../operations.h"
 
 extern "C"
 {

@@ -2,7 +2,6 @@
 #include "operation_functors.cuh"
 #include "broadcast_ops.cuh"
 #include "broadcast_ops.h"
-#include "../operations.h"
 
 extern "C"
 {

@@ -16,7 +16,7 @@ extern "C"
                              size_t b_base_offset);
     typedef struct
     {
-        int op;
+        operation_type_t op;
         broadcast_fn fn;
     } BroadcastDispatchEntry;
 

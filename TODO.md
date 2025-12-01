@@ -11,7 +11,7 @@ Items are prioritized but not yet scheduled.
   - Optimize for contiguous and non-contiguous tensors
 
 
-## Tensor Indexing & Assignment
+## CudaArray Indexing & Assignment
 
 - [ ] Add support for ranged write assignment using syntax:
 ```php

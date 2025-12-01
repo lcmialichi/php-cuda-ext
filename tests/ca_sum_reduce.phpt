@@ -6,7 +6,7 @@ if (!extension_loaded('cuda')) die('skip');
 ?>
 --FILE--
 <?php
-$ca = new CudaArray([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
+$ca = new Cuda\CudaArray([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
 var_dump($ca->sum(1)->toArray());
 var_dump($ca->sum(0)->toArray());
 var_dump($ca->sum(2)->toArray());

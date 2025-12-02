@@ -31,65 +31,124 @@ typedef enum
     OP_REDUCE_MIN,
     OP_REDUCE_PROD,
     OP_ARG_MAX,
-    OP_ARG_MIN
+    OP_ARG_MIN,
+
+    OP_CONCAT,
+    OP_RESHAPE,
+    OP_TRANSPOSE,
+    OP_SLICE
 } operation_type_t;
 
-typedef struct _operation_t {
-    
+typedef enum
+{
+    OP_TYPE_TENSOR_TENSOR,
+    OP_TYPE_TENSOR_SCALAR,
+    OP_TYPE_SCALAR_TENSOR,
+    OP_TYPE_UNARY_TENSOR,
+    OP_TYPE_NO_OPERAND,
+} operation_arity_t;
+
+typedef struct _operation_t
+{
     operation_type_t type;
-    
-    tensor_t *input_a;
-    tensor_t *input_b;
+    operation_arity_t arity;
+
+    union
+    {
+        struct
+        {
+            tensor_t *a;
+            tensor_t *b;
+        } tensor_tensor;
+
+        struct
+        {
+            tensor_t *tensor;
+            float scalar;
+        } tensor_scalar;
+
+        struct
+        {
+            float scalar;
+            tensor_t *tensor;
+        } scalar_tensor;
+
+        struct
+        {
+            tensor_t *tensor;
+        } unary;
+
+        struct
+        {
+            double a;
+            double b;
+        } scalar_scalar;
+    } operands;
+
     int output_ndims;
     int output_shape[MAX_DIMS];
-    
-    union {
-        struct {
-            double scalar_value;
-        } scalar_op;
+    int output_id;
+    char output_alias[8];
 
-        struct {
-            int axis; 
-            bool keep_dims; 
+    union
+    {
+        struct
+        {
+            int axis;
+            bool keep_dims;
         } reduction;
-        
-        struct {
-            int new_shape[MAX_DIMS]; 
+
+        struct
+        {
+            int new_shape[MAX_DIMS];
         } reshape;
 
-        struct {
+        struct
+        {
             int perm[MAX_DIMS];
         } transpose;
 
-        struct {
+        struct
+        {
             int slice_starts[MAX_DIMS];
             int slice_ends[MAX_DIMS];
             int slice_steps[MAX_DIMS];
         } slice;
 
-    } data;
-    
+    } params;
+
 } operation_t;
 
-
-typedef struct _op_list_node_t {
-    operation_t *op;       
+typedef struct _op_list_node_t
+{
+    operation_t *op;
     struct _op_list_node_t *next;
 } op_list_node_t;
 
-typedef struct _op_list_t {
+typedef struct _op_list_t
+{
     op_list_node_t *head;
     op_list_node_t *tail;
     size_t count;
 } op_list_t;
 
-typedef struct _fusion_context_t {
+typedef struct _fusion_context_t
+{
     op_list_t operation_nodes;
     tensor_t *trace_output;
+    struct
+    {
+        bool is_active;
+        int next_id;
+        int next_temp_id;
+        int next_input_id;
+        int next_constant_id;
+        int op_counter;
+    } tracker;
 } fusion_context_t;
 
-
-operation_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b);
+tensor_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b);
+tensor_t *create_scalar_operation_node(operation_type_t op_type, tensor_t *a, float b);
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *result_shape, int *result_dims,

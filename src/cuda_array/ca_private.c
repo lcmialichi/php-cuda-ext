@@ -162,6 +162,9 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
 tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
+    if (is_tracing()) {
+        return trace_scalar_operation(operation_type, a, scalar); 
+    }
 
     tensor_t *result = resolve_result_tensor(a);
     if (!result)

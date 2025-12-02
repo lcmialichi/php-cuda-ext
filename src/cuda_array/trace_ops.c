@@ -6,19 +6,25 @@
 
 tensor_t *trace_binary_operation(operation_type_t op_type, tensor_t *a, tensor_t *b)
 {
-    int result_shape[MAX_DIMS];
-    int result_dims;
+    tensor_t *result_proxy = create_tensor_operation_node(op_type, a, b);
 
-    operation_t *op_node = create_tensor_operation_node(op_type, a, b);
-    
-    if (op_node == NULL) {
-        zend_throw_error(NULL, "Failed to allocate operation node for tracing.");
+    if (result_proxy == NULL)
+    {
+        zend_throw_error(NULL, "Failed to allocate tensor proxy for tracing.");
         return NULL;
     }
 
-    tensor_t *result_proxy = create_new_tensor_proxy(result_shape, result_dims, op_node);
-    
-    if (result_proxy == NULL) {
+    set_current_trace_output(result_proxy);
+
+    return result_proxy;
+}
+
+tensor_t *trace_scalar_operation(operation_type_t op_type, tensor_t *a, float b)
+{
+    tensor_t *result_proxy = create_scalar_operation_node(op_type, a, b);
+
+    if (result_proxy == NULL)
+    {
         zend_throw_error(NULL, "Failed to allocate tensor proxy for tracing.");
         return NULL;
     }

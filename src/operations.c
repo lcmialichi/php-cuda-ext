@@ -10,9 +10,8 @@ static void calculate_tensor_strides(tensor_t *tensor,
                                      int result_dims,
                                      int *tensor_strides);
 
-operation_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b)
+tensor_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b)
 {
-
     int result_shape[MAX_DIMS];
     int result_dims;
     int a_strides[MAX_DIMS] = {0};
@@ -25,55 +24,35 @@ operation_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a,
         return NULL;
     }
 
-    operation_t *op = (operation_t *)emalloc(sizeof(operation_t));
+    tensor_t *result_proxy = create_new_tensor_proxy(result_shape, result_dims);
+    operation_t *op = fusion_create_tensor_tensor_op(op_type, a, b, result_proxy);
+
     if (!op)
     {
         zend_throw_error(NULL, "Memory allocation failed for operation node.");
         return NULL;
     }
 
-    memset(op, 0, sizeof(operation_t));
+    return result_proxy;
+}
 
-    op->type = op_type;
-    op->input_a = a;
-    op->input_b = b;
+tensor_t *create_scalar_operation_node(operation_type_t op_type, tensor_t *a, float b)
+{
+    int result_shape[MAX_DIMS];
+    int result_dims;
 
-    op->output_ndims = result_dims;
-    memcpy(op->output_shape, result_shape, sizeof(int) * result_dims);
+    tensor_t *result_proxy = create_new_tensor_proxy(a->shape, a->ndims);
+    operation_t *op = fusion_create_tensor_scalar_op(op_type, a, b, result_proxy);
 
-    TENSOR_ADD_REF(a);
-    if (b)
+    if (!op)
     {
-        TENSOR_ADD_REF(b);
+        zend_throw_error(NULL, "Memory allocation failed for operation node.");
+        return NULL;
     }
 
-    fusion_context_t *context = CUDA_G(current_fusion_context);
-
-    if (context != NULL)
-    {
-        op_list_add(&context->operation_nodes, op);
-    }
-
-    return op;
+    return result_proxy;
 }
 
-int create_scalar_operation_node()
-{
-}
-
-int create_unary_operation_node()
-{
-}
-
-int create_matmul_operation_node()
-{
-}
-
-
-
-int create_reshape_operation_node()
-{
-}
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *result_shape, int *result_dims,

@@ -7,6 +7,7 @@
 #include "memory_pool.h"
 #include "cuda.h"
 #include "zend_smart_str.h"
+#include "kernel_fusion.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -672,7 +673,7 @@ ZEND_METHOD(CudaArray, __debugInfo)
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
     tensor_t *tensor = obj->tensor_handle;
     array_init(return_value);
-    
+
     if (tensor != NULL && tensor->is_proxy == 1)
     {
         add_assoc_string(return_value, "Type", "proxy");
@@ -1316,6 +1317,7 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
         RETURN_NULL();
     }
 
+    fusion_tag_as_constant(tensor, "rand");
     create_result_object(return_value, tensor);
 }
 
@@ -1349,12 +1351,14 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
     }
 
     tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, value);
+
     if (!tensor)
     {
         zend_throw_error(NULL, "Failed to create %s tensor", method_name);
         RETURN_NULL();
     }
 
+    fusion_tag_as_constant(tensor, "c");
     create_result_object(return_value, tensor);
 }
 

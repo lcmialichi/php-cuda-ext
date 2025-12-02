@@ -94,6 +94,7 @@ tensor_t *cuda_tensor_allocate_base(const int shape[], int ndims)
     memset(tensor, 0, sizeof(tensor_t));
 
     tensor->ndims = ndims;
+    tensor->is_on_gpu = 0;
     tensor->shape = (int *)emalloc(ndims * sizeof(int));
     if (!tensor->shape)
     {
@@ -141,7 +142,7 @@ tensor_t *cuda_tensor_allocate_base(const int shape[], int ndims)
     return tensor;
 }
 
-tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims, struct _operation_t *op_node)
+tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims)
 {
     tensor_t *proxy = cuda_tensor_allocate_base(result_shape, result_dims);
 
@@ -157,14 +158,10 @@ tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims, struct _op
         proxy->allocated_size = 0;
     }
 
-    proxy->defining_op = op_node;
     proxy->is_proxy = 1;
-    proxy->shape = result_shape;
     proxy->is_view = 0;
     proxy->gpu_offset = 0;
     proxy->data = NULL;
-    proxy->total_size = 0;
-    proxy->ndims = result_dims;
     proxy->ref_count = 1;
     proxy->num_slices = 0;
     proxy->slices = NULL;

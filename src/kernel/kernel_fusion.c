@@ -1,19 +1,13 @@
 #include "php.h"
+#include "kernel_generator.h"
+#include "cuda_globals.h"
+#include "tensor.h"
+#include "operations.h"
+#include <string.h>
 
 #ifdef ZTS
 #include "TSRM.h"
 #endif
-
-#include "cuda_globals.h"
-#include "tensor.h"
-#include "operations.h"
-#include <string.h>
-#include "php.h"
-#include "php.h"
-#include "cuda_globals.h"
-#include "tensor.h"
-#include "operations.h"
-#include <string.h>
 
 static void fusion_auto_tag_tensor(tensor_t *tensor);
 static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *result);
@@ -38,9 +32,9 @@ void start_kernel_fusions()
     op_list_init(&context->operation_nodes);
 
     context->tracker.is_active = true;
-    context->tracker.next_temp_id = 0;
-    context->tracker.next_input_id = 0;
-    context->tracker.next_constant_id = 0;
+    context->tracker.temp_id_count = 0;
+    context->tracker.input_id_count = 0;
+    context->tracker.constant_id_count = 0;
     context->tracker.op_counter = 0;
 
     CUDA_G(current_fusion_context) = context;
@@ -98,16 +92,18 @@ void fusion_tag_as_constant(tensor_t *tensor, const char *const_type)
     if (const_type && const_type[0])
     {
         snprintf(tensor->trace.expr_alias, sizeof(tensor->trace.expr_alias),
-                 "%s%d", const_type, context->tracker.next_constant_id++);
+                 "%s%d", const_type, context->tracker.constant_id_count++);
     }
     else
     {
         snprintf(tensor->trace.expr_alias, sizeof(tensor->trace.expr_alias),
-                 "C%d", context->tracker.next_constant_id++);
+                 "C%d", context->tracker.constant_id_count++);
     }
 
     tensor->trace.expr_id = -2;
     tensor->trace.defining_op = NULL;
+    tensor->trace.defining_op = NULL;
+    tensor->trace.tensor_type = TENSOR_TYPE_INPUT;
 }
 
 operation_t *fusion_create_tensor_tensor_op(operation_type_t type,
@@ -207,45 +203,83 @@ const char *fusion_get_tensor_alias(const tensor_t *tensor)
     return tensor->trace.expr_alias;
 }
 
-tensor_t *stop_kernel_fusions()
+void stop_kernel_fusions()
 {
     CUDA_G(is_tracing_enabled) = false;
 
     fusion_context_t *context = CUDA_G(current_fusion_context);
-    tensor_t *result = NULL;
 
     if (context != NULL)
     {
-        result = context->trace_output;
-
         op_list_node_t *current = context->operation_nodes.head;
         while (current != NULL)
         {
             op_list_node_t *next = current->next;
+            operation_t *op = current->op;
 
-            if (current->op != NULL)
+            if (op != NULL)
             {
-                efree(current->op);
+                switch (op->arity)
+                {
+                case OP_TYPE_TENSOR_TENSOR:
+                    if (op->operands.tensor_tensor.a) TENSOR_DEL_REF(op->operands.tensor_tensor.a);
+                    if (op->operands.tensor_tensor.b) TENSOR_DEL_REF(op->operands.tensor_tensor.b);
+                    break;
+                case OP_TYPE_TENSOR_SCALAR:
+                    if (op->operands.tensor_scalar.tensor) TENSOR_DEL_REF(op->operands.tensor_scalar.tensor);
+                    break;
+                case OP_TYPE_SCALAR_TENSOR:
+                    if (op->operands.scalar_tensor.tensor) TENSOR_DEL_REF(op->operands.scalar_tensor.tensor);
+                    break;
+                case OP_TYPE_UNARY_TENSOR:
+                    if (op->operands.unary.tensor) TENSOR_DEL_REF(op->operands.unary.tensor);
+                    break;
+                default:
+                    break;
+                }
+                
+                efree(op);
             }
 
             efree(current);
             current = next;
         }
 
-        context->operation_nodes.head = NULL;
-        context->operation_nodes.tail = NULL;
-        context->operation_nodes.count = 0;
-
         efree(context);
         CUDA_G(current_fusion_context) = NULL;
     }
-
-    return result;
 }
 
 bool is_tracing()
 {
     return CUDA_G(is_tracing_enabled);
+}
+
+tensor_t *compile_and_execute_fusion(fusion_context_t *context)
+{
+    if (!context)
+        return NULL;
+
+    kernel_generator_t *gen = kernel_generator_create(context);
+    if (!gen)
+        return NULL;
+
+    if (!kernel_generator_analyze(gen))
+    {
+        kernel_generator_destroy(gen);
+        return NULL;
+    }
+
+    if (!kernel_generator_generate(gen))
+    {
+        kernel_generator_destroy(gen);
+        return NULL;
+    }
+
+    kernel_generator_print(gen);
+    kernel_generator_destroy(gen);
+
+    return context->trace_output;
 }
 
 void set_current_trace_output(tensor_t *t)
@@ -560,15 +594,15 @@ void op_list_print()
     if (unary_ops > 0)
         php_printf("Unary ops: %d\n", unary_ops);
 
-    php_printf("Tensors created: T0..T%d\n", context->tracker.next_temp_id - 1);
+    php_printf("Tensors created: T0..T%d\n", context->tracker.temp_id_count - 1);
 
-    if (context->tracker.next_input_id > 0)
+    if (context->tracker.input_id_count > 0)
     {
-        php_printf("Inputs: I0..I%d\n", context->tracker.next_input_id - 1);
+        php_printf("Inputs: I0..I%d\n", context->tracker.input_id_count - 1);
     }
-    if (context->tracker.next_constant_id > 0)
+    if (context->tracker.constant_id_count > 0)
     {
-        php_printf("Constants: %d\n", context->tracker.next_constant_id);
+        php_printf("Constants: %d\n", context->tracker.constant_id_count);
     }
 
     php_printf("Final result: %s\n",
@@ -600,7 +634,7 @@ static void fusion_auto_tag_tensor(tensor_t *tensor)
     }
 
     snprintf(tensor->trace.expr_alias, sizeof(tensor->trace.expr_alias),
-             "I%d", context->tracker.next_input_id++);
+             "I%d", context->tracker.input_id_count++);
     tensor->trace.expr_id = -1;
     tensor->trace.defining_op = NULL;
 }
@@ -622,6 +656,8 @@ static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *resul
 
     if (result)
     {
+        result->trace.tensor_type = TENSOR_TYPE_TEMP;
+        op->result = result;
         op->output_ndims = result->ndims;
         int dims_to_copy = result->ndims;
         if (dims_to_copy > MAX_DIMS)
@@ -633,11 +669,13 @@ static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *resul
         }
     }
 
-    op->output_id = context->tracker.next_temp_id++;
+    op->output_id = context->tracker.temp_id_count++;
     snprintf(op->output_alias, sizeof(op->output_alias), "T%d", op->output_id);
 
     op_list_add(&context->operation_nodes, op);
     context->tracker.op_counter++;
+
+   
 
     if (result)
     {

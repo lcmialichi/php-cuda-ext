@@ -40,7 +40,7 @@ ZEND_METHOD(Kernel, fusion)
         return;
     }
 
-    op_list_print();
+    compile_and_execute_fusion(context);
     final_proxy_tensor = stop_kernel_fusions();
 
     if (call_status == FAILURE)

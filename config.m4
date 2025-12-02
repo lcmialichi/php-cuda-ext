@@ -50,7 +50,8 @@ if test "$PHP_CUDA" != "no"; then
     src/operations.c \
     src/kernel/kernel.c \
     src/kernel/kernel_fusion.c \
-    src/cuda_array/trace_ops.c"
+    src/cuda_array/trace_ops.c \
+    src/kernel/kernel_generator.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
     PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)

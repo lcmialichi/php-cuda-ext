@@ -39,6 +39,8 @@ typedef enum
     OP_SLICE
 } operation_type_t;
 
+
+
 typedef enum
 {
     OP_TYPE_TENSOR_TENSOR,
@@ -52,7 +54,7 @@ typedef struct _operation_t
 {
     operation_type_t type;
     operation_arity_t arity;
-
+    tensor_t * result;
     union
     {
         struct
@@ -140,9 +142,9 @@ typedef struct _fusion_context_t
     {
         bool is_active;
         int next_id;
-        int next_temp_id;
-        int next_input_id;
-        int next_constant_id;
+        int temp_id_count;
+        int input_id_count;
+        int constant_id_count;
         int op_counter;
     } tracker;
 } fusion_context_t;

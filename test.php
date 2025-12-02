@@ -1,12 +1,14 @@
 <?php
 
 $test = Cuda\Kernel::fusion(function () {
-    $ca = Cuda\CudaArray::rand([4, 4], -1, 1);
-    $ca2 = Cuda\CudaArray::rand([4, 4], -1, 1);
+    $rand0 = Cuda\CudaArray::rand([4, 4], -1, 1);
+    $rand1 = Cuda\CudaArray::rand([4, 4], -1, 1);
+    $rand2 = Cuda\CudaArray::rand([4, 4], -1, 1);
+    $rand3 = Cuda\CudaArray::rand([1, 4], -1, 1);
+    $rand4 = Cuda\CudaArray::rand([1, 4], -1, 1);
 
-    $tensor = (($ca * ($ca2 + $ca2)) / $ca) ** Cuda\CudaArray::ones([4]);
-
-    return $tensor * 3 / 15;
+    $tensor = ($rand0 * $rand1) / ($rand2 ** $rand3);
+    return $tensor * 3 /15  * $rand4;
 });
 
 var_dump($test);

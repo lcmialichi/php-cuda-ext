@@ -31,6 +31,13 @@ typedef struct
     } data;
 } slice_info_t;
 
+typedef enum _tensor_type_t
+{
+    TENSOR_TYPE_INPUT,
+    TENSOR_TYPE_OUTPUT,
+    TENSOR_TYPE_TEMP
+} tensor_type_t;
+
 typedef struct tensor
 {
     void *data;
@@ -53,9 +60,10 @@ typedef struct tensor
     int is_proxy;
     struct
     {
+        tensor_type_t tensor_type;
         struct _operation_t *defining_op; // NULL if is not a result from op
-        int expr_id;               // -1 if not tracked
-        char expr_alias[8];        // "" if not tracked
+        int expr_id;                      // -1 if not tracked
+        char expr_alias[8];               // "" if not tracked
     } trace;
 
     int is_on_gpu;
@@ -77,6 +85,19 @@ extern "C"
         else                                                                              \
         {                                                                                 \
             (__tensor__)->ref_count++;                                                    \
+        }                                                                                 \
+    } while (0)
+
+#define TENSOR_DEL_REF(__tensor__)                                                        \
+    do                                                                                    \
+    {                                                                                     \
+        if (UNEXPECTED((__tensor__) == NULL))                                             \
+        {                                                                                 \
+            php_error_docref(NULL, E_WARNING, "TENSOR_ADD_REF called with NULL tensor."); \
+        }                                                                                 \
+        else                                                                              \
+        {                                                                                 \
+            (__tensor__)->ref_count--;                                                    \
         }                                                                                 \
     } while (0)
 

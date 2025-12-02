@@ -166,6 +166,7 @@ tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims)
     proxy->num_slices = 0;
     proxy->slices = NULL;
     proxy->dtype = DTYPE_FLOAT; // this cannot be mocked
+    proxy->trace.tensor_type = TENSOR_TYPE_TEMP;
 
     return proxy;
 }

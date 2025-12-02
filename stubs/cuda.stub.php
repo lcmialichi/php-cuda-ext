@@ -1,6 +1,14 @@
 <?php
 
 namespace Cuda;
+
+class Kernel
+{
+    public static function fusion(callable $callable): mixed
+    {
+    }
+}
+
 /**
  * <psalm
  * disallowLiteralKeysOnUnshapedArrays="[bool]"
@@ -153,7 +161,8 @@ class CudaArray implements ArrayAccess
     {
     }
 
-    public function matmul(CudaArray $other): CudaArray{
+    public function matmul(CudaArray $other): CudaArray
+    {
     }
 
     /**
@@ -182,11 +191,3 @@ class CudaArray implements ArrayAccess
     }
 
 }
-
-
-/**
- * @var CudaArray $CudaArray
- * @var CudaArray $result
- * @psalm-assert CudaArray $result
- */
-$result = $CudaArray * $CudaArray;

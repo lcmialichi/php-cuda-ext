@@ -1,11 +1,79 @@
 #include "operations.h"
 #include "php.h"
+#include "trace_ops.h"
+#include "cuda.h"
+#include "kernel_fusion.h"
 
 static int calculate_broadcast_shape(int *a_shape, int a_dims, int *b_shape, int b_dims, int *result_shape, int *result_dims);
 static void calculate_tensor_strides(tensor_t *tensor,
                                      int *result_shape,
                                      int result_dims,
                                      int *tensor_strides);
+
+operation_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b)
+{
+
+    int result_shape[MAX_DIMS];
+    int result_dims;
+    int a_strides[MAX_DIMS] = {0};
+    int b_strides[MAX_DIMS] = {0};
+    size_t total_elements;
+
+    if (!prepare_broadcast_operation(a, b, result_shape, &result_dims, a_strides, b_strides, &total_elements))
+    {
+        zend_throw_error(NULL, "Broadcast shapes are incompatible for operation %d.", op_type);
+        return NULL;
+    }
+
+    operation_t *op = (operation_t *)emalloc(sizeof(operation_t));
+    if (!op)
+    {
+        zend_throw_error(NULL, "Memory allocation failed for operation node.");
+        return NULL;
+    }
+
+    memset(op, 0, sizeof(operation_t));
+
+    op->type = op_type;
+    op->input_a = a;
+    op->input_b = b;
+
+    op->output_ndims = result_dims;
+    memcpy(op->output_shape, result_shape, sizeof(int) * result_dims);
+
+    TENSOR_ADD_REF(a);
+    if (b)
+    {
+        TENSOR_ADD_REF(b);
+    }
+
+    fusion_context_t *context = CUDA_G(current_fusion_context);
+
+    if (context != NULL)
+    {
+        op_list_add(&context->operation_nodes, op);
+    }
+
+    return op;
+}
+
+int create_scalar_operation_node()
+{
+}
+
+int create_unary_operation_node()
+{
+}
+
+int create_matmul_operation_node()
+{
+}
+
+
+
+int create_reshape_operation_node()
+{
+}
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *result_shape, int *result_dims,

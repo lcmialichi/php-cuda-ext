@@ -3,7 +3,7 @@
 
 #include "php.h"
 
-#define TENSOR_CLASS_NAME "Cuda\\CudaArray"
+#define CA_CLASS_NAME "Cuda\\CudaArray"
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_construct, 0, 0, 1)
 ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
@@ -141,7 +141,7 @@ PHP_FE_END};
 static zend_class_entry *register_cuda_array_class(void)
 {
     zend_class_entry ce;
-    INIT_CLASS_ENTRY(ce, TENSOR_CLASS_NAME, cuda_array_methods);
+    INIT_CLASS_ENTRY(ce, CA_CLASS_NAME, cuda_array_methods);
     cuda_array_ce = zend_register_internal_class(&ce);
 
     return cuda_array_ce;

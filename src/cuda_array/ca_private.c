@@ -9,6 +9,8 @@
 #include <string.h>
 #include "php.h"
 #include "tensor.h"
+#include "kernel_fusion.h"
+#include "trace_ops.h"
 
 ScalarDispatchEntry scalar_dispatch[] = {
     {OP_ADD, launch_scalar_add_kernel},
@@ -107,6 +109,9 @@ reduction_arg_fn get_reduction_arg_fn(operation_type_t op)
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
+    if (is_tracing()) {
+        return trace_binary_operation(operation_type, a, b); 
+    }
 
     broadcast_fn func = get_broadcast_fn(operation_type);
 

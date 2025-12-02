@@ -8,6 +8,8 @@
 #define DTYPE_FLOAT 1
 #define DTYPE_INT 2
 
+struct _operation_t;
+
 typedef enum
 {
     SLICE_ALL = 0,
@@ -41,18 +43,30 @@ typedef struct tensor
     int ref_count;
     size_t allocated_size;
     int is_view;
+    int is_proxy;
     size_t gpu_offset;
     slice_info_t *slices;
     struct tensor *base_tensor;
     int num_slices;
     size_t *d_strides;
     int *d_shape;
+    struct _operation_t *defining_op;
 } tensor_t;
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+
+#define TENSOR_ADD_REF(__tensor__) \
+    do { \
+        if (UNEXPECTED((__tensor__) == NULL)) { \
+            php_error_docref(NULL, E_WARNING, "TENSOR_ADD_REF called with NULL tensor."); \
+        } else { \
+            (__tensor__)->ref_count++; \
+        } \
+    } while (0)
 
 #define CUDA_CHECK_AND_RETURN_NULL(__tensor__)                                           \
     do                                                                                   \
@@ -91,6 +105,7 @@ extern "C"
     void lazy_copy_metadata_to_gpu(tensor_t *t);
     char *tensor_shape_as_string(tensor_t *tensor);
 
+    tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims, struct _operation_t *op_node);
     tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
     tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size);
     tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);

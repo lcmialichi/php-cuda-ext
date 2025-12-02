@@ -13,6 +13,7 @@ if test "$PHP_CUDA" != "no"; then
     PHP_ADD_INCLUDE(/usr/local/cuda/include)
     PHP_ADD_INCLUDE([src])
     PHP_ADD_INCLUDE([src/cuda])
+    PHP_ADD_INCLUDE([src/kernel])
     PHP_ADD_INCLUDE([src/cuda_array])
     PHP_ADD_LIBRARY(stdc++, 1, CUDA_SHARED_LIBADD)
 
@@ -46,7 +47,10 @@ if test "$PHP_CUDA" != "no"; then
     src/tensor.c \
     src/cuda/memory_pool.c \
     src/cuda_array/tensor_fabric.c \
-    src/operations.c"
+    src/operations.c \
+    src/kernel/kernel.c \
+    src/kernel/kernel_fusion.c \
+    src/cuda_array/trace_ops.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
     PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)

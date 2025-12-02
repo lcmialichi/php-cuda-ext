@@ -11,10 +11,6 @@
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
 
-typedef tensor_t *(*tensor_operation_func)(tensor_t *, tensor_t *);
-typedef tensor_t *(*scalar_operation_func)(tensor_t *, float);
-typedef tensor_t *(*self_operation_func)(tensor_t *);
-
 static cuda_array_obj *php_cuda_array_fetch_object(zend_object *obj);
 static cuda_array_obj *php_cuda_array_fetch_valid_object(zend_object *obj);
 static zend_object *cuda_array_create_object(zend_class_entry *class_type);
@@ -675,15 +671,20 @@ ZEND_METHOD(CudaArray, __debugInfo)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
     tensor_t *tensor = obj->tensor_handle;
+    array_init(return_value);
+    
+    if (tensor != NULL && tensor->is_proxy == 1)
+    {
+        add_assoc_string(return_value, "Type", "proxy");
+        return;
+    }
 
     if (!tensor || tensor->ndims <= 0)
     {
-        array_init(return_value);
         add_assoc_string(return_value, "Error", "CudaArray handle is NULL or has zero dimensions");
         return;
     }
 
-    array_init(return_value);
     zval shape_array;
     array_init(&shape_array);
 
@@ -811,10 +812,16 @@ static cuda_array_obj *php_cuda_array_fetch_object(zend_object *obj)
 static cuda_array_obj *php_cuda_array_fetch_valid_object(zend_object *obj)
 {
     cuda_array_obj *this_obj = (cuda_array_obj *)((char *)obj - XtOffsetOf(cuda_array_obj, obj));
+
     if (!this_obj || this_obj->tensor_handle == NULL)
     {
         zend_error(E_ERROR, "Attempting to access uninitialized tensor!");
         return NULL;
+    }
+
+    if (this_obj->tensor_handle->is_proxy == 1)
+    {
+        return this_obj;
     }
 
     if (this_obj->shape == NULL)

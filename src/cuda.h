@@ -1,7 +1,8 @@
-#ifndef PHP_CUDA_H
-#define PHP_CUDA_H
+#ifndef CUDA_H
+#define CUDA_H
 
 #include "php.h"
+#include "operations.h"
 #include <cuda_runtime.h>
 
 #define PHP_CUDA_VERSION "1.0.0"
@@ -14,10 +15,20 @@ extern zend_module_entry cuda_module_entry;
 #include "TSRM.h"
 #endif
 
-
 ZEND_BEGIN_MODULE_GLOBALS(cuda)
-	char				*memory_size;
+char *memory_size;
+fusion_context_t *current_fusion_context;
+bool is_tracing_enabled;
 ZEND_END_MODULE_GLOBALS(cuda)
+
+ZEND_EXTERN_MODULE_GLOBALS(cuda);
+
+#ifdef ZTS
+    #define CUDA_G(v) TSRMG(cuda_globals_id, zend_cuda_globals *, v)
+#else
+    extern zend_cuda_globals cuda_globals;
+    #define CUDA_G(v) (cuda_globals.v)
+#endif
 
 ZEND_FUNCTION(cuda_get_device_count);
 ZEND_FUNCTION(cuda_get_device_info);

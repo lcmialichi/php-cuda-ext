@@ -190,7 +190,7 @@ static char *generate_parameter_list(
         }
 
         char param[128];
-        snprintf(param, sizeof(param), "    const float* %s", t->trace.expr_alias);
+        snprintf(param, sizeof(param), "    const TensorInfo* %s", t->trace.expr_alias);
         strcat(params, param);
         param_count++;
     }
@@ -204,7 +204,7 @@ static char *generate_parameter_list(
         }
 
         char param[128];
-        snprintf(param, sizeof(param), "    float* %s", t->trace.expr_alias);
+        snprintf(param, sizeof(param), "    TensorInfo * %s", t->trace.expr_alias);
         strcat(params, param);
         param_count++;
     }
@@ -303,6 +303,7 @@ bool kernel_generator_generate(kernel_generator_t *gen)
 
     strcat(gen->header_code, "// Generated CUDA fused kernel\n");
     strcat(gen->header_code, "#include <cmath>\n\n");
+    strcat(gen->header_code, "#include \"tensor_info.h\"\n\n");
 
     strcat(gen->device_code, "// Device functions\n");
     strcat(gen->device_code, "__device__ float cuda_safe_div(float a, float b) {\n");
@@ -474,7 +475,7 @@ bool kernel_generator_generate(kernel_generator_t *gen)
     for (int i = 0; i < outputs.count; i++)
     {
         char param[128];
-        snprintf(param, sizeof(param), "    %s%s", outputs.tensors[i]->trace.expr_alias,
+        snprintf(param, sizeof(param), "  TensorInfo %s%s", outputs.tensors[i]->trace.expr_alias,
                  (launch_count < gen->num_params - 1) ? ",\n" : "\n");
         strcat(gen->launch_code, param);
         launch_count++;

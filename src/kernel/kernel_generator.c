@@ -403,7 +403,7 @@ bool kernel_generator_generate(kernel_generator_t *gen)
     append_code(&gen->kernel_code, "  // Fused operations (Topologically Sorted)\n");
 
     op_list_node_t *current = gen->required_ops.head;
-    char a_expr[64], b_expr[64], t_expr[64];
+    char a_expr[64], b_expr[64], t_expr[64], r_expr[64];
 
 #define SET_TENSOR_ACCESS(TARGET, TENSOR)                                       \
     if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                        \
@@ -415,6 +415,20 @@ bool kernel_generator_generate(kernel_generator_t *gen)
         snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_operand_alias(TENSOR)); \
     }
 
+#define SET_RESULT_ACCESS(TARGET, TENSOR)                                      \
+    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_OUTPUT)                     \
+    {                                                                          \
+        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_result_alias(TENSOR)); \
+    }                                                                          \
+    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                  \
+    {                                                                          \
+        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_result_alias(TENSOR)); \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        snprintf(TARGET, sizeof(TARGET), "%s", get_result_alias(TENSOR));      \
+    }
+
     while (current != NULL)
     {
         operation_t *op = current->op;
@@ -424,10 +438,9 @@ bool kernel_generator_generate(kernel_generator_t *gen)
             continue;
         }
 
-        const char *result_expr = get_result_alias(op->result);
         char line[512];
         const char *assign_op = "=";
-        const char *result_var_prefix = op->result->trace.tensor_type == TENSOR_TYPE_TEMP ? "temp_" : "";
+        SET_RESULT_ACCESS(r_expr, op->result);
 
         switch (op->arity)
         {
@@ -438,13 +451,13 @@ bool kernel_generator_generate(kernel_generator_t *gen)
 
             if (op->type == OP_POW)
             {
-                snprintf(line, sizeof(line), "  %s%s %s powf(%s, %s);",
-                         result_var_prefix, result_expr, assign_op, a_expr, b_expr);
+                snprintf(line, sizeof(line), "  %s %s powf(%s, %s);",
+                         r_expr, assign_op, a_expr, b_expr);
             }
             else
             {
-                snprintf(line, sizeof(line), "  %s%s %s %s %s %s;",
-                         result_var_prefix, result_expr, assign_op, a_expr, get_cuda_operator(op->type), b_expr);
+                snprintf(line, sizeof(line), "  %s %s %s %s %s;",
+                         r_expr, assign_op, a_expr, get_cuda_operator(op->type), b_expr);
             }
             break;
         }
@@ -453,13 +466,13 @@ bool kernel_generator_generate(kernel_generator_t *gen)
             SET_TENSOR_ACCESS(t_expr, op->operands.tensor_scalar.tensor);
             if (op->type == OP_POW)
             {
-                snprintf(line, sizeof(line), "  %s%s %s powf(%s, %.6ff);",
-                         result_var_prefix, result_expr, assign_op, t_expr, op->operands.tensor_scalar.scalar);
+                snprintf(line, sizeof(line), "  %s %s powf(%s, %.6ff);",
+                         r_expr, assign_op, t_expr, op->operands.tensor_scalar.scalar);
             }
             else
             {
-                snprintf(line, sizeof(line), "  %s%s %s %s %s %.6ff;",
-                         result_var_prefix, result_expr, assign_op, t_expr, get_cuda_operator(op->type),
+                snprintf(line, sizeof(line), "  %s %s %s %s %.6ff;",
+                         r_expr, assign_op, t_expr, get_cuda_operator(op->type),
                          op->operands.tensor_scalar.scalar);
             }
             break;
@@ -470,18 +483,18 @@ bool kernel_generator_generate(kernel_generator_t *gen)
 
             if (op->type == OP_SUB)
             {
-                snprintf(line, sizeof(line), "  %s%s %s %.6ff - %s;",
-                         result_var_prefix, result_expr, assign_op, op->operands.scalar_tensor.scalar, t_expr);
+                snprintf(line, sizeof(line), "  %s %s %.6ff - %s;",
+                         r_expr, assign_op, op->operands.scalar_tensor.scalar, t_expr);
             }
             else if (op->type == OP_DIV)
             {
-                snprintf(line, sizeof(line), "  %s%s %s cuda_safe_div(%.6ff, %s);",
-                         result_var_prefix, result_expr, assign_op, op->operands.scalar_tensor.scalar, t_expr);
+                snprintf(line, sizeof(line), "  %s %s cuda_safe_div(%.6ff, %s);",
+                         r_expr, assign_op, op->operands.scalar_tensor.scalar, t_expr);
             }
             else
             {
-                snprintf(line, sizeof(line), "  %s%s %s %.6ff %s %s;",
-                         result_var_prefix, result_expr, assign_op, op->operands.scalar_tensor.scalar,
+                snprintf(line, sizeof(line), "  %s %s %.6ff %s %s;",
+                         r_expr, assign_op, op->operands.scalar_tensor.scalar,
                          get_cuda_operator(op->type), t_expr);
             }
             break;
@@ -493,13 +506,13 @@ bool kernel_generator_generate(kernel_generator_t *gen)
 
             if (op->type == OP_NEG)
             {
-                snprintf(line, sizeof(line), "  %s%s %s -%s;",
-                         result_var_prefix, result_expr, assign_op, t_expr);
+                snprintf(line, sizeof(line), "  %s %s -%s;",
+                         r_expr, assign_op, t_expr);
             }
             else
             {
-                snprintf(line, sizeof(line), "  %s%s %s %s(%s);",
-                         result_var_prefix, result_expr, assign_op, cuda_func, t_expr);
+                snprintf(line, sizeof(line), "  %s %s %s(%s);",
+                         r_expr, assign_op, cuda_func, t_expr);
             }
             break;
         }
@@ -508,17 +521,9 @@ bool kernel_generator_generate(kernel_generator_t *gen)
             break;
         }
 
-        if (op->result->trace.tensor_type == TENSOR_TYPE_OUTPUT)
-        {
-            append_code(&gen->kernel_code, "  %s[idx] = %s;\n", result_expr, result_expr);
-        }
-        else
-        {
-            append_code(&gen->kernel_code, "  %s\n", line);
-        }
+        append_code(&gen->kernel_code, "  %s\n", line);
 
         current = current->next;
-
     }
 
     append_code(&gen->kernel_code, "}\n");

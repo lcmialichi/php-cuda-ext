@@ -266,12 +266,9 @@ tensor_t *compile_and_execute_fusion(tensor_t *tensor)
     if (!tensor)
         return NULL;    
 
-    printf("1\n");
     kernel_generator_t *gen = kernel_generator_create(tensor);
     if (!gen)
         return NULL;
-
-    printf("2\n");
 
     if (!kernel_generator_analyze(gen))
     {
@@ -279,15 +276,12 @@ tensor_t *compile_and_execute_fusion(tensor_t *tensor)
         return NULL;
     }
 
-    printf("3\n");
-
     if (!kernel_generator_generate(gen))
     {
         kernel_generator_destroy(gen);
         return NULL;
     }
 
-    printf("4\n");
     kernel_generator_print(gen);
     kernel_generator_destroy(gen);
 

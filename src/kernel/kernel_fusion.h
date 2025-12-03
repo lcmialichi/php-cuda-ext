@@ -5,7 +5,7 @@
 #include "operations.h"
 
 void start_kernel_fusions();
-tensor_t *compile_and_execute_fusion(fusion_context_t *context);
+tensor_t *compile_and_execute_fusion(tensor_t *tensor);
 tensor_t *stop_kernel_fusions();
 bool is_tracing();
 void set_current_trace_output(tensor_t *t);

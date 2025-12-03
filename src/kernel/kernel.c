@@ -4,6 +4,7 @@
 #include "tensor.h"
 #include "kernel_fusion.h"
 #include "cuda_globals.h"
+#include "cuda_array.h"
 
 zend_class_entry *kernel_ce;
 static zend_object_handlers kernel_handlers;
@@ -11,6 +12,18 @@ static zend_object_handlers kernel_handlers;
 static void kernel_free_object(zend_object *object);
 static kernel_obj *php_kernel_fetch_object(zend_object *obj);
 static zend_object *kernel_create_object(zend_class_entry *class_type);
+
+tensor_t *convert_zend_object_to_tensor_t(zend_object *obj)
+{
+    cuda_array_obj *ca_obj = (cuda_array_obj *)((char *)obj - XtOffsetOf(cuda_array_obj, obj));
+    if (!ca_obj || ca_obj->tensor_handle == NULL)
+    {
+        zend_error(E_ERROR, "Attempting to access uninitialized tensor!");
+        return NULL;
+    }
+
+    return ca_obj->tensor_handle;
+}
 
 ZEND_METHOD(Kernel, fusion)
 {
@@ -32,16 +45,6 @@ ZEND_METHOD(Kernel, fusion)
 
     start_kernel_fusions();
     int call_status = zend_call_function(&fci, &fci_cache);
-    fusion_context_t *context = CUDA_G(current_fusion_context);
-
-    if (context == NULL)
-    {
-        RETVAL_ZVAL(&retval, 0, 1);
-        return;
-    }
-
-    compile_and_execute_fusion(context);
-    final_proxy_tensor = stop_kernel_fusions();
 
     if (call_status == FAILURE)
     {
@@ -49,19 +52,45 @@ ZEND_METHOD(Kernel, fusion)
         {
             zend_throw_error(NULL, "Failed to execute the fusion kernel callable (internal error).");
         }
-
+        stop_kernel_fusions();
         ZVAL_NULL(return_value);
         return;
     }
+
+    if (Z_TYPE(retval) != IS_OBJECT)
+    {
+        zend_throw_error(NULL, "Cuda\\Kernel::fusion callable must return a Cuda\\CudaArray object.");
+        zval_ptr_dtor(&retval);
+        stop_kernel_fusions();
+        ZVAL_NULL(return_value);
+        return;
+    }
+
+    final_proxy_tensor = convert_zend_object_to_tensor_t(Z_OBJ(retval));
+
     if (final_proxy_tensor == NULL)
     {
-        zend_throw_error(NULL, "Cuda\\Kernel::fusion callable must return a tensor object.");
+        zend_throw_error(NULL, "The returned object is not a valid Cuda tensor object.");
         zval_ptr_dtor(&retval);
+        stop_kernel_fusions();
         ZVAL_NULL(return_value);
         return;
     }
 
-    RETVAL_ZVAL(&retval, 0, 1);
+    fusion_context_t *context = CUDA_G(current_fusion_context);
+
+    if (context == NULL)
+    {
+        zend_throw_error(NULL, "Fusion context lost.");
+        zval_ptr_dtor(&retval);
+        stop_kernel_fusions();
+        return;
+    }
+
+    compile_and_execute_fusion(final_proxy_tensor);
+    stop_kernel_fusions();
+
+    RETVAL_ZVAL(&retval, 0, 0);
 }
 
 static kernel_obj *php_kernel_fetch_object(zend_object *obj)

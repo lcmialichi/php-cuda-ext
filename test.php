@@ -1,15 +1,16 @@
 <?php
 
-$test = Cuda\Kernel::fusion(function () {
+$tensor = Cuda\Kernel::fusion(function () {
     $rand0 = Cuda\CudaArray::rand([4, 4], -1, 1);
-    $rand1 = Cuda\CudaArray::rand([4, 4], -1, 1);
-    $rand2 = Cuda\CudaArray::rand([4, 4], -1, 1);
-    $rand3 = Cuda\CudaArray::rand([1, 4], -1, 1);
-    $rand4 = Cuda\CudaArray::rand([1, 4], -1, 1);
+    $rand1= Cuda\CudaArray::rand([4, 4], -1, 1);
+    $t0 = $rand0 + 10 * 5 / 11;
+    
+    $t2 = $rand0 + 100;
+    $t1 = ($t0 * 4 );
+    $t1 = $t1 / $rand1;
 
-    $tensor = ($rand0 * $rand1) / ($rand2 ** $rand3);
-    return $tensor * 3 /15  * $rand4;
+    return $t1;
 });
 
-var_dump($test);
+// $tensor->getShape();
 exit;

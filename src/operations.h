@@ -6,17 +6,20 @@
 
 typedef enum
 {
+    MODEL_ELEMENT_WISE,
+    MODEL_REDUCTION,
+    MODEL_COMPUTE_CALL,
+    MODEL_CONCAT,
+    METADATA_TRANSFORM
+} kernel_model_t;
+
+typedef enum
+{
     OP_ADD,
     OP_SUB,
     OP_MUL,
     OP_DIV,
     OP_POW,
-    OP_GT,
-    OP_LT,
-    OP_EQ,
-    OP_NE,
-    OP_GE,
-    OP_LE,
     OP_EXP,
     OP_SQRT,
     OP_LOG,
@@ -25,21 +28,36 @@ typedef enum
     OP_TAN,
     OP_ABS,
     OP_NEG,
+    OP_SELECT,
+    OP_CLAMP,
+    OP_CEIL,
+    OP_FLOOR,
+    OP_ROUND,
+
+    OP_GT,
+    OP_LT,
+    OP_EQ,
+    OP_NE,
+    OP_GE,
+    OP_LE,
+
     OP_REDUCE_SUM,
     OP_REDUCE_MEAN,
     OP_REDUCE_MAX,
     OP_REDUCE_MIN,
     OP_REDUCE_PROD,
+
     OP_ARG_MAX,
     OP_ARG_MIN,
 
     OP_CONCAT,
+
     OP_RESHAPE,
     OP_TRANSPOSE,
-    OP_SLICE
+    OP_SLICE,
+
+    OP_MATMUL
 } operation_type_t;
-
-
 
 typedef enum
 {
@@ -54,7 +72,8 @@ typedef struct _operation_t
 {
     operation_type_t type;
     operation_arity_t arity;
-    tensor_t * result;
+    tensor_t *result;
+    kernel_model_t *model;
     union
     {
         struct

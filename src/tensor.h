@@ -64,6 +64,7 @@ typedef struct tensor
         struct _operation_t *defining_op; // NULL if is not a result from op
         int expr_id;                      // -1 if not tracked
         char expr_alias[8];               // "" if not tracked
+        int kernel_refs;                  // if has more than 1 ref this kernel probably should be an output
     } trace;
 
     int is_on_gpu;
@@ -74,6 +75,30 @@ typedef struct tensor
 extern "C"
 {
 #endif
+
+#define TENSOR_KERNEL_TRACE(__tensor__)                                                                          \
+    do                                                                                                           \
+    {                                                                                                            \
+        if (UNEXPECTED((__tensor__) == NULL))                                                                    \
+        {                                                                                                        \
+            php_error_docref(NULL, E_WARNING, "TENSOR_KERNEL_TRACE called with NULL tensor.");                   \
+        }                                                                                                        \
+        else                                                                                                     \
+        {                                                                                                        \
+            if ((__tensor__)->trace.kernel_refs == 0)                                                            \
+            {                                                                                                    \
+                (__tensor__)->trace.kernel_refs = 1;                                                             \
+            }                                                                                                    \
+            else                                                                                                 \
+            {                                                                                                    \
+                (__tensor__)->trace.kernel_refs++;                                                               \
+                if ((__tensor__)->trace.kernel_refs > 1 && (__tensor__)->trace.tensor_type != TENSOR_TYPE_INPUT) \
+                {                                                                                                \
+                    (__tensor__)->trace.tensor_type = TENSOR_TYPE_OUTPUT;                                        \
+                }                                                                                                \
+            }                                                                                                    \
+        }                                                                                                        \
+    } while (0)
 
 #define TENSOR_ADD_REF(__tensor__)                                                        \
     do                                                                                    \

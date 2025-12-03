@@ -3,10 +3,11 @@
 
 #include "operations.h"
 
-typedef enum {
-    KERNEL_TYPE_ELEMENTWISE, 
+typedef enum
+{
+    KERNEL_TYPE_ELEMENTWISE,
     KERNEL_TYPE_REDUCTION,
-    KERNEL_TYPE_MIXED, 
+    KERNEL_TYPE_MIXED,
 } kernel_type_t;
 
 typedef struct
@@ -16,30 +17,37 @@ typedef struct
     int capacity;
 } tensor_list_t;
 
-typedef struct _kernel_generator {
+typedef struct _kernel_generator
+{
     fusion_context_t *context;
+    op_list_t  required_ops;
     
     int block_size;
-    int grid_size; 
+    int grid_size;
     kernel_type_t kernel_type;
-    
+    tensor_t * final_output;
+
+    tensor_list_t inputs;
+    tensor_list_t outputs;
+    tensor_list_t temps;
+
     char *header_code;
     char *device_code;
-    char *kernel_code; 
+    char *kernel_code;
     char *launch_code;
-    
+
     int total_threads;
     int memory_bytes;
     int num_params;
-    
+
 } kernel_generator_t;
 
-kernel_generator_t *kernel_generator_create(fusion_context_t *context);
+kernel_generator_t *kernel_generator_create(tensor_t *final_output);
 void kernel_generator_destroy(kernel_generator_t *gen);
 bool kernel_generator_analyze(kernel_generator_t *gen);
 bool kernel_generator_generate(kernel_generator_t *gen);
 void kernel_generator_print(kernel_generator_t *gen);
-bool kernel_generator_compile(kernel_generator_t *gen);
-bool kernel_generator_execute(kernel_generator_t *gen);
+// bool kernel_generator_compile(kernel_generator_t *gen);
+// bool kernel_generator_execute(kernel_generator_t *gen);
 
 #endif

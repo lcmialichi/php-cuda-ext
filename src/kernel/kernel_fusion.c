@@ -11,6 +11,7 @@
 
 static void fusion_auto_tag_tensor(tensor_t *tensor);
 static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *result);
+static kernel_model_t get_operation_model(operation_type_t op_type);
 
 void op_list_init(op_list_t *list)
 {
@@ -110,6 +111,8 @@ operation_t *fusion_create_tensor_tensor_op(operation_type_t type,
                                             tensor_t *a, tensor_t *b,
                                             tensor_t *result)
 {
+    TENSOR_KERNEL_TRACE(a);
+    TENSOR_KERNEL_TRACE(b);
     operation_t *op = fusion_create_base_op(type, result);
     if (!op)
         return NULL;
@@ -132,8 +135,9 @@ operation_t *fusion_create_tensor_scalar_op(operation_type_t type,
 {
     operation_t *op = fusion_create_base_op(type, result);
     if (!op)
-        return NULL;
-
+    return NULL;
+    
+    TENSOR_KERNEL_TRACE(tensor);
     op->arity = OP_TYPE_TENSOR_SCALAR;
     op->operands.tensor_scalar.tensor = tensor;
     op->operands.tensor_scalar.scalar = scalar;
@@ -152,6 +156,7 @@ operation_t *fusion_create_scalar_tensor_op(operation_type_t type,
     if (!op)
         return NULL;
 
+    TENSOR_KERNEL_TRACE(tensor);
     op->arity = OP_TYPE_SCALAR_TENSOR;
     op->operands.scalar_tensor.scalar = scalar;
     op->operands.scalar_tensor.tensor = tensor;
@@ -170,6 +175,7 @@ operation_t *fusion_create_unary_op(operation_type_t type,
     if (!op)
         return NULL;
 
+    TENSOR_KERNEL_TRACE(tensor);
     op->arity = OP_TYPE_UNARY_TENSOR;
     op->operands.unary.tensor = tensor;
 
@@ -255,14 +261,17 @@ bool is_tracing()
     return CUDA_G(is_tracing_enabled);
 }
 
-tensor_t *compile_and_execute_fusion(fusion_context_t *context)
+tensor_t *compile_and_execute_fusion(tensor_t *tensor)
 {
-    if (!context)
-        return NULL;
+    if (!tensor)
+        return NULL;    
 
-    kernel_generator_t *gen = kernel_generator_create(context);
+    printf("1\n");
+    kernel_generator_t *gen = kernel_generator_create(tensor);
     if (!gen)
         return NULL;
+
+    printf("2\n");
 
     if (!kernel_generator_analyze(gen))
     {
@@ -270,16 +279,19 @@ tensor_t *compile_and_execute_fusion(fusion_context_t *context)
         return NULL;
     }
 
+    printf("3\n");
+
     if (!kernel_generator_generate(gen))
     {
         kernel_generator_destroy(gen);
         return NULL;
     }
 
+    printf("4\n");
     kernel_generator_print(gen);
     kernel_generator_destroy(gen);
 
-    return context->trace_output;
+    return tensor;
 }
 
 void set_current_trace_output(tensor_t *t)
@@ -675,12 +687,62 @@ static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *resul
     op_list_add(&context->operation_nodes, op);
     context->tracker.op_counter++;
 
-   
-
     if (result)
     {
         fusion_link_tensor(result, op);
     }
 
     return op;
+}
+
+static kernel_model_t get_operation_model(operation_type_t op_type) {
+    switch (op_type) {
+        case OP_ADD:
+        case OP_SUB:
+        case OP_MUL:
+        case OP_DIV:
+        case OP_POW:
+        case OP_EXP:
+        case OP_SQRT:
+        case OP_LOG:
+        case OP_SIN:
+        case OP_COS:
+        case OP_TAN:
+        case OP_ABS:
+        case OP_NEG:
+        case OP_SELECT:
+        case OP_CLAMP:
+        case OP_CEIL:
+        case OP_FLOOR:
+        case OP_ROUND:
+        case OP_GT:
+        case OP_LT:
+        case OP_EQ:
+        case OP_NE:
+        case OP_GE:
+        case OP_LE:
+            return MODEL_ELEMENT_WISE;
+        
+        case OP_REDUCE_SUM:
+        case OP_REDUCE_MEAN:
+        case OP_REDUCE_MAX:
+        case OP_REDUCE_MIN:
+        case OP_REDUCE_PROD:
+        case OP_ARG_MAX:
+        case OP_ARG_MIN:
+            return MODEL_REDUCTION;
+            
+        case OP_RESHAPE:
+        case OP_TRANSPOSE:
+        case OP_SLICE:
+            return METADATA_TRANSFORM;
+
+        case OP_CONCAT:
+            return MODEL_CONCAT;
+        case OP_MATMUL:
+            return MODEL_COMPUTE_CALL;
+
+        default:
+            return MODEL_COMPUTE_CALL; 
+    }
 }

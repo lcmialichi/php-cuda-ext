@@ -274,25 +274,28 @@ tensor_t *compile_and_execute_fusion(tensor_t *tensor)
     if (!tensor)
         return NULL;
 
-    kernel_generator_t *gen = kernel_generator_create(tensor);
+      printf("1\n");
+    multi_kernel_generator *gen = multi_kernel_create(tensor);
     if (!gen)
         return NULL;
 
-    if (!kernel_generator_analyze(gen))
+      printf("2\n");
+    if (!multi_kernel_analyze_and_split(gen))
     {
-        kernel_generator_destroy(gen);
+        multi_kernel_destroy(gen);
         return NULL;
     }
 
-    if (!kernel_generator_generate(gen))
+      printf("3\n");
+    if (!multi_kernel_generate(gen))
     {
-        kernel_generator_destroy(gen);
+        multi_kernel_destroy(gen);
         return NULL;
     }
-
-    kernel_generator_print(gen);
-    kernel_generator_destroy(gen);
-
+      printf("4\n");
+    multi_kernel_generator_print(gen);
+    multi_kernel_destroy(gen);
+      printf("5\n");
     return tensor;
 }
 
@@ -376,6 +379,7 @@ static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *resul
     }
 
     op->output_id = context->tracker.temp_id_count++;
+    op->model = get_operation_model(op->type);
     snprintf(op->output_alias, sizeof(op->output_alias), "T%d", op->output_id);
 
     op_list_add(&context->operation_nodes, op);

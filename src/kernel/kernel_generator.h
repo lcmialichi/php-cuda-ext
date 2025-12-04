@@ -3,13 +3,6 @@
 
 #include "operations.h"
 
-typedef enum
-{
-    KERNEL_TYPE_ELEMENTWISE,
-    KERNEL_TYPE_REDUCTION,
-    KERNEL_TYPE_MIXED,
-} kernel_type_t;
-
 typedef struct
 {
     tensor_t **tensors;
@@ -19,12 +12,14 @@ typedef struct
 
 typedef struct _kernel_generator
 {
+    int id;
+    kernel_model_t kernel_type;
+
     fusion_context_t *context;
     op_list_t required_ops;
 
     int block_size;
     int grid_size;
-    kernel_type_t kernel_type;
     tensor_t *final_output;
 
     tensor_list_t inputs;
@@ -37,16 +32,45 @@ typedef struct _kernel_generator
     char *launch_code;
 
     int total_threads;
-    int memory_bytes;
+    size_t memory_bytes;
     int num_params;
 
+    struct _kernel_generator **dependencies;
+    int num_dependencies;
+    int num_ops;
+    int analyzed;
+    int generated;
+
 } kernel_generator_t;
+
+typedef struct _multi_kernel_generator
+{
+    kernel_generator_t **kernels;
+    int kernel_count;
+    int kernel_capacity;
+    tensor_t *final_output;
+
+    tensor_list_t inter_kernel_tensors;
+    int default_block_size;
+
+    char *header_code;
+    char *device_code;
+    char *combined_kernel_code;
+    char *combined_launch_code;
+
+    int analyzed;
+    int generated;
+
+} multi_kernel_generator;
 
 #define KERNEL_OPLIST_FOREACH(current, op_var)           \
     for (op_list_node_t *_node_ = (current);             \
          _node_ != NULL && ((op_var = _node_->op) || 1); \
          _node_ = _node_->next)                          \
         if ((op_var) != NULL)
+
+#define MULTI_KERNEL_FOREACH(multi, kg_var) \
+    for (int __i = 0; __i < (multi)->kernel_count && ((kg_var) = (multi)->kernels[__i]); __i++)
 
 #define SET_TENSOR_ACCESS(TARGET, TENSOR)                                       \
     if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                        \
@@ -72,11 +96,12 @@ typedef struct _kernel_generator
         snprintf(TARGET, sizeof(TARGET), "%s", get_result_alias(TENSOR));      \
     }
 
-kernel_generator_t *kernel_generator_create(tensor_t *final_output);
-void kernel_generator_destroy(kernel_generator_t *gen);
-bool kernel_generator_analyze(kernel_generator_t *gen);
-bool kernel_generator_generate(kernel_generator_t *gen);
-void kernel_generator_print(kernel_generator_t *gen);
+
+multi_kernel_generator *multi_kernel_create(tensor_t *final_output);
+void multi_kernel_destroy(multi_kernel_generator *multi);
+bool multi_kernel_analyze_and_split(multi_kernel_generator *multi);
+bool multi_kernel_generate(multi_kernel_generator *multi);
+void multi_kernel_generator_print(multi_kernel_generator *multi);
 // bool kernel_generator_compile(kernel_generator_t *gen);
 // bool kernel_generator_execute(kernel_generator_t *gen);
 

@@ -73,7 +73,7 @@ typedef struct _operation_t
     operation_type_t type;
     operation_arity_t arity;
     tensor_t *result;
-    kernel_model_t *model;
+    kernel_model_t model;
     union
     {
         struct

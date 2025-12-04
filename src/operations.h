@@ -62,8 +62,8 @@ typedef enum
 typedef enum
 {
     OP_TYPE_TENSOR_TENSOR,
-    OP_TYPE_TENSOR_SCALAR,
     OP_TYPE_SCALAR_TENSOR,
+    OP_TYPE_TENSOR_SCALAR,
     OP_TYPE_UNARY_TENSOR,
     OP_TYPE_NO_OPERAND,
 } operation_arity_t;

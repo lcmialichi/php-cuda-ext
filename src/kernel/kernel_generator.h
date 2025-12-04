@@ -20,12 +20,12 @@ typedef struct
 typedef struct _kernel_generator
 {
     fusion_context_t *context;
-    op_list_t  required_ops;
-    
+    op_list_t required_ops;
+
     int block_size;
     int grid_size;
     kernel_type_t kernel_type;
-    tensor_t * final_output;
+    tensor_t *final_output;
 
     tensor_list_t inputs;
     tensor_list_t outputs;
@@ -41,6 +41,36 @@ typedef struct _kernel_generator
     int num_params;
 
 } kernel_generator_t;
+
+#define KERNEL_OPLIST_FOREACH(current, op_var)           \
+    for (op_list_node_t *_node_ = (current);             \
+         _node_ != NULL && ((op_var = _node_->op) || 1); \
+         _node_ = _node_->next)                          \
+        if ((op_var) != NULL)
+
+#define SET_TENSOR_ACCESS(TARGET, TENSOR)                                       \
+    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                        \
+    {                                                                           \
+        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_operand_alias(TENSOR)); \
+    }                                                                           \
+    else                                                                        \
+    {                                                                           \
+        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_operand_alias(TENSOR)); \
+    }
+
+#define SET_RESULT_ACCESS(TARGET, TENSOR)                                      \
+    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_OUTPUT)                     \
+    {                                                                          \
+        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_result_alias(TENSOR)); \
+    }                                                                          \
+    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                  \
+    {                                                                          \
+        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_result_alias(TENSOR)); \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+        snprintf(TARGET, sizeof(TARGET), "%s", get_result_alias(TENSOR));      \
+    }
 
 kernel_generator_t *kernel_generator_create(tensor_t *final_output);
 void kernel_generator_destroy(kernel_generator_t *gen);

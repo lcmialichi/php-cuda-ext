@@ -20,6 +20,36 @@ static void add_tensor_if_new(tensor_list_t *list, tensor_t *tensor);
 static bool op_is_in_list(op_list_t *list, operation_t *op);
 static void op_list_destroy(op_list_t *list);
 
+static void kernel_gen_headers(kernel_generator_t *gen);
+static void kernel_gen_device_funcs(kernel_generator_t *gen);
+static void kernel_gen_kernels();
+static void kernel_gen_launchers();
+
+static char *kernel_define_op(operation_t *op);
+
+static void kernel_define_binary_op(operation_t *op, const char *result_expr,
+                                    const char *func, const char *oper,
+                                    char *expr, size_t expr_size);
+static void kernel_define_t_scalar_op(operation_t *op, const char *result_expr,
+                                      const char *func, const char *oper,
+                                      char *expr, size_t expr_size);
+static void kernel_define_scalar_t_op(operation_t *op, const char *result_expr,
+                                      const char *func, const char *oper,
+                                      char *expr, size_t expr_size);
+static void kernel_define_unary_op(operation_t *op, const char *result_expr,
+                                   const char *func, const char *oper,
+                                   char *expr, size_t expr_size);
+typedef void (*op_definer_t)(operation_t *op, const char *result_expr,
+                             const char *func, const char *oper,
+                             char *expr, size_t expr_size);
+
+static const op_definer_t op_definers[] = {
+    [OP_TYPE_TENSOR_TENSOR] = kernel_define_binary_op,
+    [OP_TYPE_TENSOR_SCALAR] = kernel_define_t_scalar_op,
+    [OP_TYPE_SCALAR_TENSOR] = kernel_define_scalar_t_op,
+    [OP_TYPE_UNARY_TENSOR] = kernel_define_unary_op,
+};
+
 static void append_code(char **code_buffer, const char *format, ...)
 {
     va_list args;
@@ -193,27 +223,27 @@ static void collect_dependencies_recursive(operation_t *op, op_list_t *required_
 
 static void collect_unique_tensors(const op_list_t *required_ops, tensor_list_t *list)
 {
-    op_list_node_t *current = required_ops->head;
     list->capacity = 32;
     list->tensors = (tensor_t **)ecalloc(list->capacity, sizeof(tensor_t *));
 
-    while (current != NULL)
+    operation_t *op;
+    KERNEL_OPLIST_FOREACH(required_ops->head, op)
     {
-        operation_t *op = current->op;
-        if (op)
+        if (!op)
         {
-            if (op->result)
-            {
-                add_tensor_if_new(list, op->result);
-            }
-            tensor_t *inputs[2] = {NULL};
-            int num_inputs = get_op_inputs(op, inputs);
-            for (int i = 0; i < num_inputs; i++)
-            {
-                add_tensor_if_new(list, inputs[i]);
-            }
+            continue;
         }
-        current = current->next;
+
+        if (op->result)
+        {
+            add_tensor_if_new(list, op->result);
+        }
+        tensor_t *inputs[2] = {NULL};
+        int num_inputs = get_op_inputs(op, inputs);
+        for (int i = 0; i < num_inputs; i++)
+        {
+            add_tensor_if_new(list, inputs[i]);
+        }
     }
 }
 
@@ -282,23 +312,25 @@ bool kernel_generator_analyze(kernel_generator_t *gen)
     bool has_reduction = false;
     op_list_node_t *current = gen->required_ops.head;
     size_t max_total_elements = 0;
-    while (current != NULL)
+
+    operation_t *op;
+    KERNEL_OPLIST_FOREACH(gen->required_ops.head, op)
     {
-        operation_t *op = current->op;
-        if (op)
+        if (!op)
         {
-            if (op->type >= OP_REDUCE_SUM && op->type <= OP_REDUCE_PROD)
-            {
-                has_reduction = true;
-            }
-            if (op->result && op->result->ndims > 0)
-            {
-                size_t op_elements = get_total_elements(op->result);
-                if (op_elements > max_total_elements)
-                    max_total_elements = op_elements;
-            }
+            continue;
         }
-        current = current->next;
+
+        if (op->type >= OP_REDUCE_SUM && op->type <= OP_REDUCE_PROD)
+        {
+            has_reduction = true;
+        }
+        if (op->result && op->result->ndims > 0)
+        {
+            size_t op_elements = get_total_elements(op->result);
+            if (op_elements > max_total_elements)
+                max_total_elements = op_elements;
+        }
     }
 
     gen->kernel_type = has_reduction ? KERNEL_TYPE_REDUCTION : KERNEL_TYPE_ELEMENTWISE;
@@ -376,10 +408,8 @@ bool kernel_generator_generate(kernel_generator_t *gen)
     tensor_list_t *outputs = &gen->outputs;
     tensor_list_t *temps = &gen->temps;
 
-    append_code(&gen->header_code, "// Generated CUDA fused kernel\n#include <cmath>\n\n");
-    append_code(&gen->device_code, "// Device functions\n");
-    append_code(&gen->device_code, "__device__ float cuda_safe_div(float a, float b) {\n");
-    append_code(&gen->device_code, "  return b != 0.0f ? a / b : 0.0f;\n}\n\n");
+    kernel_gen_headers(gen);
+    kernel_gen_device_funcs(gen);
 
     append_code(&gen->kernel_code, "__global__ void fused_kernel(\n");
     char *param_list = generate_parameter_list(inputs, outputs);
@@ -402,128 +432,16 @@ bool kernel_generator_generate(kernel_generator_t *gen)
     append_code(&gen->kernel_code, "\n");
     append_code(&gen->kernel_code, "  // Fused operations (Topologically Sorted)\n");
 
-    op_list_node_t *current = gen->required_ops.head;
-    char a_expr[64], b_expr[64], t_expr[64], r_expr[64];
-
-#define SET_TENSOR_ACCESS(TARGET, TENSOR)                                       \
-    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                        \
-    {                                                                           \
-        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_operand_alias(TENSOR)); \
-    }                                                                           \
-    else                                                                        \
-    {                                                                           \
-        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_operand_alias(TENSOR)); \
-    }
-
-#define SET_RESULT_ACCESS(TARGET, TENSOR)                                      \
-    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_OUTPUT)                     \
-    {                                                                          \
-        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_result_alias(TENSOR)); \
-    }                                                                          \
-    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                  \
-    {                                                                          \
-        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_result_alias(TENSOR)); \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        snprintf(TARGET, sizeof(TARGET), "%s", get_result_alias(TENSOR));      \
-    }
-
-    while (current != NULL)
+    operation_t *op;
+    KERNEL_OPLIST_FOREACH(gen->required_ops.head, op)
     {
-        operation_t *op = current->op;
-        if (!op)
+        char *expr = kernel_define_op(op);
+        if (expr)
         {
-            current = current->next;
-            continue;
+            append_code(&gen->kernel_code, "%s\n", expr);
+            efree(expr);
         }
-
-        char line[512];
-        const char *assign_op = "=";
-        SET_RESULT_ACCESS(r_expr, op->result);
-
-        switch (op->arity)
-        {
-        case OP_TYPE_TENSOR_TENSOR:
-        {
-            SET_TENSOR_ACCESS(a_expr, op->operands.tensor_tensor.a);
-            SET_TENSOR_ACCESS(b_expr, op->operands.tensor_tensor.b);
-
-            if (op->type == OP_POW)
-            {
-                snprintf(line, sizeof(line), "  %s %s powf(%s, %s);",
-                         r_expr, assign_op, a_expr, b_expr);
-            }
-            else
-            {
-                snprintf(line, sizeof(line), "  %s %s %s %s %s;",
-                         r_expr, assign_op, a_expr, get_cuda_operator(op->type), b_expr);
-            }
-            break;
-        }
-        case OP_TYPE_TENSOR_SCALAR:
-        {
-            SET_TENSOR_ACCESS(t_expr, op->operands.tensor_scalar.tensor);
-            if (op->type == OP_POW)
-            {
-                snprintf(line, sizeof(line), "  %s %s powf(%s, %.6ff);",
-                         r_expr, assign_op, t_expr, op->operands.tensor_scalar.scalar);
-            }
-            else
-            {
-                snprintf(line, sizeof(line), "  %s %s %s %s %.6ff;",
-                         r_expr, assign_op, t_expr, get_cuda_operator(op->type),
-                         op->operands.tensor_scalar.scalar);
-            }
-            break;
-        }
-        case OP_TYPE_SCALAR_TENSOR:
-        {
-            SET_TENSOR_ACCESS(t_expr, op->operands.scalar_tensor.tensor);
-
-            if (op->type == OP_SUB)
-            {
-                snprintf(line, sizeof(line), "  %s %s %.6ff - %s;",
-                         r_expr, assign_op, op->operands.scalar_tensor.scalar, t_expr);
-            }
-            else if (op->type == OP_DIV)
-            {
-                snprintf(line, sizeof(line), "  %s %s cuda_safe_div(%.6ff, %s);",
-                         r_expr, assign_op, op->operands.scalar_tensor.scalar, t_expr);
-            }
-            else
-            {
-                snprintf(line, sizeof(line), "  %s %s %.6ff %s %s;",
-                         r_expr, assign_op, op->operands.scalar_tensor.scalar,
-                         get_cuda_operator(op->type), t_expr);
-            }
-            break;
-        }
-        case OP_TYPE_UNARY_TENSOR:
-        {
-            SET_TENSOR_ACCESS(t_expr, op->operands.unary.tensor);
-            const char *cuda_func = get_cuda_function(op->type);
-
-            if (op->type == OP_NEG)
-            {
-                snprintf(line, sizeof(line), "  %s %s -%s;",
-                         r_expr, assign_op, t_expr);
-            }
-            else
-            {
-                snprintf(line, sizeof(line), "  %s %s %s(%s);",
-                         r_expr, assign_op, cuda_func, t_expr);
-            }
-            break;
-        }
-        default:
-            snprintf(line, sizeof(line), "  // Unsupported operation type\n");
-            break;
-        }
-
-        append_code(&gen->kernel_code, "  %s\n", line);
-
-        current = current->next;
+        // @todo if could not generate a operation expr return error
     }
 
     append_code(&gen->kernel_code, "}\n");
@@ -632,6 +550,20 @@ static void add_tensor_if_new(tensor_list_t *list, tensor_t *tensor)
     list->tensors[list->count++] = tensor;
 }
 
+static void kernel_gen_headers(kernel_generator_t *gen)
+{
+    append_code(&gen->header_code,
+                "// Generated CUDA fused kernel\n#include <cmath>\n\n");
+}
+
+static void kernel_gen_device_funcs(kernel_generator_t *gen)
+{
+    append_code(&gen->device_code,
+                "// Device functions\n",
+                "__device__ float cuda_safe_div(float a, float b) {\n",
+                "  return b != 0.0f ? a / b : 0.0f;\n}\n\n");
+}
+
 static size_t get_total_elements(const tensor_t *t)
 {
     if (!t || t->ndims == 0)
@@ -642,6 +574,133 @@ static size_t get_total_elements(const tensor_t *t)
         total *= t->shape[i];
     }
     return total;
+}
+
+static char *kernel_define_op(operation_t *op)
+{
+    if (!op || op->arity >= sizeof(op_definers) / sizeof(op_definers[0]))
+    {
+        return estrdup("  // Invalid operation");
+    }
+
+    const char *func = get_cuda_function(op->type);
+    const char *operator = get_cuda_operator(op->type);
+
+    char r_expr[64] = {0};
+    char expr[512] = {0};
+
+    SET_RESULT_ACCESS(r_expr, op->result);
+
+    op_definers[op->arity](op, r_expr, func, operator, expr, sizeof(expr));
+
+    return estrdup(expr);
+}
+
+static void kernel_define_binary_op(operation_t *op, const char *result_expr,
+                                    const char *func, const char *oper,
+                                    char *expr, size_t expr_size)
+{
+    char a_expr[64] = {0}, b_expr[64] = {0};
+
+    SET_TENSOR_ACCESS(a_expr, op->operands.tensor_tensor.a);
+    SET_TENSOR_ACCESS(b_expr, op->operands.tensor_tensor.b);
+
+    if (func)
+    {
+        snprintf(expr, expr_size, "  %s = %s(%s, %s);",
+                 result_expr, func, a_expr, b_expr);
+        return;
+    }
+
+    if (oper)
+    {
+        snprintf(expr, expr_size, "  %s = %s %s %s;",
+                 result_expr, a_expr, oper, b_expr);
+        return;
+    }
+
+    snprintf(expr, expr_size, "  // Unsupported binary operation\n");
+}
+
+static void kernel_define_scalar_t_op(operation_t *op, const char *result_expr,
+                                      const char *func, const char *oper,
+                                      char *expr, size_t expr_size)
+{
+    char t_expr[64] = {0};
+    float scalar;
+
+    SET_TENSOR_ACCESS(t_expr, op->operands.scalar_tensor.tensor);
+    scalar = op->operands.scalar_tensor.scalar;
+
+    if (func)
+    {
+        snprintf(expr, expr_size, "  %s = %s(%.6ff, %s);",
+                 result_expr, func, scalar, t_expr);
+        return;
+    }
+
+    if (oper)
+    {
+        snprintf(expr, expr_size, "  %s = %.6ff %s %s;",
+                 result_expr, scalar, oper, t_expr);
+
+        return;
+    }
+
+    snprintf(expr, expr_size, "  // Unsupported scalar operation\n");
+}
+
+static void kernel_define_t_scalar_op(operation_t *op, const char *result_expr,
+                                      const char *func, const char *oper,
+                                      char *expr, size_t expr_size)
+{
+    char t_expr[64] = {0};
+    float scalar;
+
+    SET_TENSOR_ACCESS(t_expr, op->operands.tensor_scalar.tensor);
+    scalar = op->operands.tensor_scalar.scalar;
+
+    if (func)
+    {
+        snprintf(expr, expr_size, "  %s = %s(%s, %.6ff);",
+                 result_expr, func, t_expr, scalar);
+        return;
+    }
+
+    if (oper)
+    {
+        snprintf(expr, expr_size, "  %s = %s %s %.6ff;",
+                 result_expr, t_expr, oper, scalar);
+
+        return;
+    }
+
+    snprintf(expr, expr_size, "  // Unsupported scalar operation\n");
+}
+
+static void kernel_define_unary_op(operation_t *op, const char *result_expr,
+                                   const char *func, const char *oper,
+                                   char *expr, size_t expr_size)
+{
+    char t_expr[64] = {0};
+    SET_TENSOR_ACCESS(t_expr, op->operands.unary.tensor);
+
+    if (op->type == OP_NEG)
+    {
+        snprintf(expr, expr_size, "  %s = -%s;",
+                 result_expr, t_expr);
+
+        return;
+    }
+
+    if (func)
+    {
+        snprintf(expr, expr_size, "  %s = %s(%s);",
+                 result_expr, func, t_expr);
+        return;
+    }
+
+    snprintf(expr, expr_size, "  // Unsupported unary operation\n");
 }
 
 static const char *get_cuda_function(operation_type_t type)
@@ -662,8 +721,10 @@ static const char *get_cuda_function(operation_type_t type)
         return "tanf";
     case OP_ABS:
         return "fabsf";
+    case OP_POW:
+        return "powf";
     default:
-        return "?";
+        return NULL;
     }
 }
 
@@ -686,6 +747,6 @@ static const char *get_cuda_operator(operation_type_t type)
     case OP_EQ:
         return "==";
     default:
-        return "?";
+        return NULL;
     }
 }

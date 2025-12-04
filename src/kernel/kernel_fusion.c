@@ -135,8 +135,8 @@ operation_t *fusion_create_tensor_scalar_op(operation_type_t type,
 {
     operation_t *op = fusion_create_base_op(type, result);
     if (!op)
-    return NULL;
-    
+        return NULL;
+
     TENSOR_KERNEL_TRACE(tensor);
     op->arity = OP_TYPE_TENSOR_SCALAR;
     op->operands.tensor_scalar.tensor = tensor;
@@ -223,29 +223,37 @@ void stop_kernel_fusions()
             op_list_node_t *next = current->next;
             operation_t *op = current->op;
 
-            if (op != NULL)
+            if (op == NULL)
             {
-                switch (op->arity)
-                {
-                case OP_TYPE_TENSOR_TENSOR:
-                    if (op->operands.tensor_tensor.a) TENSOR_DEL_REF(op->operands.tensor_tensor.a);
-                    if (op->operands.tensor_tensor.b) TENSOR_DEL_REF(op->operands.tensor_tensor.b);
-                    break;
-                case OP_TYPE_TENSOR_SCALAR:
-                    if (op->operands.tensor_scalar.tensor) TENSOR_DEL_REF(op->operands.tensor_scalar.tensor);
-                    break;
-                case OP_TYPE_SCALAR_TENSOR:
-                    if (op->operands.scalar_tensor.tensor) TENSOR_DEL_REF(op->operands.scalar_tensor.tensor);
-                    break;
-                case OP_TYPE_UNARY_TENSOR:
-                    if (op->operands.unary.tensor) TENSOR_DEL_REF(op->operands.unary.tensor);
-                    break;
-                default:
-                    break;
-                }
-                
-                efree(op);
+                efree(current);
+                current = next;
             }
+
+            switch (op->arity)
+            {
+            case OP_TYPE_TENSOR_TENSOR:
+                if (op->operands.tensor_tensor.a)
+                    TENSOR_DEL_REF(op->operands.tensor_tensor.a);
+                if (op->operands.tensor_tensor.b)
+                    TENSOR_DEL_REF(op->operands.tensor_tensor.b);
+                break;
+            case OP_TYPE_TENSOR_SCALAR:
+                if (op->operands.tensor_scalar.tensor)
+                    TENSOR_DEL_REF(op->operands.tensor_scalar.tensor);
+                break;
+            case OP_TYPE_SCALAR_TENSOR:
+                if (op->operands.scalar_tensor.tensor)
+                    TENSOR_DEL_REF(op->operands.scalar_tensor.tensor);
+                break;
+            case OP_TYPE_UNARY_TENSOR:
+                if (op->operands.unary.tensor)
+                    TENSOR_DEL_REF(op->operands.unary.tensor);
+                break;
+            default:
+                break;
+            }
+
+            efree(op);
 
             efree(current);
             current = next;
@@ -264,7 +272,7 @@ bool is_tracing()
 tensor_t *compile_and_execute_fusion(tensor_t *tensor)
 {
     if (!tensor)
-        return NULL;    
+        return NULL;
 
     kernel_generator_t *gen = kernel_generator_create(tensor);
     if (!gen)
@@ -689,54 +697,56 @@ static operation_t *fusion_create_base_op(operation_type_t type, tensor_t *resul
     return op;
 }
 
-static kernel_model_t get_operation_model(operation_type_t op_type) {
-    switch (op_type) {
-        case OP_ADD:
-        case OP_SUB:
-        case OP_MUL:
-        case OP_DIV:
-        case OP_POW:
-        case OP_EXP:
-        case OP_SQRT:
-        case OP_LOG:
-        case OP_SIN:
-        case OP_COS:
-        case OP_TAN:
-        case OP_ABS:
-        case OP_NEG:
-        case OP_SELECT:
-        case OP_CLAMP:
-        case OP_CEIL:
-        case OP_FLOOR:
-        case OP_ROUND:
-        case OP_GT:
-        case OP_LT:
-        case OP_EQ:
-        case OP_NE:
-        case OP_GE:
-        case OP_LE:
-            return MODEL_ELEMENT_WISE;
-        
-        case OP_REDUCE_SUM:
-        case OP_REDUCE_MEAN:
-        case OP_REDUCE_MAX:
-        case OP_REDUCE_MIN:
-        case OP_REDUCE_PROD:
-        case OP_ARG_MAX:
-        case OP_ARG_MIN:
-            return MODEL_REDUCTION;
-            
-        case OP_RESHAPE:
-        case OP_TRANSPOSE:
-        case OP_SLICE:
-            return METADATA_TRANSFORM;
+static kernel_model_t get_operation_model(operation_type_t op_type)
+{
+    switch (op_type)
+    {
+    case OP_ADD:
+    case OP_SUB:
+    case OP_MUL:
+    case OP_DIV:
+    case OP_POW:
+    case OP_EXP:
+    case OP_SQRT:
+    case OP_LOG:
+    case OP_SIN:
+    case OP_COS:
+    case OP_TAN:
+    case OP_ABS:
+    case OP_NEG:
+    case OP_SELECT:
+    case OP_CLAMP:
+    case OP_CEIL:
+    case OP_FLOOR:
+    case OP_ROUND:
+    case OP_GT:
+    case OP_LT:
+    case OP_EQ:
+    case OP_NE:
+    case OP_GE:
+    case OP_LE:
+        return MODEL_ELEMENT_WISE;
 
-        case OP_CONCAT:
-            return MODEL_CONCAT;
-        case OP_MATMUL:
-            return MODEL_COMPUTE_CALL;
+    case OP_REDUCE_SUM:
+    case OP_REDUCE_MEAN:
+    case OP_REDUCE_MAX:
+    case OP_REDUCE_MIN:
+    case OP_REDUCE_PROD:
+    case OP_ARG_MAX:
+    case OP_ARG_MIN:
+        return MODEL_REDUCTION;
 
-        default:
-            return MODEL_COMPUTE_CALL; 
+    case OP_RESHAPE:
+    case OP_TRANSPOSE:
+    case OP_SLICE:
+        return METADATA_TRANSFORM;
+
+    case OP_CONCAT:
+        return MODEL_CONCAT;
+    case OP_MATMUL:
+        return MODEL_COMPUTE_CALL;
+
+    default:
+        return MODEL_COMPUTE_CALL;
     }
 }

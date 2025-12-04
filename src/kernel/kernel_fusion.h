@@ -10,7 +10,6 @@ tensor_t *stop_kernel_fusions();
 bool is_tracing();
 void set_current_trace_output(tensor_t *t);
 void op_list_add(op_list_t *list, operation_t *new_op);
-void op_list_print();
 
 operation_t *fusion_create_tensor_tensor_op(operation_type_t type, 
                                            tensor_t *a, tensor_t *b,
@@ -27,7 +26,6 @@ operation_t *fusion_create_scalar_tensor_op(operation_type_t type,
 
 void fusion_link_tensor(tensor_t *tensor, operation_t *op);
 void fusion_tag_as_constant(tensor_t *tensor, const char *const_type);
-
 const char *fusion_get_tensor_alias(const tensor_t *tensor);
 
 #endif

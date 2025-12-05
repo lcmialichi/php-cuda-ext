@@ -1362,26 +1362,6 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
     create_result_object(return_value, tensor);
 }
 
-static void *get_gpu_source_pointer(tensor_t *t, size_t *out_size_elements)
-{
-
-    if (t->is_view && t->base_tensor)
-    {
-        tensor_t *root = t->base_tensor;
-        while (root->is_view && root->base_tensor)
-        {
-            root = root->base_tensor;
-        }
-        *out_size_elements = t->total_size;
-        return (char *)root->data + t->gpu_offset;
-    }
-    else
-    {
-        *out_size_elements = t->total_size;
-        return t->data;
-    }
-}
-
 static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 {
     HashTable *ht = Z_ARRVAL_P(tensors_array);

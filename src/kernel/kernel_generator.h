@@ -109,6 +109,9 @@ void multi_kernel_destroy(multi_kernel_generator *multi);
 bool multi_kernel_analyze_and_split(multi_kernel_generator *multi);
 bool multi_kernel_generate(multi_kernel_generator *multi);
 void multi_kernel_generator_print(multi_kernel_generator *multi);
+
+char *mk_get_code_as_c(multi_kernel_generator *multi);
+
 // bool kernel_generator_compile(kernel_generator_t *gen);
 // bool kernel_generator_execute(kernel_generator_t *gen);
 

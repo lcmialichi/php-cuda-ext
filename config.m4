@@ -17,6 +17,22 @@ if test "$PHP_CUDA" != "no"; then
     PHP_ADD_INCLUDE([src/cuda_array])
     PHP_ADD_LIBRARY(stdc++, 1, CUDA_SHARED_LIBADD)
 
+    AC_DEFINE_UNQUOTED(CUDA_INCLUDE_PATH_STR, "-I$PHP_CUDA/include", [inclusion path for NVRTC JIT])
+    AC_DEFINE_UNQUOTED(CUDA_CRT_INCLUDE_STR, "-I$PHP_CUDA/include/crt", [ C++ inclusion path for NVRTC JIT])
+
+    PHP_CHECK_LIBRARY(nvrtc, nvrtcCreateProgram, [
+    PHP_ADD_LIBRARY_WITH_PATH(nvrtc, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
+    ], [
+        AC_MSG_ERROR([libnvrtc not found. Please set PHP_CUDA or ensure libnvrtc is installed.])
+    ])
+
+    PHP_CHECK_LIBRARY(cuda, cuInit, [
+        PHP_ADD_LIBRARY_WITH_PATH(cuda, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
+    ], [
+        AC_MSG_WARN([libcuda (Driver API) not explicitly found. Assuming it is available in standard path.])
+        PHP_ADD_LIBRARY(cuda, CUDA_SHARED_LIBADD)
+    ])
+
     PHP_ADD_LIBRARY_WITH_PATH(cudart, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
     PHP_ADD_LIBRARY_WITH_PATH(curand, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
 

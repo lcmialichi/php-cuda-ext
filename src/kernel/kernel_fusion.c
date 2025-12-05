@@ -4,6 +4,10 @@
 #include "tensor.h"
 #include "operations.h"
 #include <string.h>
+#include <nvrtc.h>
+#include <cuda.h>
+#include "config.h"
+#include "memory_pool.h"
 
 #ifdef ZTS
 #include "TSRM.h"
@@ -274,28 +278,162 @@ tensor_t *compile_and_execute_fusion(tensor_t *tensor)
     if (!tensor)
         return NULL;
 
-    printf("1\n");
     multi_kernel_generator *gen = multi_kernel_create(tensor);
     if (!gen)
         return NULL;
 
-    printf("2\n");
     if (!multi_kernel_analyze_and_split(gen))
     {
         multi_kernel_destroy(gen);
         return NULL;
     }
 
-    printf("3\n");
     if (!multi_kernel_generate(gen))
     {
         multi_kernel_destroy(gen);
         return NULL;
     }
-    printf("4\n");
+
     multi_kernel_generator_print(gen);
+
+    nvrtcProgram prog;
+    char *code = mk_get_code_as_c(gen);
+
+    nvrtcResult program_result = nvrtcCreateProgram(&prog, code, "fused_kernel.cu", 0, NULL, NULL);
+    if (program_result != NVRTC_SUCCESS)
+    {
+        size_t log_size;
+        nvrtcGetProgramLogSize(prog, &log_size);
+        char *log = (char *)malloc(log_size + 1);
+        nvrtcGetProgramLog(prog, log);
+        php_error_docref(NULL, E_ERROR, "CUDA JIT Compilation Error: %s", log);
+        free(log);
+        return false;
+    }
+
+    const char *options[] = {
+        "-arch=sm_60",
+        "--use_fast_math",
+        "--std=c++14",
+        CUDA_INCLUDE_PATH_STR,
+        CUDA_CRT_INCLUDE_STR};
+
+    const int num_options = sizeof(options) / sizeof(options[0]);
+
+    nvrtcResult compile_result = nvrtcCompileProgram(prog, num_options, options);
+
+    if (compile_result != NVRTC_SUCCESS)
+    {
+        size_t log_size;
+        nvrtcGetProgramLogSize(prog, &log_size);
+        char *log = (char *)malloc(log_size + 1);
+        nvrtcGetProgramLog(prog, log);
+        php_error_docref(NULL, E_ERROR, "CUDA JIT Compilation Error: %s", log);
+        free(log);
+        return false;
+    }
+
+    size_t ptx_size;
+    nvrtcGetPTXSize(prog, &ptx_size);
+    char *ptx = (char *)malloc(ptx_size);
+    nvrtcGetPTX(prog, ptx);
+
+    cuInit(0);
+    CUdevice device;
+    cuDeviceGet(&device, 0);
+    CUcontext context;
+    cuCtxCreate(&context, 0, device);
+
+    CUmodule module;
+    cuModuleLoadData(&module, ptx);
+    kernel_generator_t *kgen;
+
+    MULTI_KERNEL_FOREACH(gen, kgen)
+    {
+        CUfunction kernel_handle;
+        char kernel_name[32];
+        snprintf(kernel_name, sizeof(kernel_name), "kernel_%d", kgen->id);
+        CUresult result = cuModuleGetFunction(&kernel_handle, module, kernel_name);
+        if (result != CUDA_SUCCESS)
+        {
+            const char *err_str;
+            cuGetErrorString(result, &err_str);
+            php_error_docref(NULL, E_ERROR,
+                             "CUDA JIT Driver API Error: Failed to find kernel '%s'. Error: %s",
+                             kernel_name, err_str);
+
+            return NULL;
+        }
+
+        int total_params = kgen->inputs.count + kgen->outputs.count;
+        void **kernel_params = (void **)malloc(total_params * sizeof(void *));
+
+        int param_idx = 0;
+
+        for (int j = 0; j < kgen->inputs.count; j++)
+        {
+            tensor_t *input_tensor = kgen->inputs.tensors[j];
+            size_t required_bytes = input_tensor->total_size * input_tensor->element_size;
+            if (!input_tensor->is_on_gpu)
+            {
+                size_t required_bytes = input_tensor->total_size * input_tensor->element_size;
+                input_tensor->allocated_size = required_bytes;
+                input_tensor->data = tensor_mem_alloc(required_bytes);
+            }
+
+            if (!input_tensor->data)
+            {
+                php_error_docref(NULL, E_ERROR, "Failed to allocate GPU memory for input");
+                return NULL;
+            }
+
+            kernel_params[param_idx++] = &input_tensor->data;
+        }
+
+        for (int j = 0; j < kgen->outputs.count; j++)
+        {
+            tensor_t *output_tensor = kgen->outputs.tensors[j];
+
+            if (!output_tensor->is_on_gpu)
+            {
+                size_t required_bytes = output_tensor->total_size * output_tensor->element_size;
+                output_tensor->allocated_size = required_bytes;
+                output_tensor->data = tensor_mem_alloc(required_bytes);
+            }
+
+            if (!output_tensor->data)
+            {
+                php_error_docref(NULL, E_ERROR, "Failed to allocate GPU memory for output");
+                return NULL;
+            }
+
+            kernel_params[param_idx++] = &output_tensor->data;
+        }
+        cuLaunchKernel(
+            kernel_handle,
+            kgen->grid_size, 1, 1,
+            kgen->block_size, 1, 1,
+            0,
+            NULL,
+            kernel_params,
+            NULL);
+
+        free(kernel_params);
+    }
+
+    cudaError_t sync_err = cuCtxSynchronize();
     multi_kernel_destroy(gen);
-    printf("5\n");
+    if (sync_err != CUDA_SUCCESS)
+    {
+        php_error_docref(NULL, E_ERROR, "CUDA JIT Synchronization Error: %s", cudaGetErrorString(sync_err));
+        return NULL;
+    }
+
+    tensor->is_on_gpu = 1;
+    tensor->is_proxy = 0;
+    tensor->trace.defining_op = NULL;
+    tensor->trace.kernel_refs = 0;
+
     return tensor;
 }
 

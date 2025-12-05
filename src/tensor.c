@@ -113,8 +113,10 @@ tensor_t *cuda_tensor_allocate_base(const int shape[], int ndims)
         tensor->strides[i] = stride;
         stride *= shape[i];
     }
-    tensor->total_size = stride;
 
+    tensor->total_size = stride;
+    tensor->element_size = sizeof(float); // @todo remove this mocked element_size
+    
     err = cudaMalloc((void **)&tensor->d_shape, ndims * sizeof(int));
     if (err != cudaSuccess)
     {

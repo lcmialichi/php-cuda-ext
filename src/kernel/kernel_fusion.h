@@ -4,6 +4,7 @@
 #include "tensor.h"
 #include "operations.h"
 
+
 void start_kernel_fusions();
 tensor_t *compile_and_execute_fusion(tensor_t *tensor);
 tensor_t *stop_kernel_fusions();
@@ -26,6 +27,10 @@ operation_t *fusion_create_scalar_tensor_op(operation_type_t type,
 operation_t *fusion_create_unary_op(operation_type_t type,
                                     tensor_t *tensor,
                                     tensor_t *result);
+
+operation_t *fusion_create_reduction_op(operation_type_t type,
+                                    tensor_t *tensor,
+                                    int axis);
 
 void fusion_link_tensor(tensor_t *tensor, operation_t *op);
 void fusion_tag_as_constant(tensor_t *tensor, const char *const_type);

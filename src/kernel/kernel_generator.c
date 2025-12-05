@@ -714,7 +714,7 @@ static void generate_single_kernel_code(kernel_generator_t *kg, int kernel_id)
     tensor_list_t *outputs = &kg->outputs;
     tensor_list_t *temps = &kg->temps;
 
-    append_code(&kg->kernel_code, "__global__ void kernel_%d(\n", kernel_id);
+    append_code(&kg->kernel_code, "extern \"C\" __global__ void kernel_%d(\n", kernel_id);
     char *param_list = generate_parameter_list(inputs, outputs);
     append_code(&kg->kernel_code, "%s", param_list);
     append_code(&kg->kernel_code, "\n) {\n");
@@ -819,8 +819,7 @@ bool multi_kernel_generate(multi_kernel_generator *multi)
 
     append_code(&multi->header_code,
                 "// Generated CUDA Multi-Kernel\n"
-                "#include <cuda_runtime.h>\n"
-                "#include <cmath>\n\n");
+                "#include <cuda_runtime.h>\n");
 
     append_code(&multi->device_code,
                 "// Device functions\n"
@@ -908,8 +907,50 @@ void multi_kernel_generator_print(multi_kernel_generator *multi)
     php_printf("\n// HEADER\n%s\n", multi->header_code);
     php_printf("// DEVICE FUNCTIONS\n%s\n", multi->device_code);
     php_printf("// COMBINED KERNELS\n%s\n", multi->combined_kernel_code);
-    php_printf("// COMBINED LAUNCH CONFIG\n%s\n", multi->combined_launch_code);
     php_printf("=======================================\n");
+}
+
+char *mk_get_code_as_c(multi_kernel_generator *multi)
+{
+    char *code = (char *)ecalloc(MAX_CODE_SIZE, 1);
+    int offset = 0;
+
+    offset += snprintf(code + offset, MAX_CODE_SIZE - offset,
+                       "// Generated CUDA Multi-Kernel\n"
+                       "#include <cuda_runtime.h>\n"
+                       "#include <device_launch_parameters.h>\n"
+                       "\n");
+
+    if (multi->header_code && strlen(multi->header_code) > 0)
+    {
+        offset += snprintf(code + offset, MAX_CODE_SIZE - offset,
+                           "// HEADER CODE\n"
+                           "%s\n"
+                           "\n",
+                           multi->header_code);
+    }
+
+    if (multi->device_code && strlen(multi->device_code) > 0)
+    {
+        offset += snprintf(code + offset, MAX_CODE_SIZE - offset,
+                           "// DEVICE FUNCTIONS\n"
+                           "%s\n"
+                           "\n",
+                           multi->device_code);
+    }
+
+    if (multi->combined_kernel_code && strlen(multi->combined_kernel_code) > 0)
+    {
+        offset += snprintf(code + offset, MAX_CODE_SIZE - offset,
+                           "// KERNELS\n\n%s", multi->combined_kernel_code);
+    }
+    else
+    {
+        offset += snprintf(code + offset, MAX_CODE_SIZE - offset,
+                           "// ERROR: No kernel code generated!\n");
+    }
+
+    return code;
 }
 
 static const char *get_operand_alias(const tensor_t *tensor)

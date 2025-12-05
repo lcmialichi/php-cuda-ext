@@ -6,10 +6,10 @@ $tensor = Cuda\Kernel::fusion(function () {
     $t0 = $rand0 + 10 * 5 / 11;
 
     $t2 = $rand0 + 100;
-    $t1 = ($t0 * 4);
-    $t1 = $t1 / ($rand1 * 2);
+    $t3 = ($t0 * 4);
+    $t4 = $t2 / ($rand1 * 2);
 
-    return $t1;
+    return $t4->sqrt();
 });
 
 // $tensor->getShape();

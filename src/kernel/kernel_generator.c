@@ -157,6 +157,7 @@ multi_kernel_generator *multi_kernel_create(tensor_t *final_output)
     if (!multi)
         return NULL;
 
+    final_output->trace.tensor_type = TENSOR_TYPE_OUTPUT;
     multi->final_output = final_output;
     multi->default_block_size = 256;
     multi->kernel_capacity = 8;
@@ -244,7 +245,6 @@ void multi_kernel_destroy(multi_kernel_generator *multi)
     efree(multi);
 }
 
-
 static void kernel_generator_destroy(kernel_generator_t *gen)
 {
     if (!gen)
@@ -266,7 +266,6 @@ static void kernel_generator_destroy(kernel_generator_t *gen)
 
     efree(gen);
 }
-
 
 static void collect_dependencies_recursive(operation_t *op, op_list_t *required_ops)
 {
@@ -383,8 +382,9 @@ bool multi_kernel_analyze_and_split(multi_kernel_generator *multi)
 
     operation_t *op = NULL;
     kernel_generator_t *current_kernel = NULL;
-    kernel_model_t current_model = MODEL_ELEMENT_WISE;
+    kernel_model_t last_model = MODEL_ELEMENT_WISE;
     int kernel_id = 0;
+    tensor_t *final_output = NULL;
 
     KERNEL_OPLIST_FOREACH(all_ops.head, op)
     {
@@ -392,24 +392,17 @@ bool multi_kernel_analyze_and_split(multi_kernel_generator *multi)
             continue;
 
         kernel_model_t op_model = op->model;
-
-        bool create_new_kernel = false;
-
-        if (!current_kernel)
+        if (!current_kernel || !can_fuse_models(last_model, op_model))
         {
-            create_new_kernel = true;
-        }
-        else if (!can_fuse_models(current_model, op_model))
-        {
-            create_new_kernel = true;
-        }
+            if (final_output != NULL && current_kernel != NULL)
+            {
+                final_output->trace.tensor_type = TENSOR_TYPE_OUTPUT;
+                current_kernel->final_output = final_output;
+            }
 
-        if (create_new_kernel)
-        {
             current_kernel = kernel_generator_create_single(NULL, multi->default_block_size);
             if (!current_kernel)
             {
-                printf("here\n");
                 op_list_destroy(&all_ops);
                 return false;
             }
@@ -424,11 +417,14 @@ bool multi_kernel_analyze_and_split(multi_kernel_generator *multi)
                 return false;
             }
 
-            current_model = op_model;
+            last_model = op_model;
         }
 
+        final_output = op->result;
         op_list_append(&current_kernel->required_ops, op);
     }
+
+    current_kernel->final_output = multi->final_output;
 
     for (int i = 0; i < multi->kernel_count; i++)
     {
@@ -468,61 +464,18 @@ static bool analyze_single_kernel(kernel_generator_t *kg)
         if (!t)
             continue;
 
-        bool is_produced = false;
-        op_list_node_t *current = kg->required_ops.head;
-        while (current)
+        if (t->trace.tensor_type == TENSOR_TYPE_OUTPUT)
         {
-            if (current->op && current->op->result == t)
-            {
-                is_produced = true;
-                break;
-            }
-            current = current->next;
-        }
-
-        bool is_consumed = false;
-        current = kg->required_ops.head;
-        while (current)
-        {
-            operation_t *op = current->op;
-            if (op)
-            {
-                tensor_t *inputs[2] = {NULL};
-                int num_inputs = get_op_inputs(op, inputs);
-                for (int j = 0; j < num_inputs; j++)
-                {
-                    if (inputs[j] == t)
-                    {
-                        is_consumed = true;
-                        break;
-                    }
-                }
-            }
-            if (is_consumed)
-                break;
-            current = current->next;
-        }
-
-        if (is_produced)
-        {
-            t->trace.tensor_type = TENSOR_TYPE_OUTPUT;
             add_tensor_if_new(&kg->outputs, t);
         }
-        else if (is_consumed)
+        else if (t->trace.tensor_type == TENSOR_TYPE_INPUT)
         {
-            t->trace.tensor_type = TENSOR_TYPE_INPUT;
             add_tensor_if_new(&kg->inputs, t);
         }
         else
         {
-            t->trace.tensor_type = TENSOR_TYPE_TEMP;
             add_tensor_if_new(&kg->temps, t);
         }
-    }
-
-    if (kg->required_ops.tail && kg->required_ops.tail->op)
-    {
-        kg->final_output = kg->required_ops.tail->op->result;
     }
 
     if (kg->final_output)
@@ -731,7 +684,7 @@ static char *generate_parameter_list(tensor_list_t *inputs, tensor_list_t *outpu
         {
             append_code(&params, ",\n");
         }
-        append_code(&params, "  const float* %s", t->trace.expr_alias);
+        append_code(&params, "  const float* %s%s", INP_PREFIX, t->trace.expr_alias);
         param_count++;
     }
 
@@ -742,7 +695,7 @@ static char *generate_parameter_list(tensor_list_t *inputs, tensor_list_t *outpu
         {
             append_code(&params, ",\n");
         }
-        append_code(&params, "  float* %s", t->trace.expr_alias);
+        append_code(&params, "  float* %s%s", OUT_PREFIX, t->trace.expr_alias);
         param_count++;
     }
 
@@ -782,7 +735,7 @@ static void generate_single_kernel_code(kernel_generator_t *kg, int kernel_id)
             tensor_t *t = temps->tensors[i];
             if (t && t->trace.expr_alias[0] != '\0')
             {
-                append_code(&kg->kernel_code, "  float %s;\n", t->trace.expr_alias);
+                append_code(&kg->kernel_code, "  float %s%s;\n", TMP_PREFIX, t->trace.expr_alias);
             }
         }
         append_code(&kg->kernel_code, "\n");

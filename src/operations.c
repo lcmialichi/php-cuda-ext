@@ -53,6 +53,23 @@ tensor_t *create_scalar_operation_node(operation_type_t op_type, tensor_t *a, fl
     return result_proxy;
 }
 
+tensor_t *create_unary_operation_node(operation_type_t op_type, tensor_t *a)
+{
+    int result_shape[MAX_DIMS];
+    int result_dims;
+
+    tensor_t *result_proxy = create_new_tensor_proxy(a->shape, a->ndims);
+    operation_t *op = fusion_create_unary_op(op_type, a,  result_proxy);
+
+    if (!op)
+    {
+        zend_throw_error(NULL, "Memory allocation failed for operation node.");
+        return NULL;
+    }
+
+    return result_proxy;
+}
+
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *result_shape, int *result_dims,

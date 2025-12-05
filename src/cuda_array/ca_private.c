@@ -109,8 +109,9 @@ reduction_arg_fn get_reduction_arg_fn(operation_type_t op)
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
-    if (is_tracing()) {
-        return trace_binary_operation(operation_type, a, b); 
+    if (is_tracing())
+    {
+        return trace_binary_operation(operation_type, a, b);
     }
 
     broadcast_fn func = get_broadcast_fn(operation_type);
@@ -162,8 +163,9 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
 tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
-    if (is_tracing()) {
-        return trace_scalar_operation(operation_type, a, scalar); 
+    if (is_tracing())
+    {
+        return trace_scalar_operation(operation_type, a, scalar);
     }
 
     tensor_t *result = resolve_result_tensor(a);
@@ -196,6 +198,11 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_t
 tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
+    if (is_tracing())
+    {
+        return trace_unary_operation(operation_type, a);
+    }
+
     unary_fn func = get_unary_fn(operation_type);
     if (func == NULL)
     {

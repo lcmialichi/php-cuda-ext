@@ -33,3 +33,19 @@ tensor_t *trace_scalar_operation(operation_type_t op_type, tensor_t *a, float b)
 
     return result_proxy;
 }
+
+
+tensor_t *trace_unary_operation(operation_type_t op_type, tensor_t *a)
+{
+    tensor_t *result_proxy = create_unary_operation_node(op_type, a);
+
+    if (result_proxy == NULL)
+    {
+        zend_throw_error(NULL, "Failed to allocate tensor proxy for tracing.");
+        return NULL;
+    }
+
+    set_current_trace_output(result_proxy);
+
+    return result_proxy;
+}

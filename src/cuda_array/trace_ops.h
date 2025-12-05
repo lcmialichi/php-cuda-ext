@@ -6,5 +6,6 @@
 
 tensor_t *trace_binary_operation(operation_type_t op_type, tensor_t *a, tensor_t *b);
 tensor_t *trace_scalar_operation(operation_type_t op_type, tensor_t *a, float b);
+tensor_t *trace_unary_operation(operation_type_t op_type, tensor_t *a);
 
 #endif

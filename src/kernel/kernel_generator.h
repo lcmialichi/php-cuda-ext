@@ -10,6 +10,10 @@ typedef struct
     int capacity;
 } tensor_list_t;
 
+#define TMP_PREFIX "tmp_"
+#define INP_PREFIX "inp_"
+#define OUT_PREFIX "out_"
+
 typedef struct _kernel_generator
 {
     int id;
@@ -72,30 +76,33 @@ typedef struct _multi_kernel_generator
 #define MULTI_KERNEL_FOREACH(multi, kg_var) \
     for (int __i = 0; __i < (multi)->kernel_count && ((kg_var) = (multi)->kernels[__i]); __i++)
 
-#define SET_TENSOR_ACCESS(TARGET, TENSOR)                                       \
-    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                        \
-    {                                                                           \
-        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_operand_alias(TENSOR)); \
-    }                                                                           \
-    else                                                                        \
-    {                                                                           \
-        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_operand_alias(TENSOR)); \
+#define SET_TENSOR_ACCESS(TARGET, TENSOR)                                                     \
+    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                                      \
+    {                                                                                         \
+        snprintf(TARGET, sizeof(TARGET), "%s%s", TMP_PREFIX, get_operand_alias(TENSOR));      \
+    }                                                                                         \
+    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_INPUT)                                \
+    {                                                                                         \
+        snprintf(TARGET, sizeof(TARGET), "%s%s[idx]", INP_PREFIX, get_operand_alias(TENSOR)); \
+    }                                                                                         \
+    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_OUTPUT)                               \
+    {                                                                                         \
+        snprintf(TARGET, sizeof(TARGET), "%s%s[idx]", OUT_PREFIX, get_operand_alias(TENSOR)); \
     }
 
-#define SET_RESULT_ACCESS(TARGET, TENSOR)                                      \
-    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_OUTPUT)                     \
-    {                                                                          \
-        snprintf(TARGET, sizeof(TARGET), "%s[idx]", get_result_alias(TENSOR)); \
-    }                                                                          \
-    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                  \
-    {                                                                          \
-        snprintf(TARGET, sizeof(TARGET), "temp_%s", get_result_alias(TENSOR)); \
-    }                                                                          \
-    else                                                                       \
-    {                                                                          \
-        snprintf(TARGET, sizeof(TARGET), "%s", get_result_alias(TENSOR));      \
+#define SET_RESULT_ACCESS(TARGET, TENSOR)                                                     \
+    if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_OUTPUT)                                    \
+    {                                                                                         \
+        snprintf(TARGET, sizeof(TARGET), "%s%s[idx]", OUT_PREFIX, get_operand_alias(TENSOR)); \
+    }                                                                                         \
+    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_TEMP)                                 \
+    {                                                                                         \
+        snprintf(TARGET, sizeof(TARGET), "%s%s", TMP_PREFIX, get_operand_alias(TENSOR));   \
+    }                                                                                         \
+    else if ((TENSOR)->trace.tensor_type == TENSOR_TYPE_INPUT)                                \
+    {                                                                                         \
+        snprintf(TARGET, sizeof(TARGET), "%s%s", INP_PREFIX, get_result_alias(TENSOR));       \
     }
-
 
 multi_kernel_generator *multi_kernel_create(tensor_t *final_output);
 void multi_kernel_destroy(multi_kernel_generator *multi);

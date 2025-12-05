@@ -170,6 +170,7 @@ typedef struct _fusion_context_t
 
 tensor_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b);
 tensor_t *create_scalar_operation_node(operation_type_t op_type, tensor_t *a, float b);
+tensor_t *create_unary_operation_node(operation_type_t op_type, tensor_t *a);
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *result_shape, int *result_dims,

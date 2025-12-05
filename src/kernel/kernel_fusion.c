@@ -274,28 +274,28 @@ tensor_t *compile_and_execute_fusion(tensor_t *tensor)
     if (!tensor)
         return NULL;
 
-      printf("1\n");
+    printf("1\n");
     multi_kernel_generator *gen = multi_kernel_create(tensor);
     if (!gen)
         return NULL;
 
-      printf("2\n");
+    printf("2\n");
     if (!multi_kernel_analyze_and_split(gen))
     {
         multi_kernel_destroy(gen);
         return NULL;
     }
 
-      printf("3\n");
+    printf("3\n");
     if (!multi_kernel_generate(gen))
     {
         multi_kernel_destroy(gen);
         return NULL;
     }
-      printf("4\n");
+    printf("4\n");
     multi_kernel_generator_print(gen);
     multi_kernel_destroy(gen);
-      printf("5\n");
+    printf("5\n");
     return tensor;
 }
 

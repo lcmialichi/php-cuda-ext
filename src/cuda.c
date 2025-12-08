@@ -11,6 +11,7 @@
 #include "cuda_array.h"
 #include "cuda.h"
 #include "kernel.h"
+#include "cuda_attributes.h" 
 
 ZEND_DECLARE_MODULE_GLOBALS(cuda);
 
@@ -43,18 +44,12 @@ PHP_INI_END()
 static PHP_GINIT_FUNCTION(cuda)
 {
     cuda_globals->memory_size = "3G";
-    cuda_globals->current_fusion_context = NULL;
-    cuda_globals->is_tracing_enabled = false;
 }
 
 
 PHP_MINIT_FUNCTION(cuda)
 {
     REGISTER_INI_ENTRIES();
-
-    CUDA_G(memory_size) = NULL;
-    CUDA_G(current_fusion_context) = NULL;
-    CUDA_G(is_tracing_enabled) = 0;
 
     const char *ini_value = INI_STR("cuda.memory_size");
     size_t pool_size = parse_size_string(ini_value);
@@ -65,6 +60,7 @@ PHP_MINIT_FUNCTION(cuda)
         php_error_docref(NULL, E_WARNING, "CUDA initialization failed");
     }
 
+    cuda_attr_init();
     if (!cuda_array_init(pool_size))
     {
         return FAILURE;
@@ -298,8 +294,6 @@ PHP_RSHUTDOWN_FUNCTION(cuda)
 
 PHP_RINIT_FUNCTION(cuda)
 {
-    CUDA_G(current_fusion_context) = NULL;
-    CUDA_G(is_tracing_enabled) = false;
     return SUCCESS;
 }
 

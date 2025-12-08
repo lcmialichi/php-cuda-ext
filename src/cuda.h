@@ -17,8 +17,6 @@ extern zend_module_entry cuda_module_entry;
 
 ZEND_BEGIN_MODULE_GLOBALS(cuda)
 char *memory_size;
-fusion_context_t *current_fusion_context;
-bool is_tracing_enabled;
 ZEND_END_MODULE_GLOBALS(cuda)
 
 ZEND_EXTERN_MODULE_GLOBALS(cuda);

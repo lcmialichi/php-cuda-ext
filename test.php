@@ -1,46 +1,33 @@
 <?php
 
-$start2 = microtime(true);
+use Cuda\CudaArray;
+use Cuda\Attr as Attr;
 
-$ones = Cuda\CudaArray::ones([1024, 516, 32]);
-$fours = Cuda\CudaArray::rand([1024, 516, 32]);
+class UserKernel extends Cuda\Kernel
+{
+    #[Cuda\Attr\Kernel(name: 'fused_relu_scale', target: 'sm_60')]
+    public function kernel_with_metadata(
+        #[Attr\Input(dtype: 'float')] array $a,
+        #[Attr\Input(dtype: 'float')] array $b,
+        #[Attr\Output(dtype: 'float')] array $c
+    ): void {
+        $idx = $this->threadIdx();
+        $c[$idx] = $this->calculateMax($a[$idx], $b[$idx]) * 2.0;
+    }
 
-$temp1 = ($ones * $fours) / 11;
-$temp2 = ($temp1 * $ones) ** 3;
-$temp3 = ($temp2 * 2) / 1;
-$temp4 = ($temp3 * $fours) / 1;
-$temp5 = ($temp4 * 2) / 1;
-$temp6 = ($temp5 * $fours) / 1;
-$temp7 = ($temp6 * 2) / 1;
-$temp8 = ($temp7 * $fours) / 1;
-$temp8->sqrt() ** 2;
+    #[Cuda\Attr\Device(name: 'calculate_max', target: 'sm_60')]
+    private function calculateMax(
+        #[Attr\Input(dtype: 'float')] float $a,
+        #[Attr\Input(dtype: 'int')] float $b
+    ): float {
 
-$time2 = round(microtime(true) - $start2, 3);
+        if ($a > 10) {
+            return max($a * $b, 0.0);
+        }
 
-$start1 = microtime(true);
-$tensor = Cuda\Kernel::fusion(function () {
-    $ones = Cuda\CudaArray::ones([1024, 516, 32]);
-    $fours = Cuda\CudaArray::rand([1024, 516, 32]);
+        return $b;
+    }
+}
 
-    $temp1 = ($ones * $fours) / 11;
-    $temp2 = ($temp1 * $ones) ** 3;
-    $temp3 = ($temp2 * 2) / 1;
-    $temp4 = ($temp3 * $fours) / 1;
-    $temp5 = ($temp4 * 2) / 1;
-    $temp6 = ($temp5 * $fours) / 1;
-    $temp7 = ($temp6 * 2) / 1;
-    $temp8 = ($temp7 * $fours) / 1;
-    return $temp8->sqrt() ** 2;
-});
-
-$time1 = round(microtime(true) - $start1, 3);
-
-var_dump([
-    'NOT_FUSED' => $time2,
-    'FUSED' => $time1
-]);
-
-exit;
-
-
+$userKernel = new UserKernel(); // aqui compila
 

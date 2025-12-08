@@ -1,128 +1,213 @@
 #include "kernel.h"
 #include "ke_arginfo.h"
 #include "php.h"
-#include "tensor.h"
-#include "kernel_fusion.h"
-#include "cuda_globals.h"
-#include "cuda_array.h"
+#include "zend_compile.h"
+#include "zend_attributes.h"
+#include "kernel_reflection.h" 
+#include "zend_compile.h"
+#include "zend_string.h"
+#include "zend_operators.h"
+#include "zend_ast.h"
 
 zend_class_entry *kernel_ce;
 static zend_object_handlers kernel_handlers;
 
-static void kernel_free_object(zend_object *object);
-static kernel_obj *php_kernel_fetch_object(zend_object *obj);
-static zend_object *kernel_create_object(zend_class_entry *class_type);
+static int indent_level = 0;
 
-tensor_t *convert_zend_object_to_tensor_t(zend_object *obj)
-{
-    cuda_array_obj *ca_obj = (cuda_array_obj *)((char *)obj - XtOffsetOf(cuda_array_obj, obj));
-    if (!ca_obj || ca_obj->tensor_handle == NULL)
-    {
-        zend_error(E_ERROR, "Attempting to access uninitialized tensor!");
-        return NULL;
+extern zend_class_entry *cuda_attr_kernel_ce;
+extern zend_class_entry *cuda_attr_device_ce;
+extern cuda_method_attribute_args *cuda_extract_method_attribute(zend_function *fptr, zend_class_entry *ce_attribute);
+
+static void print_indent() {
+    for (int i = 0; i < indent_level; i++) {
+        php_printf("  ");
     }
-
-    return ca_obj->tensor_handle;
 }
 
-ZEND_METHOD(Kernel, fusion)
-{
-    zend_fcall_info fci;
-    zend_fcall_info_cache fci_cache;
+static const char *get_ast_kind_name(zend_ast *ast) {
+    if (ast == NULL) return "NULL";
+    
+    switch (ast->kind) {
+        case ZEND_AST_ZVAL: return "LITERAL";
+        case ZEND_AST_CONSTANT: return "CONSTANT";
 
-    zval retval;
-    ZVAL_UNDEF(&retval);
+        case ZEND_AST_STMT_LIST: return "STMT_LIST";
+        case ZEND_AST_IF: return "IF";
+        case ZEND_AST_IF_ELEM: return "IF_ELEM";
+        case ZEND_AST_WHILE: return "WHILE";
+        case ZEND_AST_DO_WHILE: return "DO_WHILE";
+        case ZEND_AST_FOR: return "FOR";
+        case ZEND_AST_ARG_LIST: return "ARG_LIST"; 
+        case ZEND_AST_EXPR_LIST: return "EXPR_LIST";
 
-    tensor_t *final_proxy_tensor = NULL;
+        case ZEND_AST_VAR: return "VAR";
+        case ZEND_AST_RETURN: return "RETURN";
+        case ZEND_AST_CONST: return "CONST_FETCH";
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-    Z_PARAM_FUNC(fci, fci_cache)
-    ZEND_PARSE_PARAMETERS_END();
+        case ZEND_AST_DIM: return "ARRAY_ACCESS";
+        case ZEND_AST_CALL: return "CALL";
+        
+        case ZEND_AST_ASSIGN: return "ASSIGN";
+        case ZEND_AST_ASSIGN_OP: return "ASSIGN_OP";
+        case ZEND_AST_BINARY_OP: return "BINARY_OP";
 
-    fci.retval = &retval;
-    fci.param_count = 0;
-    fci.params = NULL;
+        case ZEND_AST_GREATER: return "OP_GREATER"; 
+        case ZEND_AST_GREATER_EQUAL: return "OP_GEQUAL";
+        case ZEND_AST_AND: return "OP_AND";
+        case ZEND_AST_OR: return "OP_OR";
+        
+        case ZEND_AST_METHOD_CALL: return "METHOD_CALL";
+        case ZEND_AST_CONDITIONAL: return "TERNARY_OP";
 
-    start_kernel_fusions();
-    int call_status = zend_call_function(&fci, &fci_cache);
+        default: 
+            php_printf("UNKNOWN_KIND(%d)", ast->kind); 
+            return "UNKNOWN";
+    }
+}
 
-    if (call_status == FAILURE)
-    {
-        if (!EG(exception))
-        {
-            zend_throw_error(NULL, "Failed to execute the fusion kernel callable (internal error).");
+static void print_ast_recursive(zend_ast *ast) {
+    if (ast == NULL) return;
+
+    print_indent();
+    
+    php_printf("[%s] ", get_ast_kind_name(ast));
+
+    if (ast->kind == ZEND_AST_ZVAL) {
+        zend_ast_zval *zval_node = (zend_ast_zval *)ast;
+        php_printf("Value: ");
+        zend_print_zval(&zval_node->val, 0);
+        php_printf("\n");
+        return;
+    } 
+    
+    if (ast->kind == ZEND_AST_VAR) {
+        php_printf("Variable:\n");
+        indent_level++;
+        print_ast_recursive(ast->child[0]);
+        indent_level--;
+        return;
+    }
+    
+    if (ast->kind == ZEND_AST_BINARY_OP) {
+        php_printf("Opcode: %d\n", ast->attr); 
+    } else {
+        php_printf("\n");
+    }
+
+    indent_level++;
+    
+    if (zend_ast_is_list(ast)) {
+        zend_ast_list *list = (zend_ast_list *)ast;
+        for (uint32_t i = 0; i < list->children; i++) {
+            print_ast_recursive(list->child[i]);
         }
-        stop_kernel_fusions();
-        ZVAL_NULL(return_value);
-        return;
+    } else {
+        uint32_t children = zend_ast_get_num_children(ast);
+        for (uint32_t i = 0; i < children; i++) {
+            print_ast_recursive(ast->child[i]);
+        }
     }
 
-    if (Z_TYPE(retval) != IS_OBJECT)
-    {
-        zend_throw_error(NULL, "Cuda\\Kernel::fusion callable must return a Cuda\\CudaArray object.");
-        zval_ptr_dtor(&retval);
-        stop_kernel_fusions();
-        ZVAL_NULL(return_value);
-        return;
-    }
-
-    final_proxy_tensor = convert_zend_object_to_tensor_t(Z_OBJ(retval));
-
-    if (final_proxy_tensor == NULL)
-    {
-        zend_throw_error(NULL, "The returned object is not a valid Cuda tensor object.");
-        zval_ptr_dtor(&retval);
-        stop_kernel_fusions();
-        ZVAL_NULL(return_value);
-        return;
-    }
-
-    fusion_context_t *context = CUDA_G(current_fusion_context);
-
-    if (context == NULL)
-    {
-        zend_throw_error(NULL, "Fusion context lost.");
-        zval_ptr_dtor(&retval);
-        stop_kernel_fusions();
-        return;
-    }
-
-    compile_and_execute_fusion(final_proxy_tensor);
-    stop_kernel_fusions();
-
-    RETVAL_ZVAL(&retval, 0, 0);
+    indent_level--;
 }
 
-static kernel_obj *php_kernel_fetch_object(zend_object *obj)
-{
-    return (kernel_obj *)((char *)obj - XtOffsetOf(kernel_obj, obj));
+zend_string *cuda_extract_method_source_code(zend_function *fptr) {
+    const char *source = 
+        "<?php \n"
+        "if ($a > 10) { \n"
+        "    return max($a * $b, 0.0); \n"
+        "} \n"
+
+        "$a[$index] = 10;\n"
+        "return $b;";
+    
+    return zend_string_init(source, strlen(source), 0);
 }
 
-static void kernel_free_object(zend_object *object)
-{
-    kernel_obj *obj = php_kernel_fetch_object(object);
+static void kernel_free_object(zend_object *object) {
+    kernel_obj *obj = (kernel_obj *)((char *)object - XtOffsetOf(kernel_obj, obj));
     zend_object_std_dtor(&obj->obj);
 }
 
-static zend_object *kernel_create_object(zend_class_entry *class_type)
-{
-    kernel_obj *obj = (kernel_obj *)ecalloc(1, sizeof(kernel_obj));
+static kernel_obj *php_kernel_fetch_object(zend_object *obj) {
+    return (kernel_obj *)((char *)obj - XtOffsetOf(kernel_obj, obj));
+}
 
+static zend_object *kernel_create_object(zend_class_entry *class_type) {
+    kernel_obj *obj = (kernel_obj *)ecalloc(1, sizeof(kernel_obj));
     zend_object_std_init(&obj->obj, class_type);
     object_properties_init(&obj->obj, class_type);
-
     obj->obj.handlers = &kernel_handlers;
     return &obj->obj;
 }
 
+
+ZEND_METHOD(Kernel, __construct)
+{
+    zend_class_entry *ce = Z_OBJCE_P(ZEND_THIS);
+    zend_function *fptr;
+    zend_string *method_name;
+
+    php_printf("=== STARTING KERNEL COMPILATION for %s ===\n", ZSTR_VAL(ce->name));
+
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&ce->function_table, method_name, fptr) {
+        
+        if (ZSTR_VAL(method_name)[0] == '_') {
+            continue;
+        }
+
+        cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_device_ce);
+
+        if (fargs) {
+            zend_string *method_source_code = NULL;
+            zend_arena *ast_arena = NULL;
+            zend_ast *root_ast = NULL;
+
+            php_printf("\n-> Processing Kernel: %s (Target: %s)\n", ZSTR_VAL(fptr->common.function_name), ZSTR_VAL(fargs->target));
+
+            method_source_code = cuda_extract_method_source_code(fptr);
+
+            if (method_source_code) {
+                
+                root_ast = zend_compile_string_to_ast(
+                    method_source_code, 
+                    &ast_arena, 
+                    fptr->common.function_name
+                );
+
+                if (root_ast) {
+                    php_printf("   [SUCCESS] AST created. Root Kind: %s\n", get_ast_kind_name(root_ast));
+                    
+                    php_printf("*** GENERATED AST STRUCTURE ***\n");
+                    indent_level = 0; 
+                    print_ast_recursive(root_ast);
+                    php_printf("*** END OF AST ***\n");
+
+                } else {
+                    php_printf("   [FAILURE] Could not compile source to AST.\n");
+                }
+
+                if (ast_arena) {
+                    zend_arena_destroy(ast_arena);
+                }
+                zend_string_release(method_source_code);
+            }
+        }
+
+    } ZEND_HASH_FOREACH_END();
+    
+    php_printf("=== KERNEL COMPILATION ENDED ===\n");
+}
+
 int kernel_init()
 {
-    zend_class_entry *kernel_ce = register_kernel_class();
-
-    kernel_ce->create_object = kernel_create_object;
+    zend_class_entry *kernel_ce_local = register_kernel_class();
+    
+    kernel_ce_local->create_object = kernel_create_object;
 
     memcpy(&kernel_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     kernel_handlers.offset = XtOffsetOf(kernel_obj, obj);
     kernel_handlers.free_obj = kernel_free_object;
+    
     return 1;
 }

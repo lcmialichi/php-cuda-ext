@@ -1,75 +1,12 @@
 #include "operations.h"
 #include "php.h"
-#include "trace_ops.h"
 #include "cuda.h"
-#include "kernel_fusion.h"
 
 static int calculate_broadcast_shape(int *a_shape, int a_dims, int *b_shape, int b_dims, int *result_shape, int *result_dims);
 static void calculate_tensor_strides(tensor_t *tensor,
                                      int *result_shape,
                                      int result_dims,
                                      int *tensor_strides);
-
-tensor_t *create_tensor_operation_node(operation_type_t op_type, tensor_t *a, tensor_t *b)
-{
-    int result_shape[MAX_DIMS];
-    int result_dims;
-    int a_strides[MAX_DIMS] = {0};
-    int b_strides[MAX_DIMS] = {0};
-    size_t total_elements;
-
-    if (!prepare_broadcast_operation(a, b, result_shape, &result_dims, a_strides, b_strides, &total_elements))
-    {
-        zend_throw_error(NULL, "Broadcast shapes are incompatible for operation %d.", op_type);
-        return NULL;
-    }
-
-    tensor_t *result_proxy = create_new_tensor_proxy(result_shape, result_dims);
-    operation_t *op = fusion_create_tensor_tensor_op(op_type, a, b, result_proxy);
-
-    if (!op)
-    {
-        zend_throw_error(NULL, "Memory allocation failed for operation node.");
-        return NULL;
-    }
-
-    return result_proxy;
-}
-
-tensor_t *create_scalar_operation_node(operation_type_t op_type, tensor_t *a, float b)
-{
-    int result_shape[MAX_DIMS];
-    int result_dims;
-
-    tensor_t *result_proxy = create_new_tensor_proxy(a->shape, a->ndims);
-    operation_t *op = fusion_create_tensor_scalar_op(op_type, a, b, result_proxy);
-
-    if (!op)
-    {
-        zend_throw_error(NULL, "Memory allocation failed for operation node.");
-        return NULL;
-    }
-
-    return result_proxy;
-}
-
-tensor_t *create_unary_operation_node(operation_type_t op_type, tensor_t *a)
-{
-    int result_shape[MAX_DIMS];
-    int result_dims;
-
-    tensor_t *result_proxy = create_new_tensor_proxy(a->shape, a->ndims);
-    operation_t *op = fusion_create_unary_op(op_type, a,  result_proxy);
-
-    if (!op)
-    {
-        zend_throw_error(NULL, "Memory allocation failed for operation node.");
-        return NULL;
-    }
-
-    return result_proxy;
-}
-
 
 int prepare_broadcast_operation(tensor_t *a, tensor_t *b,
                                 int *result_shape, int *result_dims,

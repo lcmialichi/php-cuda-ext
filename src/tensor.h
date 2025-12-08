@@ -57,16 +57,6 @@ typedef struct tensor
     int num_slices;
     size_t *d_strides;
     int *d_shape;
-    int is_proxy;
-    struct
-    {
-        tensor_type_t tensor_type;
-        struct _operation_t *defining_op; // NULL if is not a result from op
-        int expr_id;                      // -1 if not tracked
-        char expr_alias[8];               // "" if not tracked
-        int kernel_refs;                  // if has more than 1 ref this kernel probably should be an output
-    } trace;
-
     int is_on_gpu;
     int is_dirty;
 } tensor_t;
@@ -75,56 +65,6 @@ typedef struct tensor
 extern "C"
 {
 #endif
-
-#define TENSOR_KERNEL_TRACE(__tensor__)                                                                          \
-    do                                                                                                           \
-    {                                                                                                            \
-        if (UNEXPECTED((__tensor__) == NULL))                                                                    \
-        {                                                                                                        \
-            php_error_docref(NULL, E_WARNING, "TENSOR_KERNEL_TRACE called with NULL tensor.");                   \
-        }                                                                                                        \
-        else                                                                                                     \
-        {                                                                                                        \
-            if ((__tensor__)->trace.kernel_refs == 0)                                                            \
-            {                                                                                                    \
-                (__tensor__)->trace.kernel_refs = 1;                                                             \
-            }                                                                                                    \
-            else                                                                                                 \
-            {                                                                                                    \
-                (__tensor__)->trace.kernel_refs++;                                                               \
-                if ((__tensor__)->trace.kernel_refs > 1 && (__tensor__)->trace.tensor_type != TENSOR_TYPE_INPUT) \
-                {                                                                                                \
-                    (__tensor__)->trace.tensor_type = TENSOR_TYPE_OUTPUT;                                        \
-                }                                                                                                \
-            }                                                                                                    \
-        }                                                                                                        \
-    } while (0)
-
-#define TENSOR_ADD_REF(__tensor__)                                                        \
-    do                                                                                    \
-    {                                                                                     \
-        if (UNEXPECTED((__tensor__) == NULL))                                             \
-        {                                                                                 \
-            php_error_docref(NULL, E_WARNING, "TENSOR_ADD_REF called with NULL tensor."); \
-        }                                                                                 \
-        else                                                                              \
-        {                                                                                 \
-            (__tensor__)->ref_count++;                                                    \
-        }                                                                                 \
-    } while (0)
-
-#define TENSOR_DEL_REF(__tensor__)                                                        \
-    do                                                                                    \
-    {                                                                                     \
-        if (UNEXPECTED((__tensor__) == NULL))                                             \
-        {                                                                                 \
-            php_error_docref(NULL, E_WARNING, "TENSOR_ADD_REF called with NULL tensor."); \
-        }                                                                                 \
-        else                                                                              \
-        {                                                                                 \
-            (__tensor__)->ref_count--;                                                    \
-        }                                                                                 \
-    } while (0)
 
 #define CUDA_CHECK_AND_RETURN_NULL(__tensor__)                                           \
     do                                                                                   \
@@ -163,7 +103,6 @@ extern "C"
     void lazy_copy_metadata_to_gpu(tensor_t *t);
     char *tensor_shape_as_string(tensor_t *tensor);
 
-    tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims);
     tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);
     tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *strides, int dims, size_t offset, size_t total_size);
     tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices);

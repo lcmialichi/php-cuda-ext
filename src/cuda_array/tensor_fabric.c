@@ -220,7 +220,6 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int
     tensor->d_shape = d_shape;
     tensor->d_strides = d_strides;
     tensor->element_size = element_size;
-    tensor->is_proxy = 0;
     tensor->is_on_gpu = 1;
 
     size_t required_bytes = tensor->total_size * element_size;
@@ -440,9 +439,6 @@ tensor_t *cuda_tensor_clone(tensor_t *base_tensor)
     {
         return NULL;
     }
-
-    size_t total_elements = base_tensor->total_size;
-    size_t total_bytes = total_elements * base_tensor->element_size;
 
     tensor_t *new_tensor = cuda_tensor_create(base_tensor->shape, base_tensor->ndims, base_tensor->data, base_tensor->dtype);
 

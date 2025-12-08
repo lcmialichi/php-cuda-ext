@@ -144,36 +144,6 @@ tensor_t *cuda_tensor_allocate_base(const int shape[], int ndims)
     return tensor;
 }
 
-tensor_t *create_new_tensor_proxy(int *result_shape, int result_dims)
-{
-    tensor_t *proxy = cuda_tensor_allocate_base(result_shape, result_dims);
-
-    if (UNEXPECTED(!proxy))
-    {
-        php_error_docref(NULL, E_WARNING, "Failed to allocate memory for new tensor proxy.");
-        return NULL;
-    }
-
-    if (proxy->data != NULL)
-    {
-        proxy->data = NULL;
-        proxy->allocated_size = 0;
-    }
-
-    proxy->is_proxy = 1;
-    proxy->is_view = 0;
-    proxy->gpu_offset = 0;
-    proxy->data = NULL;
-    proxy->ref_count = 1;
-    proxy->num_slices = 0;
-    proxy->slices = NULL;
-    proxy->dtype = DTYPE_FLOAT; // this cannot be mocked
-    proxy->trace.tensor_type = TENSOR_TYPE_TEMP;
-    proxy->trace.kernel_refs = 0;
-
-    return proxy;
-}
-
 void lazy_copy_metadata_to_gpu(tensor_t *t)
 {
     cudaError_t err_shape = cudaMalloc((void **)&t->d_shape, t->ndims * sizeof(int));
@@ -203,7 +173,6 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     view->ndims = dims;
     view->base_tensor = base_tensor;
     base_tensor->ref_count++;
-    view->is_proxy = 0;
     view->num_slices = 0;
     view->dtype = base_tensor->dtype;
     view->slices = NULL;
@@ -516,7 +485,7 @@ int cuda_initialized()
 
 void cuda_tensor_destroy(tensor_t *tensor)
 {
-    if (!tensor || tensor->is_proxy == 1)
+    if (!tensor)
         return;
 
     if (tensor->is_view && !tensor->base_tensor)

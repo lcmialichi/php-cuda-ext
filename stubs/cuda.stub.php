@@ -2,11 +2,9 @@
 
 namespace Cuda;
 
+
 class Kernel
 {
-    public static function fusion(callable $callable): mixed
-    {
-    }
 }
 
 /**

@@ -146,7 +146,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_METHOD_CALL, handle_not_allowed},
     {ZEND_AST_NULLSAFE_METHOD_CALL, handle_not_allowed},
     {ZEND_AST_STATIC_CALL, handle_not_allowed},
-    {ZEND_AST_CONDITIONAL, handler_ast_allowed_simple}, // Operador ternário (a ? b : c)
+    {ZEND_AST_CONDITIONAL, handler_ast_allowed_simple},
 
     {ZEND_AST_TRY, handle_not_allowed},
     {ZEND_AST_CATCH, handle_not_allowed},
@@ -165,8 +165,6 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_PARAM, handle_not_allowed},
 };
 
-// --- FUNÇÃO DE DISPATCH ---
-
 handler get_ast_handler(zend_ast_kind kind)
 {
     for (int i = 0; i < sizeof(php_ast_handlers) / sizeof(php_ast_handler); i++)
@@ -175,8 +173,6 @@ handler get_ast_handler(zend_ast_kind kind)
 
     return NULL;
 }
-
-// --- FUNÇÃO PRINCIPAL ---
 
 int compile_ast_as_valid_cuda(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
@@ -192,20 +188,13 @@ int compile_ast_as_valid_cuda(smart_string *cuda_code_buffer, zend_ast *ast, fun
         return handle_not_allowed(cuda_code_buffer, ast, input, ouput);
     }
 
-    // O handler faz a validação, gera o código e chama a recursão nos filhos
     if (handler_func(cuda_code_buffer, ast, input, ouput) != 1)
     {
-        return 0; // Falha na validação ou geração de código
+        return 0;
     }
 
     return 1;
 }
-
-// ----------------------------------------------------------------------
-// --- IMPLEMENTAÇÕES DOS HANDLERS ---
-// ----------------------------------------------------------------------
-
-// --- Handlers de Erro e Recursão Simples ---
 
 static int handle_not_allowed(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
@@ -213,12 +202,8 @@ static int handle_not_allowed(smart_string *cuda_code_buffer, zend_ast *ast, fun
     return 0;
 }
 
-// Handler para nós que são permitidos, mas onde a sintaxe é injetada
-// (Requer lógica complexa para injetar operadores, parênteses e ponto-e-vírgula)
 static int handler_ast_allowed_simple(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
-    // A implementação real exigiria uma tabela de operadores para prefixos/infixos.
-    // Por simplicidade, vamos apenas validar e recursar nos filhos.
 
     uint32_t children = zend_ast_get_num_children(ast);
     for (uint32_t i = 0; i < children; i++)
@@ -229,14 +214,9 @@ static int handler_ast_allowed_simple(smart_string *cuda_code_buffer, zend_ast *
         }
     }
 
-    // NOTA: Para este nó funcionar de verdade (ex: UNARY_MINUS), você precisa
-    // injetar o '-' ANTES da recursão, mas saber quando fechar é complexo.
-    // Esta função precisaria de uma grande refatoração ou ser substituída por handlers específicos.
-
     return 1;
 }
 
-// Handler de Contêiner de Listas (ex: ARG_LIST, EXPR_LIST)
 static int handler_ast_list_container(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
     zend_ast_list *list = (zend_ast_list *)ast;
@@ -247,7 +227,6 @@ static int handler_ast_list_container(smart_string *cuda_code_buffer, zend_ast *
         {
             return 0;
         }
-        // Adiciona vírgula, mas APENAS se não for o último elemento
         if (i < list->children - 1)
         {
             smart_string_appends(cuda_code_buffer, ", ");
@@ -256,15 +235,12 @@ static int handler_ast_list_container(smart_string *cuda_code_buffer, zend_ast *
     return 1;
 }
 
-// --- HANDLERS ESTRUTURAIS ---
-
 static int handle_ast_stmt_list(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
     zend_ast_list *list = (zend_ast_list *)ast;
 
     for (uint32_t i = 0; i < list->children; i++)
     {
-        // Chamada recursiva para cada statement
         if (compile_ast_as_valid_cuda(cuda_code_buffer, list->child[i], input, ouput) != 1)
         {
             return 0;
@@ -275,7 +251,6 @@ static int handle_ast_stmt_list(smart_string *cuda_code_buffer, zend_ast *ast, f
 
 static int handler_ast_if(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
-    // Apenas itera sobre os IF_ELEM (IF, ELSEIF, ELSE)
     zend_ast_list *list = (zend_ast_list *)ast;
     for (uint32_t i = 0; i < list->children; i++)
     {
@@ -289,27 +264,19 @@ static int handler_ast_if(smart_string *cuda_code_buffer, zend_ast *ast, func_pa
 
 static int handle_ast_if_elem(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
-    // ast->child[0] é a Condição, ast->child[1] é o Corpo
 
-    // Injeta a sintaxe 'if ('
     smart_string_appends(cuda_code_buffer, "if (");
-
-    // Compila a Condição recursivamente
     if (compile_ast_as_valid_cuda(cuda_code_buffer, ast->child[0], input, ouput) != 1)
     {
         return 0;
     }
 
-    // Finaliza a condição e abre o corpo
     smart_string_appends(cuda_code_buffer, ") {\n");
-
-    // Compila o Corpo (STMT_LIST) recursivamente
     if (compile_ast_as_valid_cuda(cuda_code_buffer, ast->child[1], input, ouput) != 1)
     {
         return 0;
     }
 
-    // Fecha o bloco
     smart_string_appends(cuda_code_buffer, "}\n");
     return 1;
 }
@@ -318,7 +285,6 @@ static int handler_ast_return(smart_string *cuda_code_buffer, zend_ast *ast, fun
 {
     smart_string_appends(cuda_code_buffer, "return ");
 
-    // Compila a expressão de retorno
     if (compile_ast_as_valid_cuda(cuda_code_buffer, ast->child[0], input, ouput) != 1)
     {
         return 0;
@@ -327,8 +293,6 @@ static int handler_ast_return(smart_string *cuda_code_buffer, zend_ast *ast, fun
     smart_string_appends(cuda_code_buffer, ";\n");
     return 1;
 }
-
-// --- HANDLERS DE EXPRESSÃO ---
 
 static int handler_ast_zval(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
@@ -368,17 +332,13 @@ static int handler_ast_zval(smart_string *cuda_code_buffer, zend_ast *ast, func_
 
 static int handler_ast_var(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
-    // A validação de escopo e tipo é crucial aqui, mas omitida por brevidade.
-
     zend_ast_zval *var_name_node = (zend_ast_zval *)ast->child[0];
     if (Z_TYPE(var_name_node->val) == IS_STRING)
     {
-        // Gera o nome da variável C/CUDA (sem o '$')
         smart_string_appendl(cuda_code_buffer, Z_STRVAL(var_name_node->val), Z_STRLEN(var_name_node->val));
     }
     else
     {
-        // Variável complexa (ex: $$var)
         php_error_docref(NULL, E_ERROR, "Complex variable names are not allowed in CUDA kernel.");
         return 0;
     }
@@ -388,8 +348,6 @@ static int handler_ast_var(smart_string *cuda_code_buffer, zend_ast *ast, func_p
 static int handler_ast_binary_op(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
     const char *op_symbol = NULL;
-    // php_printf("DEBUG: handler_ast_binary_op received attribute: %d\n", ast->attr);
-
     switch (ast->attr)
     {
     case ZEND_NOP:
@@ -426,7 +384,6 @@ static int handler_ast_binary_op(smart_string *cuda_code_buffer, zend_ast *ast, 
         return 0;
     smart_string_appendc(cuda_code_buffer, ')');
 
-    // Se for um statement (ASSIGN), adicione ';'
     if (ast->attr == ZEND_ASSIGN) // || ast->attr == ZEND_ASSIGN_ADD
     {
         smart_string_appends(cuda_code_buffer, ";\n");
@@ -437,10 +394,7 @@ static int handler_ast_binary_op(smart_string *cuda_code_buffer, zend_ast *ast, 
 
 static int handler_ast_comp_op(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
-    // ast->child[0] é LHS, ast->child[1] é RHS
     const char *op_symbol = NULL;
-
-    // Mapeamento para operadores de comparação
     switch (ast->kind)
     {
     case ZEND_AST_GREATER:
@@ -471,13 +425,9 @@ static int handler_ast_comp_op(smart_string *cuda_code_buffer, zend_ast *ast, fu
 
 static int handler_ast_call(smart_string *cuda_code_buffer, zend_ast *ast, func_parameter_list *input, func_parameter_list *ouput)
 {
-    // ast->child[0] é o nome da função (ZVAL), ast->child[1] são os argumentos (ARG_LIST)
-
-    // 1. Geração do nome da função
     zend_ast_zval *func_name_node = (zend_ast_zval *)ast->child[0];
     if (Z_TYPE(func_name_node->val) == IS_STRING)
     {
-        // Validação: A função 'max' é permitida? (Precisa de uma lista de funções CUDA permitidas)
         smart_string_appendl(cuda_code_buffer, Z_STRVAL(func_name_node->val), Z_STRLEN(func_name_node->val));
     }
     else

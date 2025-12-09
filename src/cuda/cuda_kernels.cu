@@ -3,6 +3,7 @@
 #include "cuda_kernels.h"
 #include <float.h>
 #include <cstdio>
+#include "../data_types.h"
 
 #define SUCCESS 0
 #define FAILURE 1
@@ -241,12 +242,12 @@ extern "C"
 
         switch (output_tensor->dtype)
         {
-        case DTYPE_FLOAT:
+        case FLOAT32:
             concat_kernel_float<<<grid_size, block_size>>>(
                 d_params,
                 (float *)output_tensor->data);
             break;
-        case DTYPE_INT:
+        case INT32:
             concat_kernel_int32<<<grid_size, block_size>>>(
                 d_params,
                 (int *)output_tensor->data);

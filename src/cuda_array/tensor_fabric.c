@@ -3,6 +3,7 @@
 #include "memory_pool.h"
 #include <time.h>
 #include <curand.h>
+#include "data_types.h"
 
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
@@ -164,7 +165,7 @@ tensor_t *cuda_tensor_create_empty(const int shape[], int ndims)
     return cuda_tensor_create_float(shape, ndims, NULL);
 }
 
-tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int dtype)
+tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dtype_t dtype)
 {
     if (!tensor_init())
         return NULL;
@@ -174,18 +175,18 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int
         return NULL;
 
     size_t element_size;
-    if (dtype == DTYPE_FLOAT)
+    if (dtype == FLOAT32)
     {
         element_size = sizeof(float);
     }
-    else if (dtype == DTYPE_INT)
+    else if (dtype == INT32)
     {
         element_size = sizeof(int);
     }
     else
     {
         efree(tensor);
-        zend_throw_error(NULL, "Unsupported data type for tensor creation: %d", dtype);
+        zend_throw_error(NULL, "Unsupported data type for tensor creation");
         return NULL;
     }
 
@@ -263,12 +264,12 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, int
 
 tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[])
 {
-    return cuda_tensor_create(shape, ndims, data, DTYPE_FLOAT);
+    return cuda_tensor_create(shape, ndims, data, FLOAT32);
 }
 
 tensor_t *cuda_tensor_create_int(const int shape[], int ndims, const int data[])
 {
-    return cuda_tensor_create(shape, ndims, data, DTYPE_INT);
+    return cuda_tensor_create(shape, ndims, data, INT32);
 }
 
 tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)

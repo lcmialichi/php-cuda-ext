@@ -10,15 +10,6 @@ typedef struct _kernel_obj {
     int is_compiled;
 } kernel_obj;
 
-typedef struct cuda_context {
-    char *code;
-    size_t size;
-    size_t capacity;
-    int indent_level;
-    int temp_var_counter;
-    zend_bool in_device_function;
-} cuda_context_t;
-
 
 int kernel_init();
 

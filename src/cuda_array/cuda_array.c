@@ -7,6 +7,7 @@
 #include "memory_pool.h"
 #include "cuda.h"
 #include "zend_smart_str.h"
+#include "data_types.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -571,7 +572,7 @@ ZEND_METHOD(CudaArray, toArray)
         int dim,
         tensor_t *t,
         size_t current_offset,
-        int dtype)
+        dtype_t dtype)
     {
         array_init(result);
 
@@ -585,12 +586,12 @@ ZEND_METHOD(CudaArray, toArray)
             if (dim == t->ndims - 1)
             {
                 zval val;
-                if (dtype == DTYPE_FLOAT)
+                if (dtype == FLOAT32)
                 {
                     float *float_data = (float *)data;
                     ZVAL_DOUBLE(&val, float_data[child_offset]);
                 }
-                else if (dtype == DTYPE_INT)
+                else if (dtype == INT32)
                 {
                     int *int_data = (int *)data;
                     ZVAL_LONG(&val, int_data[child_offset]);
@@ -691,12 +692,12 @@ ZEND_METHOD(CudaArray, __debugInfo)
     const char *dtype_str;
     size_t element_size;
 
-    if (tensor->dtype == DTYPE_FLOAT)
+    if (tensor->dtype == FLOAT32)
     {
         dtype_str = "float32";
         element_size = sizeof(float);
     }
-    else if (tensor->dtype == DTYPE_INT)
+    else if (tensor->dtype == INT32)
     {
         dtype_str = "int32";
         element_size = sizeof(int);

@@ -2,11 +2,10 @@
 #define TENSOR_H
 
 #include <cuda_runtime.h>
+#include "data_types.h"
 
 #define MAX_DIMS 10
 #define MAX_CONCAT_TENSORS 10
-#define DTYPE_FLOAT 1
-#define DTYPE_INT 2
 
 struct _operation_t;
 
@@ -31,17 +30,10 @@ typedef struct
     } data;
 } slice_info_t;
 
-typedef enum _tensor_type_t
-{
-    TENSOR_TYPE_INPUT,
-    TENSOR_TYPE_OUTPUT,
-    TENSOR_TYPE_TEMP
-} tensor_type_t;
-
 typedef struct tensor
 {
     void *data;
-    int dtype;
+    dtype_t dtype;
     void *device_ptr;
     int *shape;
     size_t element_size;

@@ -71,6 +71,20 @@ typedef struct _cuda_compiler_object {
     cuda_compilation_context_t *compilation_context;
 } cuda_compiler_object;
 
+typedef struct _cuda_kernel_data {
+    zend_string *name;
+    zend_string *target;
+    int grid[3];
+    int block[3];
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+    zend_ast *ast;
+    zend_arena *ast_arena;
+    zend_string *source_code;
+    HashTable *used_devices;
+    func_parameter_list_t *parameters;
+} cuda_kernel_data;
+
 typedef struct _cuda_kernel_object {
     zend_object std;
     zend_fcall_info fci;

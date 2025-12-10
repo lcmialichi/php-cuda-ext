@@ -14,7 +14,6 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_kernel, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, closure, IS_CALLABLE, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, attributes, IS_ARRAY, 1, "[]")
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_device, 0, 0, 2)

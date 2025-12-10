@@ -2,9 +2,24 @@
 
 namespace Cuda;
 
+class Compiler
+{
+    public function kernel(callable $fn): static
+    {
+        return $this;
+    }
+}
+
+class Device
+{
+}
+
 
 class Kernel
 {
+    public static function fn(callable $fn): Device
+    {
+    }
 }
 
 /**

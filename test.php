@@ -20,8 +20,12 @@ class UserKernel extends Cuda\Kernel
         #[Cuda\Attr\Input(dtype: 'float')] float $a,
         #[Cuda\Attr\Input(dtype: 'int')] float $b
     ): float {
+        $idx = $this->threadIdx();
+        for($i = 0; $i <= $idx; $i++){
+            $a[$i] = $a[$i] * $i;
+        }
         if ($a > 10) {
-            return max($a * $b, 0.0);
+            return $this->max($a * $b, 0.0);
         }
 
         return $b;

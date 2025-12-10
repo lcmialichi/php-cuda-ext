@@ -12,42 +12,25 @@
 #include "zend_hash.h"
 #include "zend_globals.h"
 
-typedef struct
-{
-    const char *cuda_name;
-    dtype_t return_type;
-    uint32_t num_params;
-    dtype_t param_types[4];
-    const char *header;
-} cuda_function_info_t;
-
 static const cuda_function_info_t cuda_functions[] = {
-    {"fmaxf", FLOAT32, 2, {FLOAT32, FLOAT32}, "math_functions.h"},
-    {"fmax", FLOAT64, 2, {FLOAT64, FLOAT64}, "math_functions.h"},
-    {"fminf", FLOAT32, 2, {FLOAT32, FLOAT32}, "math_functions.h"},
-    {"fmin", FLOAT64, 2, {FLOAT64, FLOAT64}, "math_functions.h"},
-    {"expf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"exp", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"logf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"log", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"sinf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"sin", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"cosf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"cos", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"sqrtf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"sqrt", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"powf", FLOAT32, 2, {FLOAT32, FLOAT32}, "math_functions.h"},
-    {"pow", FLOAT64, 2, {FLOAT64, FLOAT64}, "math_functions.h"},
-    {"abs", INT32, 1, {INT32}, "stdlib.h"},
-    {"fabsf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"fabs", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"ceilf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"ceil", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"floorf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"floor", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {"roundf", FLOAT32, 1, {FLOAT32}, "math_functions.h"},
-    {"round", FLOAT64, 1, {FLOAT64}, "math_functions.h"},
-    {NULL, DTYPE_UNKNOWN, 0, {0}, NULL}};
+    {"max", "fmaxf", "fmax", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},
+    {"min", "fminf", "fmin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},
+    {"exp", "expf", "exp", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"log", "logf", "log", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"sin", "sinf", "sin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"cos", "cosf", "cos", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"sqrt", "sqrtf", "sqrt", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"pow", "powf", "pow", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},
+    {"abs", NULL, NULL, "abs", DTYPE_UNKNOWN, DTYPE_UNKNOWN, INT32, 1, {0}, {0}, {INT32}, "stdlib.h"},
+    {"fabs", "fabsf", "fabs", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"ceil", "ceilf", "ceil", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"floor", "floorf", "floor", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"round", "roundf", "round", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
+    {"threadIdx", "threadIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
+    {"blockIdx", "blockIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
+    {"blockDim", "blockDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
+    {"gridDim", "gridDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
+    {NULL, NULL, NULL, NULL, DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL}};
 
 typedef struct
 {
@@ -69,7 +52,6 @@ static int handle_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast
 static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_return(cuda_compilation_context_t *context, zend_ast *ast);
-static int handler_ast_call(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast);
@@ -84,6 +66,7 @@ static int handler_ast_switch_case(cuda_compilation_context_t *context, zend_ast
 static int handler_ast_break_continue(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_assign_op(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast *ast);
 
 static const char *get_ast_kind_name(zend_ast_kind kind)
 {
@@ -329,7 +312,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_PROP, handle_not_allowed},
     {ZEND_AST_NULLSAFE_PROP, handle_not_allowed},
     {ZEND_AST_STATIC_PROP, handle_not_allowed},
-    {ZEND_AST_CALL, handler_ast_call},
+    {ZEND_AST_CALL, handle_not_allowed},
     {ZEND_AST_CLASS_CONST, handler_ast_allowed_simple},
     {ZEND_AST_ASSIGN, handler_ast_assign},
     {ZEND_AST_ASSIGN_REF, handle_not_allowed},
@@ -363,7 +346,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_MATCH, handle_not_allowed},
     {ZEND_AST_MATCH_ARM, handle_not_allowed},
     {ZEND_AST_NAMED_ARG, handle_not_allowed},
-    {ZEND_AST_METHOD_CALL, handle_not_allowed},
+    {ZEND_AST_METHOD_CALL, handler_ast_method_call},
     {ZEND_AST_NULLSAFE_METHOD_CALL, handle_not_allowed},
     {ZEND_AST_STATIC_CALL, handle_not_allowed},
     {ZEND_AST_CONDITIONAL, handler_ast_conditional},
@@ -504,11 +487,80 @@ static const char *get_cuda_type_str(dtype_t type)
     }
 }
 
-static const cuda_function_info_t *find_cuda_function(const char *name)
+static cuda_function_match_t find_cuda_function_by_type(
+    const char *php_name,
+    dtype_t arg_types[],
+    uint32_t num_args)
 {
-    for (int i = 0; cuda_functions[i].cuda_name != NULL; i++)
+    cuda_function_match_t result = {NULL, DTYPE_UNKNOWN};
+
+    for (int i = 0; cuda_functions[i].php_name != NULL; i++)
     {
-        if (strcmp(cuda_functions[i].cuda_name, name) == 0)
+        const cuda_function_info_t *func = &cuda_functions[i];
+
+        if (strcmp(func->php_name, php_name) != 0)
+        {
+            continue;
+        }
+
+        if (func->num_params != num_args)
+        {
+            continue;
+        }
+
+        dtype_t dominant_type = DTYPE_UNKNOWN;
+        for (uint32_t j = 0; j < num_args; j++)
+        {
+            if (arg_types[j] == FLOAT64)
+            {
+                dominant_type = FLOAT64;
+                break;
+            }
+            else if (arg_types[j] == FLOAT32)
+            {
+                if (dominant_type != FLOAT64)
+                {
+                    dominant_type = FLOAT32;
+                }
+            }
+            else if (arg_types[j] == INT32 || arg_types[j] == INT64)
+            {
+                if (dominant_type == DTYPE_UNKNOWN)
+                {
+                    dominant_type = INT32;
+                }
+            }
+        }
+
+        if (dominant_type == FLOAT64 && func->cuda_name_f64 != NULL)
+        {
+            result.cuda_name = func->cuda_name_f64;
+            result.return_type = func->return_type_f64;
+            break;
+        }
+        else if (dominant_type == FLOAT32 && func->cuda_name_f32 != NULL)
+        {
+            result.cuda_name = func->cuda_name_f32;
+            result.return_type = func->return_type_f32;
+            break;
+        }
+        else if ((dominant_type == INT32 || dominant_type == INT64) &&
+                 func->cuda_name_i32 != NULL)
+        {
+            result.cuda_name = func->cuda_name_i32;
+            result.return_type = func->return_type_i32;
+            break;
+        }
+    }
+
+    return result;
+}
+
+static const cuda_function_info_t *find_cuda_function(const char *php_name)
+{
+    for (int i = 0; cuda_functions[i].php_name != NULL; i++)
+    {
+        if (strcmp(cuda_functions[i].php_name, php_name) == 0)
         {
             return &cuda_functions[i];
         }
@@ -593,17 +645,133 @@ static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast
 {
     const char *ast_name = get_ast_kind_name(ast->kind);
 
-#ifdef ZEND_DEBUG
-    php_error_docref(NULL, E_ERROR,
-                     "Kernel compilation failed: AST node '%s' (Kind: %d) at line ~%d is not allowed in CUDA kernels.",
-                     ast_name, ast->kind, ast->lineno);
-#else
     php_error_docref(NULL, E_ERROR,
                      "Kernel compilation failed: PHP construct '%s' is not allowed in CUDA kernels.",
                      ast_name);
-#endif
 
     return 0;
+}
+
+static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    uint32_t num_children = zend_ast_get_num_children(ast);
+    if (num_children < 3)
+    {
+        php_error_docref(NULL, E_ERROR, "Method call missing parts.");
+        return 0;
+    }
+
+    zend_ast *object_ast = ast->child[0];
+    zend_ast *method_name_ast = ast->child[1];
+    zend_ast *args_ast = ast->child[2];
+
+    if (object_ast->kind != ZEND_AST_VAR)
+    {
+        php_error_docref(NULL, E_ERROR, "Only method calls on $this are allowed.");
+        return 0;
+    }
+
+    zend_ast *var_name_ast = object_ast->child[0];
+    if (var_name_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Complex object access not allowed.");
+        return 0;
+    }
+
+    zval *obj_zv = zend_ast_get_zval(var_name_ast);
+    if (!obj_zv || Z_TYPE_P(obj_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid object name.");
+        return 0;
+    }
+
+    zend_string *obj_name = Z_STR_P(obj_zv);
+    if (!zend_string_equals_literal(obj_name, "this"))
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Only $this->method() calls are allowed, got $%s", ZSTR_VAL(obj_name));
+        return 0;
+    }
+
+    if (method_name_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Method name must be a literal.");
+        return 0;
+    }
+
+    zval *method_zv = zend_ast_get_zval(method_name_ast);
+    if (!method_zv || Z_TYPE_P(method_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Method name must be a string.");
+        return 0;
+    }
+
+    zend_string *method_name = Z_STR_P(method_zv);
+    const char *method_name_c = ZSTR_VAL(method_name);
+
+    if (strcmp(method_name_c, "threadIdx") == 0)
+    {
+        smart_string_appends(context->cuda_code_buffer, "threadIdx.x");
+        context->last_evaluated_dtype = INT32;
+        return 1;
+    }
+
+    if (strcmp(method_name_c, "blockIdx") == 0)
+    {
+        smart_string_appends(context->cuda_code_buffer, "blockIdx.x");
+        context->last_evaluated_dtype = INT32;
+        return 1;
+    }
+
+    if (strcmp(method_name_c, "blockDim") == 0)
+    {
+        smart_string_appends(context->cuda_code_buffer, "blockDim.x");
+        context->last_evaluated_dtype = INT32;
+        return 1;
+    }
+
+    if (strcmp(method_name_c, "gridDim") == 0)
+    {
+        smart_string_appends(context->cuda_code_buffer, "gridDim.x");
+        context->last_evaluated_dtype = INT32;
+        return 1;
+    }
+
+    const cuda_function_info_t *func_info = find_cuda_function(method_name_c);
+    if (!func_info)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Method $this->%s() is not supported in CUDA.", method_name_c);
+        return 0;
+    }
+
+    if (func_info->num_params == 0 || !args_ast)
+    {
+        if (func_info->cuda_name_f32)
+        {
+            add_cuda_header(func_info->header);
+            smart_string_appends(context->cuda_code_buffer, func_info->cuda_name_f32);
+            context->last_evaluated_dtype = func_info->return_type_f32;
+        }
+    }
+    else
+    {
+        add_cuda_header(func_info->header);
+        if (func_info->cuda_name_f32)
+        {
+            smart_string_appends(context->cuda_code_buffer, func_info->cuda_name_f32);
+            context->last_evaluated_dtype = func_info->return_type_f32;
+        }
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, '(');
+    if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
+    {
+        return 0;
+    }
+    smart_string_appendc(context->cuda_code_buffer, ')');
+
+    return 1;
 }
 
 static int handler_ast_allowed_simple(cuda_compilation_context_t *context, zend_ast *ast)
@@ -862,7 +1030,8 @@ static int handle_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast
 
     zend_ast *cond = ast->child[0];
     zend_ast *stmt = ast->child[1];
-    zend_ast *else_stmt = (num_children > 2) ? ast->child[2] : NULL;;
+    zend_ast *else_stmt = (num_children > 2) ? ast->child[2] : NULL;
+    ;
 
     if (num_children < 2)
     {
@@ -1331,49 +1500,6 @@ static int handler_ast_comp_op(cuda_compilation_context_t *context, zend_ast *as
     return 1;
 }
 
-static int handler_ast_call(cuda_compilation_context_t *context, zend_ast *ast)
-{
-    zend_ast *callee = ast->child[0];
-    zend_ast *args = ast->child[1];
-
-    if (callee->kind != ZEND_AST_ZVAL)
-    {
-        php_error_docref(NULL, E_ERROR, "Complex function calls are not allowed.");
-        return 0;
-    }
-
-    zend_ast_zval *func_name_node = (zend_ast_zval *)callee;
-    if (Z_TYPE(func_name_node->val) != IS_STRING)
-    {
-        php_error_docref(NULL, E_ERROR, "Function name must be a string.");
-        return 0;
-    }
-
-    zend_string *func_name = Z_STR(func_name_node->val);
-    const char *func_name_c = ZSTR_VAL(func_name);
-
-    const cuda_function_info_t *cuda_func = find_cuda_function(func_name_c);
-    if (cuda_func)
-    {
-        add_cuda_header(cuda_func->header);
-        smart_string_appends(context->cuda_code_buffer, cuda_func->cuda_name);
-        context->last_evaluated_dtype = cuda_func->return_type;
-    }
-    else
-    {
-        smart_string_appendl(context->cuda_code_buffer, func_name_c, ZSTR_LEN(func_name));
-    }
-
-    smart_string_appendc(context->cuda_code_buffer, '(');
-    if (args && !compile_ast_as_valid_cuda(context, args))
-    {
-        return 0;
-    }
-    smart_string_appendc(context->cuda_code_buffer, ')');
-
-    return 1;
-}
-
 static int handler_ast_cast(cuda_compilation_context_t *context, zend_ast *ast)
 {
     zend_uchar cast_type = (zend_uchar)ast->attr;
@@ -1650,10 +1776,13 @@ char *generate_cuda_headers()
 
 static void destroy_local_variable(zval *zv)
 {
-    if (Z_TYPE_P(zv) == IS_PTR) {
+    if (Z_TYPE_P(zv) == IS_PTR)
+    {
         local_variable_t *var = (local_variable_t *)Z_PTR_P(zv);
-        if (var) {
-            if (var->name) {
+        if (var)
+        {
+            if (var->name)
+            {
                 zend_string_release(var->name);
             }
             efree(var);
@@ -1681,18 +1810,21 @@ cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameter
 
 void free_cuda_context(cuda_compilation_context_t *context)
 {
-    if (!context) return;
-    
+    if (!context)
+        return;
+
     zend_hash_destroy(&context->local_variables);
-    
-    if (context->cuda_code_buffer) {
+
+    if (context->cuda_code_buffer)
+    {
         smart_string_free(context->cuda_code_buffer);
         efree(context->cuda_code_buffer);
     }
-    
-    if (context->parameters) {
+
+    if (context->parameters)
+    {
         // @todo free context parameters
     }
-    
+
     efree(context);
 }

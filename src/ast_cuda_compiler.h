@@ -25,6 +25,26 @@ typedef struct
     int loop_depth;
 } cuda_compilation_context_t;
 
+typedef struct {
+    const char *php_name;       // Nome que o usuário usa (ex: "max")
+    const char *cuda_name_f32;  // Nome CUDA para float (ex: "fmaxf")
+    const char *cuda_name_f64;  // Nome CUDA para double (ex: "fmax")
+    const char *cuda_name_i32;  // Nome CUDA para int (ex: "abs")
+    dtype_t return_type_f32;    // Tipo de retorno para float
+    dtype_t return_type_f64;    // Tipo de retorno para double
+    dtype_t return_type_i32;    // Tipo de retorno para int
+    uint32_t num_params;        // Número de parâmetros
+    dtype_t param_types_f32[4]; // Tipos dos parâmetros para float
+    dtype_t param_types_f64[4]; // Tipos dos parâmetros para double
+    dtype_t param_types_i32[4]; // Tipos dos parâmetros para int
+    const char *header;         // Header necessário
+} cuda_function_info_t;
+
+typedef struct {
+    const char *cuda_name;
+    dtype_t return_type;
+} cuda_function_match_t;
+
 typedef int (*handler)(cuda_compilation_context_t *context, zend_ast *ast);
 
 typedef struct

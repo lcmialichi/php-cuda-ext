@@ -26,6 +26,13 @@ typedef struct
     func_parameter **parameters;
 } func_parameter_list_t;
 
+typedef struct {
+    zend_string *filename;
+    uint32_t start_line;
+    uint32_t end_line;
+    zend_string *method_name;
+    zend_function *fptr;
+} method_source_info_t;
 
 #define KERNEL_PLIST_FIND(list, name, var)                              \
     do                                                                  \

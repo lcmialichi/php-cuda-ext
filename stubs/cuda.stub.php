@@ -12,7 +12,7 @@ class Kernel
  * disallowLiteralKeysOnUnshapedArrays="[bool]"
  *>
  */
-class CudaArray implements ArrayAccess
+class CudaArray implements \ArrayAccess
 {
     /**
      *

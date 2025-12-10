@@ -8,14 +8,8 @@
 ZEND_BEGIN_ARG_INFO_EX(arginfo_kernel_construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_kernel_fn, 0, 0, 1)
-    ZEND_ARG_TYPE_INFO(0, closure, IS_CALLABLE, 0)
-    ZEND_ARG_TYPE_INFO(0, attributes, IS_ARRAY, 1)
-ZEND_END_ARG_INFO()
-
 static zend_function_entry kernel_methods[] = {
     ZEND_ME(Kernel, __construct, arginfo_kernel_construct, ZEND_ACC_PUBLIC)
-    ZEND_ME(Kernel, fn, arginfo_kernel_fn, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 

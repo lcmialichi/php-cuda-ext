@@ -8,18 +8,53 @@ class Compiler
     {
         return $this;
     }
+
+    public function compile(?string $target = '', bool $optimize = true, bool $debug = false)
+    {
+        return new CompiledModule();
+    }
 }
 
 class Device
 {
+    public function __invoke()
+    {
+    }
+
+    public static function fn(callable $callable): static
+    {
+        return new self();
+    }
 }
 
+class CompiledModule
+{
+    public function run(string $kernel, ...$params): void
+    {
+    }
+
+    public function hasKernel(string $kernel): bool
+    {
+        return false;
+    }
+
+    public function getKernels(): array
+    {
+        return [];
+    }
+
+    public function getPtx()
+    {
+
+    }
+
+    public function save(){
+
+    }
+}
 
 class Kernel
 {
-    public static function fn(callable $fn): Device
-    {
-    }
 }
 
 /**

@@ -105,7 +105,6 @@ typedef struct _cuda_device_object {
     zend_string *target;
     zend_fcall_info fci;
     zend_fcall_info_cache fcc;
-    HashTable *attributes;
     zend_ast *ast;
     zend_arena *ast_arena;
 } cuda_device_object;

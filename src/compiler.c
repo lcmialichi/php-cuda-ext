@@ -341,13 +341,60 @@ ZEND_METHOD(Compiler, kernel)
 
     if (fptr->op_array.static_variables != NULL)
     {
-        zend_throw_exception_ex(
-            NULL,
-            0,
-            "Kernel functions cannot close over external variables. "
-            "Do not use 'use(...)' or 'static' in kernel closures. "
-            "All inputs must be passed explicitly as function parameters.");
-        return;
+        zend_string *device_class_name =
+            zend_string_init("Cuda\\Device", strlen("Cuda\\Device"), 0);
+
+        zend_class_entry *device_ce = zend_lookup_class(device_class_name);
+        zend_string_release(device_class_name);
+
+        if (!device_ce)
+        {
+            zend_throw_exception_ex(
+                NULL,
+                0,
+                "Class Cuda\\Device not found");
+            return;
+        }
+
+        zend_string *key;
+        zval *zv;
+        ZEND_HASH_FOREACH_STR_KEY_VAL(fptr->op_array.static_variables, key, zv)
+        {
+            if (Z_TYPE_P(zv) != IS_OBJECT)
+            {
+                zend_throw_exception_ex(
+                    NULL,
+                    0,
+                    "Kernel closures may only capture instances of Cuda\\Device; "
+                    "captured variable '%s' is not an object.",
+                    key ? ZSTR_VAL(key) : "<unknown>");
+                return;
+            }
+
+            if (!instanceof_function(Z_OBJCE_P(zv), device_ce))
+            {
+                zend_throw_exception_ex(
+                    NULL,
+                    0,
+                    "Kernel closures may only capture instances of Cuda\\Device; "
+                    "captured variable '%s' is not a Cuda\\Device.",
+                    key ? ZSTR_VAL(key) : "<unknown>");
+                return;
+            }
+
+            cuda_device_object *dev = Z_CUDA_DEVICE_P(zv);
+            zend_string *dev_name = zend_string_copy(dev->name);
+
+            if (!zend_hash_exists(compiler->devices, dev_name))
+            {
+                zend_hash_add_ptr(compiler->devices, dev_name, dev);
+            }
+            else
+            {
+                zend_string_release(dev_name);
+            }
+        }
+        ZEND_HASH_FOREACH_END();
     }
 
     cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_kernel_ce);
@@ -470,32 +517,22 @@ ZEND_METHOD(Compiler, device)
     zend_fcall_info_cache fcc;
     zval *attributes = NULL;
 
-    ZEND_PARSE_PARAMETERS_START(2, 3)
-    Z_PARAM_STR(name)
+    ZEND_PARSE_PARAMETERS_START(1, 1)
     Z_PARAM_FUNC(fci, fcc)
-    Z_PARAM_OPTIONAL
-    Z_PARAM_ARRAY(attributes)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
 
-    zend_string *target = NULL;
-    if (attributes && Z_TYPE_P(attributes) == IS_ARRAY)
+    zend_function *fptr = fcc.function_handler;
+    if (!fptr || fptr->type != ZEND_USER_FUNCTION)
     {
-        zval *target_zv = zend_hash_str_find(Z_ARR_P(attributes), "target", sizeof("target") - 1);
-        if (target_zv && Z_TYPE_P(target_zv) == IS_STRING)
-        {
-            target = Z_STR_P(target_zv);
-        }
+        return;
     }
 
-    if (!target)
+    cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_device_ce);
+    if (!fargs)
     {
-        target = zend_string_init(compiler->target_device, strlen(compiler->target_device), 0);
-    }
-    else
-    {
-        target = zend_string_copy(target);
+        return;
     }
 
     zend_string *device_class_name = zend_string_init("Cuda\\Device", strlen("Cuda\\Device"), 0);
@@ -515,15 +552,15 @@ ZEND_METHOD(Compiler, device)
 
     device->fci = fci;
     device->fcc = fcc;
-    device->name = zend_string_copy(name);
-    device->target = target;
+    device->name = zend_string_copy(fargs->name);
+    device->target = zend_string_copy(fargs->target);
     device->ast = NULL;
     device->ast_arena = NULL;
-    device->attributes = attributes ? zend_array_dup(Z_ARR_P(attributes)) : NULL;
 
-    zend_hash_add_ptr(compiler->devices, zend_string_copy(name), device);
-
-    php_printf("Added device function: %s\n", ZSTR_VAL(name));
+    zend_hash_add_ptr(compiler->devices, zend_string_copy(fargs->name), device);
+    zend_string_release(fargs->name);
+    zend_string_release(fargs->target);
+    efree(fargs);
 
     RETURN_ZVAL(getThis(), 1, 0);
 }

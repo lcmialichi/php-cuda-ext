@@ -31,14 +31,12 @@ ZEND_METHOD(Compiler, __construct)
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
 
-    // Inicializar tabelas hash
     compiler->kernels = emalloc(sizeof(HashTable));
     zend_hash_init(compiler->kernels, 8, NULL, NULL, 0);
 
     compiler->devices = emalloc(sizeof(HashTable));
     zend_hash_init(compiler->devices, 8, NULL, NULL, 0);
 
-    // Configurações
     if (target_str)
     {
         compiler->target_device = estrndup(ZSTR_VAL(target_str), ZSTR_LEN(target_str));
@@ -54,8 +52,7 @@ ZEND_METHOD(Compiler, __construct)
     compiler->compilation_context = NULL;
 }
 
-/* Método: Compiler->kernel() */
-ZEND_METHOD(Compiler, kernel)
+PHP_METHOD(Compiler, kernel)
 {
     cuda_compiler_object *compiler;
     zend_fcall_info fci;
@@ -70,7 +67,6 @@ ZEND_METHOD(Compiler, kernel)
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
 
-    // Extrair atributos do array
     zend_string *name = NULL;
     zend_string *target = NULL;
     zval *grid_zv = NULL;
@@ -94,7 +90,6 @@ ZEND_METHOD(Compiler, kernel)
         block_zv = zend_hash_str_find(Z_ARR_P(attributes), "block", sizeof("block") - 1);
     }
 
-    // Se não tem nome, gerar um automático
     if (!name)
     {
         static int kernel_counter = 0;
@@ -102,30 +97,31 @@ ZEND_METHOD(Compiler, kernel)
         snprintf(buffer, sizeof(buffer), "kernel_%d", kernel_counter++);
         name = zend_string_init(buffer, strlen(buffer), 0);
     }
+    else
+    {
+        name = zend_string_copy(name);
+    }
 
     if (!target)
     {
-        target = zend_string_copy(compiler->target_device);
+        target = zend_string_init(compiler->target_device, strlen(compiler->target_device), 0);
     }
     else
     {
         target = zend_string_copy(target);
     }
 
-    // Criar objeto Kernel
-    zend_class_entry *kernel_ce = zend_lookup_class(ZEND_STRL("Cuda\\Kernel"));
-    zval kernel_zv;
-    object_init_ex(&kernel_zv, kernel_ce);
+    cuda_kernel_object *kernel =
+        (cuda_kernel_object *)ecalloc(1, sizeof(cuda_kernel_object));
 
-    cuda_kernel_object *kernel = Z_CUDA_KERNEL_P(&kernel_zv);
+    zend_object_std_init(&kernel->std, NULL);
+    kernel->std.handlers = zend_get_std_object_handlers();
 
-    // Inicializar kernel
     kernel->fci = fci;
     kernel->fcc = fcc;
-    kernel->name = zend_string_copy(name);
+    kernel->name = name;
     kernel->target = target;
 
-    // Configurar grid/block padrão
     kernel->grid[0] = 1;
     kernel->grid[1] = 1;
     kernel->grid[2] = 1;
@@ -133,7 +129,6 @@ ZEND_METHOD(Compiler, kernel)
     kernel->block[1] = 1;
     kernel->block[2] = 1;
 
-    // Extrair grid/block dos atributos
     if (grid_zv && Z_TYPE_P(grid_zv) == IS_ARRAY)
     {
         zval *x = zend_hash_index_find(Z_ARR_P(grid_zv), 0);
@@ -166,50 +161,11 @@ ZEND_METHOD(Compiler, kernel)
     kernel->ast_arena = NULL;
     kernel->parameters = NULL;
 
-    // Criar tabela para used devices
     kernel->used_devices = emalloc(sizeof(HashTable));
     zend_hash_init(kernel->used_devices, 4, NULL, NULL, 0);
 
-    // Analisar variáveis do use() no closure
-    zend_closure *closure = (zend_closure *)zend_fcall_info_get_function(&fci, &fcc);
-    if (closure)
-    {
-        zend_array *use_vars = zend_closure_get_use_vars(closure);
-        if (use_vars)
-        {
-            zend_string *key;
-            zval *val;
+    php_printf("  AST extraction not yet implemented\n");
 
-            ZEND_HASH_FOREACH_STR_KEY_VAL(use_vars, key, val)
-            {
-                // Verificar se é um objeto Device
-                if (Z_TYPE_P(val) == IS_OBJECT)
-                {
-                    zend_class_entry *device_ce = zend_lookup_class(ZEND_STRL("Cuda\\Device"));
-                    if (instanceof_function(Z_OBJCE_P(val), device_ce))
-                    {
-                        cuda_device_object *device = Z_CUDA_DEVICE_P(val);
-                        zend_hash_str_add_ptr(kernel->used_devices,
-                                              ZSTR_VAL(key),
-                                              ZSTR_LEN(key),
-                                              device);
-                    }
-                }
-            }
-            ZEND_HASH_FOREACH_END();
-        }
-
-        // Extrair AST do closure
-        zend_string *source = NULL;
-        int result = kernel_extract_closure_source(closure, &source);
-        if (result.status == 1)
-        {
-            kernel->ast = zend_compile_string_to_ast(source, &kernel->ast_arena, name);
-            zend_string_release(source);
-        }
-    }
-
-    // Adicionar ao compilador
     zend_hash_str_add_ptr(compiler->kernels,
                           ZSTR_VAL(kernel->name),
                           ZSTR_LEN(kernel->name),
@@ -220,11 +176,9 @@ ZEND_METHOD(Compiler, kernel)
                kernel->grid[0], kernel->grid[1], kernel->grid[2],
                kernel->block[0], kernel->block[1], kernel->block[2]);
 
-    // Retornar o próprio compilador para chamadas encadeadas
     RETURN_ZVAL(getThis(), 1, 0);
 }
 
-/* Método: Compiler->device() */
 ZEND_METHOD(Compiler, device)
 {
     cuda_compiler_object *compiler;
@@ -242,7 +196,6 @@ ZEND_METHOD(Compiler, device)
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
 
-    // Extrair target dos atributos
     zend_string *target = NULL;
     if (attributes && Z_TYPE_P(attributes) == IS_ARRAY)
     {
@@ -255,21 +208,28 @@ ZEND_METHOD(Compiler, device)
 
     if (!target)
     {
-        target = zend_string_copy(compiler->target_device);
+        target = zend_string_init(compiler->target_device, strlen(compiler->target_device), 0);
     }
     else
     {
         target = zend_string_copy(target);
     }
 
-    // Criar objeto Device
-    zend_class_entry *device_ce = zend_lookup_class(ZEND_STRL("Cuda\\Device"));
+    zend_string *device_class_name = zend_string_init("Cuda\\Device", strlen("Cuda\\Device"), 0);
+    zend_class_entry *device_ce = zend_lookup_class(device_class_name);
+    zend_string_release(device_class_name);
+
+    if (!device_ce)
+    {
+        zend_throw_exception_ex(NULL, 0, "Class Cuda\\Device not found");
+        RETURN_NULL();
+    }
+
     zval device_zv;
     object_init_ex(&device_zv, device_ce);
 
     cuda_device_object *device = Z_CUDA_DEVICE_P(&device_zv);
 
-    // Inicializar device
     device->fci = fci;
     device->fcc = fcc;
     device->name = zend_string_copy(name);
@@ -278,29 +238,13 @@ ZEND_METHOD(Compiler, device)
     device->ast_arena = NULL;
     device->attributes = attributes ? zend_array_dup(Z_ARR_P(attributes)) : NULL;
 
-    // Extrair AST do closure
-    zend_closure *closure = (zend_closure *)zend_fcall_info_get_function(&fci, &fcc);
-    if (closure)
-    {
-        zend_string *source = NULL;
-        int result = kernel_extract_closure_source(closure, &source);
-        if (result == 1)
-        {
-            device->ast = zend_compile_string_to_ast(source, &device->ast_arena, name);
-            zend_string_release(source);
-        }
-    }
-
-    // Adicionar ao compilador
-    zend_hash_add_ptr(compiler->devices, name, device);
+    zend_hash_add_ptr(compiler->devices, zend_string_copy(name), device);
 
     php_printf("Added device function: %s\n", ZSTR_VAL(name));
 
-    // Retornar o próprio compilador para chamadas encadeadas
     RETURN_ZVAL(getThis(), 1, 0);
 }
 
-/* Método: Compiler->compile() */
 ZEND_METHOD(Compiler, compile)
 {
     cuda_compiler_object *compiler;
@@ -322,21 +266,17 @@ ZEND_METHOD(Compiler, compile)
                zend_hash_num_elements(compiler->kernels),
                zend_hash_num_elements(compiler->devices));
 
-    // TODO: Implementar compilação real para CUDA
-    // Por enquanto, apenas criamos um módulo compilado vazio
+    zend_string *module_class_name = zend_string_init("Cuda\\CompiledModule", strlen("Cuda\\CompiledModule"), 0);
+    zend_class_entry *module_ce = zend_lookup_class(module_class_name);
 
-    // Criar objeto CompiledModule
-    zend_class_entry *module_ce = zend_lookup_class(ZEND_STRL("Cuda\\CompiledModule"));
     zval module_zv;
     object_init_ex(&module_zv, module_ce);
 
     cuda_module_object *module = Z_CUDA_MODULE_P(&module_zv);
 
-    // Inicializar módulo
     module->ptx_code = estrdup("// Placeholder PTX code\n.version 7.5\n.target sm_60");
     module->ptx_size = strlen(module->ptx_code);
 
-    // Adicionar kernels ao módulo
     module->functions = emalloc(sizeof(HashTable));
     zend_hash_init(module->functions, 8, NULL, NULL, 0);
 
@@ -346,7 +286,6 @@ ZEND_METHOD(Compiler, compile)
     cuda_kernel_object *kernel;
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
-        // Adicionar nome do kernel à tabela
         zval kernel_name;
         ZVAL_STR(&kernel_name, zend_string_copy(kernel->name));
         zend_hash_add(module->kernel_functions, kernel->name, &kernel_name);

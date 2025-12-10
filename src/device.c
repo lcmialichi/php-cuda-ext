@@ -1,5 +1,4 @@
 #include "device.h"
-#include "ke_arginfo.h"
 #include "php.h"
 #include "zend_interfaces.h"
 #include "zend_exceptions.h"

@@ -56,8 +56,9 @@ ZEND_METHOD(Kernel, fn)
     if (!target) {
         target = zend_string_init("sm_60", 5, 0);
     }
-    
-    zend_class_entry *device_ce = zend_lookup_class(ZEND_STRL("Cuda\\Device"));
+
+    zend_string *device_class_name = zend_string_init("Cuda\\Device", strlen("Cuda\\Device"), 0);
+    zend_class_entry *device_ce = zend_lookup_class(device_class_name);
     zval device_zv;
     object_init_ex(&device_zv, device_ce);
     
@@ -70,16 +71,6 @@ ZEND_METHOD(Kernel, fn)
     device->ast = NULL;
     device->ast_arena = NULL;
     device->attributes = attributes ? zend_array_dup(Z_ARR_P(attributes)) : NULL;
-    
-    zend_closure *closure = (zend_closure*)zend_fcall_info_get_function(&fci, &fcc);
-    if (closure) {
-        zend_string *source = NULL;
-        int result = kernel_extract_closure_source(closure, &source);
-        if (result == 1) {
-            device->ast = zend_compile_string_to_ast(source, &device->ast_arena, name);
-            zend_string_release(source);
-        }
-    }
     
     RETURN_ZVAL(&device_zv, 1, 0);
 }

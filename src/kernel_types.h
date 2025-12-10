@@ -77,7 +77,7 @@ typedef struct _cuda_kernel_object {
     zend_fcall_info_cache fcc;
     zend_string *name;
     zend_string *target;
-    int grid[3];
+    int grid[3];    
     int block[3];
     zend_ast *ast;
     zend_arena *ast_arena;
@@ -110,5 +110,7 @@ typedef struct _cuda_module_object {
 #define Z_CUDA_DEVICE_FROM_OBJ(obj) ((cuda_device_object*)((char*)(obj) - XtOffsetOf(cuda_device_object, std)))
 #define Z_CUDA_MODULE_P(zv) ((cuda_module_object*)((char*)Z_OBJ_P(zv) - XtOffsetOf(cuda_module_object, std)))
 #define Z_CUDA_MODULE_FROM_OBJ(obj) ((cuda_module_object*)((char*)(obj) - XtOffsetOf(cuda_module_object, std)))
+#define Z_CUDA_COMPILER_P(zv) ((cuda_compiler_object*)((char*)Z_OBJ_P(zv) - XtOffsetOf(cuda_compiler_object, std)))
+#define Z_CUDA_COMPILER_FROM_OBJ(obj) ((cuda_compiler_object*)((char*)(obj) - XtOffsetOf(cuda_compiler_object, std)))
 
 #endif

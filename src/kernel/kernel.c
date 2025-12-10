@@ -236,31 +236,22 @@ ZEND_METHOD(Kernel, __construct)
                 if (root_ast)
                 {
                     php_printf("    [SUCCESS] AST");
+                    init_cuda_headers();
 
-                    cuda_compilation_context_t context;
-                    context.cuda_code_buffer = (smart_string *)ecalloc(1, sizeof(smart_string));
-
-                    smart_string_alloc(context.cuda_code_buffer, 512, 0);
-                    context.parameters = params;
-
-                    zend_hash_init(&context.local_variables, 8, NULL, NULL, 0);
-                    context.last_evaluated_dtype = DTYPE_UNKNOWN;
-                    context.return_dtype = DTYPE_UNKNOWN;
-                    context.loop_depth = 0;
-
+                    cuda_compilation_context_t *context = create_cuda_context(params);
                     php_printf("\n*** START CUDA CODE GENERATION ***\n");
                     print_ast_recursive(root_ast);
 
                     compilation_result = compile_ast_as_valid_cuda(
-                        &context,
+                        context,
                         root_ast);
 
                     if (compilation_result == 1)
                     {
-                        smart_string_0(context.cuda_code_buffer);
+                        smart_string_0(context->cuda_code_buffer);
                         php_printf("\n*** CUDA CODE OUTPUT ***\n");
 
-                        php_printf("%s", context.cuda_code_buffer->c);
+                        php_printf("%s", context->cuda_code_buffer->c);
                         php_printf("*** END CUDA CODE OUTPUT ***\n");
                     }
                     else
@@ -268,9 +259,7 @@ ZEND_METHOD(Kernel, __construct)
                         php_printf("\n*** CUDA CODE GENERATION FAILED ***\n");
                     }
 
-                    zend_hash_destroy(&context.local_variables);
-                    smart_string_free(context.cuda_code_buffer);
-                    efree(context.cuda_code_buffer);
+                    free_cuda_context(context);
                 }
                 else
                 {

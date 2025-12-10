@@ -12,6 +12,9 @@
 #include "cuda.h"
 #include "kernel.h"
 #include "cuda_attributes.h" 
+#include "device.h"
+#include "compiler.h"
+#include "module.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(cuda);
 
@@ -61,6 +64,10 @@ PHP_MINIT_FUNCTION(cuda)
     }
 
     cuda_attr_init();
+    compiler_init();
+    device_init();
+    module_init();
+    
     if (!cuda_array_init(pool_size))
     {
         return FAILURE;

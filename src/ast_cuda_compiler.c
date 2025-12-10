@@ -1,4 +1,3 @@
-#include "ast_cuda_compiler.h"
 #include "ext/standard/php_smart_string.h"
 #include "ext/standard/php_string.h"
 #include "ext/standard/php_math.h"
@@ -11,6 +10,7 @@
 #include "kernel_types.h"
 #include "zend_hash.h"
 #include "zend_globals.h"
+#include "ast_cuda_compiler.h"
 
 static const cuda_function_info_t cuda_functions[] = {
     {"max", "fmaxf", "fmax", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},

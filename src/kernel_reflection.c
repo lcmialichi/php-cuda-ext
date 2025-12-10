@@ -6,6 +6,115 @@
 #include "kernel_reflection.h"
 #include "kernel_types.h"
 #include "data_types.h"
+#include "ext/standard/php_smart_string.h"
+#include <stdio.h>
+
+
+zend_array* kernel_get_closure_use_vars(zend_object *closure_obj)
+{
+    const zend_function *func = zend_get_closure_method_def(closure_obj);
+    if (!func) {
+        return NULL;
+    }
+    
+    // Infelizmente, não há função pública para acessar use_vars diretamente
+    // Mas podemos tentar através da propriedade dinâmica "__use_vars"
+    // (Esta é uma propriedade interna usada pelo PHP)
+    
+    zval *use_vars_zv = zend_read_property(zend_ce_closure, closure_obj, "__use_vars", sizeof("__use_vars")-1, 1, NULL);
+    if (use_vars_zv && Z_TYPE_P(use_vars_zv) == IS_ARRAY) {
+        return Z_ARR_P(use_vars_zv);
+    }
+    
+    return NULL;
+}
+
+int kernel_extract_closure_source(zend_object *closure_obj, zend_string **out_source)
+{
+    *out_source = NULL;
+    
+    if (!closure_obj) {
+        return 0;
+    }
+    
+    const zend_function *func = zend_get_closure_method_def(closure_obj);
+    if (!func || func->type != ZEND_USER_FUNCTION) {
+        return 0;
+    }
+    
+    zend_op_array *op_array = (zend_op_array*)func;
+    
+    if (!op_array->filename) {
+        return 0;
+    }
+    
+    FILE *file = fopen(ZSTR_VAL(op_array->filename), "r");
+    if (!file) {
+        return 0;
+    }
+    
+    smart_string source = {0};
+    smart_string_alloc(&source, 2048, 0);
+    
+    smart_string_appends(&source, "<?php\n");
+    
+    char line[4096];
+    uint32_t current_line = 1;
+    bool in_closure = false;
+    int brace_depth = 0;
+    
+    uint32_t start_line = op_array->line_start;
+    uint32_t end_line = op_array->line_end;
+    
+    if (start_line == 0 || end_line == 0) {
+        fclose(file);
+        return 0;
+    }
+    
+    while (fgets(line, sizeof(line), file)) {
+        if (current_line >= start_line && current_line <= end_line) {
+            char *trimmed = line;
+            while (*trimmed == ' ' || *trimmed == '\t') trimmed++;
+            
+            if (!in_closure) {
+                if (strstr(trimmed, "function") || strstr(trimmed, "fn") || 
+                    (strstr(trimmed, "static") && strstr(trimmed, "function"))) {
+                    in_closure = true;
+                }
+            }
+            
+            if (in_closure) {
+                smart_string_appends(&source, line);
+                for (char *p = line; *p; p++) {
+                    if (*p == '{') brace_depth++;
+                    else if (*p == '}') {
+                        brace_depth--;
+                        if (brace_depth <= 0) {
+                            in_closure = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (current_line > end_line) break;
+        current_line++;
+    }
+    
+    fclose(file);
+    
+    if (source.len == 0) {
+        smart_string_free(&source);
+        return 0;
+    }
+    
+    smart_string_0(&source);
+    *out_source = zend_string_init(source.c, source.len, 0);
+    smart_string_free(&source);
+    
+    return 1;
+}
 
 dtype_t map_dtype_string_to_int(zend_string *dtype_str)
 {

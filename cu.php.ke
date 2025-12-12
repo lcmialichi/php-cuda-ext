@@ -1,0 +1,11 @@
+<?php
+
+
+
+#[Cuda\Attr\Kernel(name: 'kernel_test')]
+function kernel(array $a, array $b)
+{
+    $idx = threadIdx();
+
+    $a[$idx] = max($b, 2);
+}

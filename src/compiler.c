@@ -355,7 +355,7 @@ ZEND_METHOD(Compiler, kernel)
     func_parameter_list_t *params = cuda_extract_parameter_list(fptr, cuda_attr_input_ce, cuda_attr_output_ce);
 
     init_cuda_headers();
-    cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL,  fargs->name);
+    cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL, fargs->name);
 
     if (!fargs)
     {

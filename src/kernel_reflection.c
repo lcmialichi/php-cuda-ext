@@ -256,7 +256,7 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
                     dtype_str = Z_STR(attr_arg->value);
                     dtype = map_dtype_string_to_int(dtype_str);
                     /** @todo create a real verification  */
-                    is_array = zend_type_is_set(&arg->type) && arg->type.type_mask & (1U << 17);
+                    is_array = ZEND_TYPE_IS_SET(arg->type) && arg->type.type_mask & (1U << 17);
                     break;
                 }
             }

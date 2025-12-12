@@ -19,10 +19,11 @@ $compiler->kernel(
         /** 
          * @var Runtime $cuda 
          */
-        $idx = $cuda->threadIdx();
-        $b[$idx] = $b[$idx] + $a[$idx];
+
+        $idx = 1;
+        $test = $b[$idx] * $a[$idx];
+
     }
 );
 
-var_dump($compiler->getKernels());
-
+var_dump($compiler->getKernels()['kernel_test']['cuda_code']);

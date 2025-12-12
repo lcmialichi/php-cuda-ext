@@ -631,23 +631,27 @@ int compile_ast_to_cuda_fn(cuda_compilation_context_t *context, zend_ast *ast)
 
 static int validate_function_parameters(cuda_compilation_context_t *context)
 {
-    if (!context || !context->parameters) {
+    if (!context || !context->parameters)
+    {
         return 1;
     }
-    
-    for (int i = 0; i < context->parameters->total; i++) {
+
+    for (int i = 0; i < context->parameters->total; i++)
+    {
         func_parameter *param_i = context->parameters->parameters[i];
-        
-        for (int j = i + 1; j < context->parameters->total; j++) {
+
+        for (int j = i + 1; j < context->parameters->total; j++)
+        {
             func_parameter *param_j = context->parameters->parameters[j];
-            
-            if (strcmp(param_i->name, param_j->name) == 0) {
-                php_error_docref(NULL, E_ERROR, 
-                    "Duplicate parameter name: '%s'", param_i->name);
+
+            if (strcmp(param_i->name, param_j->name) == 0)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Duplicate parameter name: '%s'", param_i->name);
                 return 0;
             }
         }
-        
+
         // switch (context->fn_type) {
         //     case FN_KERNEL:
         //         if (param_i->is_reference) {
@@ -656,15 +660,15 @@ static int validate_function_parameters(cuda_compilation_context_t *context)
         //                 param_i->name);
         //         }
         //         break;
-                
+
         //     case FN_DEVICE:
         //         break;
-                
+
         //     default:
         //         break;
         // }
     }
-    
+
     return 1;
 }
 
@@ -1372,8 +1376,6 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
 
 static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    fprintf(stderr, "DEBUG: before cast: Processing AST kind=%d, address=%p\n",
-            ast->kind, (void *)ast);
     zval *zv = zend_ast_get_zval(ast);
 
     if (!zv)
@@ -1381,9 +1383,6 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
         php_error_docref(NULL, E_ERROR, "Invalid ZVAL AST node.");
         return 0;
     }
-    fprintf(stderr, "DEBUG: after cast Processing AST kind=%d, address=%p\n",
-            ast->kind, (void *)ast);
-    fprintf(stderr, "DEBUG: handler_ast_zval called, zval type=%d\n", Z_TYPE_P(zv));
 
     switch (Z_TYPE_P(zv))
     {
@@ -1391,9 +1390,6 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     {
         smart_string_append_long(context->cuda_code_buffer, Z_LVAL_P(zv));
         context->last_evaluated_dtype = INT32;
-        fprintf(stderr, "DEBUG: Integer literal: %ld\n", Z_LVAL_P(zv));
-        fprintf(stderr, "DEBUG: after literal: handler_ast_zval called, zval type=%d\n", Z_TYPE_P(zv));
-
         break;
     }
     case IS_DOUBLE:
@@ -1427,7 +1423,6 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
 
             strcat(buffer, "f");
             context->last_evaluated_dtype = FLOAT32;
-            fprintf(stderr, "DEBUG: Formatted as float: %s\n", buffer);
         }
 
         smart_string_appends(context->cuda_code_buffer, buffer);
@@ -1436,19 +1431,14 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     case IS_TRUE:
         smart_string_appends(context->cuda_code_buffer, "true");
         context->last_evaluated_dtype = BOOL;
-        fprintf(stderr, "DEBUG: Boolean true\n");
         break;
     case IS_FALSE:
         smart_string_appends(context->cuda_code_buffer, "false");
         context->last_evaluated_dtype = BOOL;
-        fprintf(stderr, "DEBUG: Boolean false\n");
         break;
     case IS_STRING:
     {
         zend_string *str = Z_STR_P(zv);
-        fprintf(stderr, "DEBUG: String literal: '%.*s' (len=%zu)\n",
-                (int)ZSTR_LEN(str), ZSTR_VAL(str), ZSTR_LEN(str));
-
         const char *str_val = ZSTR_VAL(str);
 
         int is_simple_var = 1;
@@ -1545,6 +1535,10 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
         return 0;
     }
     dtype_t right_type = context->last_evaluated_dtype;
+
+    /**
+     * @todo maybe we can see if right and left type can be casted
+     */
 
     smart_string_appendc(context->cuda_code_buffer, ')');
 
@@ -1939,7 +1933,7 @@ static void destroy_local_variable(zval *zv)
     }
 }
 
-cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameters, cuda_fn_type fn_type, zend_string* name)
+cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameters, cuda_fn_type fn_type, zend_string *name)
 {
     cuda_compilation_context_t *context =
         (cuda_compilation_context_t *)emalloc(sizeof(cuda_compilation_context_t));
@@ -1949,6 +1943,7 @@ cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameter
     context->return_dtype = DTYPE_UNKNOWN;
     context->loop_depth = 0;
     context->name = name;
+    context->fn_type = fn_type;
 
     zend_hash_init(&context->local_variables, 8, NULL, destroy_local_variable, 0);
 

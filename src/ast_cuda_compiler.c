@@ -42,6 +42,7 @@ typedef struct
 static HashTable *cuda_headers = NULL;
 static HashTable *kernel_functions = NULL;
 
+static int generate_function_signature(cuda_compilation_context_t *context);
 static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast);
 static int handle_ast_stmt_list(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_if(cuda_compilation_context_t *context, zend_ast *ast);
@@ -612,18 +613,166 @@ static zend_bool needs_semicolon(zend_ast *ast)
     }
 }
 
+int compile_ast_to_cuda_fn(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    if (generate_function_signature(context) != 1)
+    {
+        return 0;
+    }
+
+    if (!compile_ast_as_valid_cuda(context, ast))
+    {
+        return 0;
+    }
+
+    smart_string_appends(context->cuda_code_buffer, "\n}\n");
+    return 1;
+}
+
+static int validate_function_parameters(cuda_compilation_context_t *context)
+{
+    if (!context || !context->parameters) {
+        return 1;
+    }
+    
+    for (int i = 0; i < context->parameters->total; i++) {
+        func_parameter *param_i = context->parameters->parameters[i];
+        
+        for (int j = i + 1; j < context->parameters->total; j++) {
+            func_parameter *param_j = context->parameters->parameters[j];
+            
+            if (strcmp(param_i->name, param_j->name) == 0) {
+                php_error_docref(NULL, E_ERROR, 
+                    "Duplicate parameter name: '%s'", param_i->name);
+                return 0;
+            }
+        }
+        
+        // switch (context->fn_type) {
+        //     case FN_KERNEL:
+        //         if (param_i->is_reference) {
+        //             php_error_docref(NULL, E_WARNING,
+        //                 "Kernel parameter '%s' passed by reference may not work in CUDA",
+        //                 param_i->name);
+        //         }
+        //         break;
+                
+        //     case FN_DEVICE:
+        //         break;
+                
+        //     default:
+        //         break;
+        // }
+    }
+    
+    return 1;
+}
+
+static int generate_function_signature(cuda_compilation_context_t *context)
+{
+    if (!context || !context->cuda_code_buffer)
+    {
+        return 0;
+    }
+
+    if (!validate_function_parameters(context))
+    {
+        return 0;
+    }
+
+    const char *qualifier = NULL;
+    const char *return_type_str = "void";
+
+    switch (context->fn_type)
+    {
+    case FN_KERNEL:
+        qualifier = "__global__";
+        return_type_str = get_cuda_type_str(context->return_dtype);
+        if (!return_type_str || context->return_dtype == DTYPE_UNKNOWN)
+        {
+            return_type_str = "void";
+        }
+        break;
+
+    case FN_DEVICE:
+        qualifier = "__device__";
+        return_type_str = get_cuda_type_str(context->return_dtype);
+        if (!return_type_str)
+        {
+            return_type_str = "void";
+        }
+        break;
+
+    case FN_GLOBAL:
+        qualifier = "";
+        return_type_str = get_cuda_type_str(context->return_dtype);
+        if (!return_type_str)
+        {
+            return_type_str = "void";
+        }
+        break;
+
+    default:
+        php_error_docref(NULL, E_ERROR, "Invalid CUDA function type");
+        return 0;
+    }
+
+    if (qualifier && qualifier[0] != '\0')
+    {
+        smart_string_appends(context->cuda_code_buffer, qualifier);
+        smart_string_appendc(context->cuda_code_buffer, ' ');
+    }
+
+    smart_string_appends(context->cuda_code_buffer, return_type_str);
+    smart_string_appendc(context->cuda_code_buffer, ' ');
+    smart_string_appends(context->cuda_code_buffer, ZSTR_VAL(context->name));
+    smart_string_appendc(context->cuda_code_buffer, '(');
+
+    if (context->parameters && context->parameters->parameters)
+    {
+        for (int i = 0; i < context->parameters->total; i++)
+        {
+            func_parameter *param = context->parameters->parameters[i];
+
+            if (strcmp(param->name, "cuda") == 0)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Parameter '$cuda' is reserved and will be automatically injected");
+                return 0;
+            }
+
+            const char *type_str = get_cuda_type_str(param->dtype);
+            if (!type_str)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Invalid type for parameter '%s'", param->name);
+                return 0;
+            }
+
+            smart_string_appends(context->cuda_code_buffer, type_str);
+            smart_string_appendc(context->cuda_code_buffer, ' ');
+
+            if (param->is_array)
+            {
+                smart_string_appendc(context->cuda_code_buffer, '*');
+            }
+
+            smart_string_appends(context->cuda_code_buffer, param->name);
+            if (i < context->parameters->total - 1)
+            {
+                smart_string_appends(context->cuda_code_buffer, ", ");
+            }
+        }
+    }
+
+    smart_string_appends(context->cuda_code_buffer, ") {\n");
+    return 1;
+}
+
 int compile_ast_as_valid_cuda(cuda_compilation_context_t *context, zend_ast *ast)
 {
     if (!ast)
         return 1;
-
-    fprintf(stderr, "DEBUG: Processing AST kind=%d, address=%p\n",
-            ast->kind, (void *)ast);
-
-    if (ast->kind == ZEND_AST_MAGIC_CONST)
-    {
-        fprintf(stderr, "DEBUG: Found MAGIC_CONST ast, attr=%d\n", ast->attr);
-    }
 
     if (ast->kind != ZEND_AST_STMT_LIST && ast->kind != ZEND_AST_ARG_LIST &&
         ast->kind != ZEND_AST_EXPR_LIST)
@@ -686,10 +835,10 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
     }
 
     zend_string *obj_name = Z_STR_P(obj_zv);
-    if (!zend_string_equals_literal(obj_name, "this"))
+    if (!zend_string_equals_literal(obj_name, "cuda"))
     {
         php_error_docref(NULL, E_ERROR,
-                         "Only $this->method() calls are allowed, got $%s", ZSTR_VAL(obj_name));
+                         "Only $cuda objects calls are allowed, got $%s", ZSTR_VAL(obj_name));
         return 0;
     }
 
@@ -1790,7 +1939,7 @@ static void destroy_local_variable(zval *zv)
     }
 }
 
-cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameters)
+cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameters, cuda_fn_type fn_type, zend_string* name)
 {
     cuda_compilation_context_t *context =
         (cuda_compilation_context_t *)emalloc(sizeof(cuda_compilation_context_t));
@@ -1799,6 +1948,7 @@ cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameter
     context->last_evaluated_dtype = DTYPE_UNKNOWN;
     context->return_dtype = DTYPE_UNKNOWN;
     context->loop_depth = 0;
+    context->name = name;
 
     zend_hash_init(&context->local_variables, 8, NULL, destroy_local_variable, 0);
 

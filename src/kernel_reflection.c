@@ -9,87 +9,103 @@
 #include "ext/standard/php_smart_string.h"
 #include <stdio.h>
 
-
-zend_array* kernel_get_closure_use_vars(zend_object *closure_obj)
+zend_array *kernel_get_closure_use_vars(zend_object *closure_obj)
 {
     const zend_function *func = zend_get_closure_method_def(closure_obj);
-    if (!func) {
+    if (!func)
+    {
         return NULL;
     }
-    
+
     // Infelizmente, não há função pública para acessar use_vars diretamente
     // Mas podemos tentar através da propriedade dinâmica "__use_vars"
     // (Esta é uma propriedade interna usada pelo PHP)
-    
-    zval *use_vars_zv = zend_read_property(zend_ce_closure, closure_obj, "__use_vars", sizeof("__use_vars")-1, 1, NULL);
-    if (use_vars_zv && Z_TYPE_P(use_vars_zv) == IS_ARRAY) {
+
+    zval *use_vars_zv = zend_read_property(zend_ce_closure, closure_obj, "__use_vars", sizeof("__use_vars") - 1, 1, NULL);
+    if (use_vars_zv && Z_TYPE_P(use_vars_zv) == IS_ARRAY)
+    {
         return Z_ARR_P(use_vars_zv);
     }
-    
+
     return NULL;
 }
 
 int kernel_extract_closure_source(zend_object *closure_obj, zend_string **out_source)
 {
     *out_source = NULL;
-    
-    if (!closure_obj) {
+
+    if (!closure_obj)
+    {
         return 0;
     }
-    
+
     const zend_function *func = zend_get_closure_method_def(closure_obj);
-    if (!func || func->type != ZEND_USER_FUNCTION) {
+    if (!func || func->type != ZEND_USER_FUNCTION)
+    {
         return 0;
     }
-    
-    zend_op_array *op_array = (zend_op_array*)func;
-    
-    if (!op_array->filename) {
+
+    zend_op_array *op_array = (zend_op_array *)func;
+
+    if (!op_array->filename)
+    {
         return 0;
     }
-    
+
     FILE *file = fopen(ZSTR_VAL(op_array->filename), "r");
-    if (!file) {
+    if (!file)
+    {
         return 0;
     }
-    
+
     smart_string source = {0};
     smart_string_alloc(&source, 2048, 0);
-    
+
     smart_string_appends(&source, "<?php\n");
-    
+
     char line[4096];
     uint32_t current_line = 1;
     bool in_closure = false;
     int brace_depth = 0;
-    
+
     uint32_t start_line = op_array->line_start;
     uint32_t end_line = op_array->line_end;
-    
-    if (start_line == 0 || end_line == 0) {
+
+    if (start_line == 0 || end_line == 0)
+    {
         fclose(file);
         return 0;
     }
-    
-    while (fgets(line, sizeof(line), file)) {
-        if (current_line >= start_line && current_line <= end_line) {
+
+    while (fgets(line, sizeof(line), file))
+    {
+        if (current_line >= start_line && current_line <= end_line)
+        {
             char *trimmed = line;
-            while (*trimmed == ' ' || *trimmed == '\t') trimmed++;
-            
-            if (!in_closure) {
-                if (strstr(trimmed, "function") || strstr(trimmed, "fn") || 
-                    (strstr(trimmed, "static") && strstr(trimmed, "function"))) {
+            while (*trimmed == ' ' || *trimmed == '\t')
+                trimmed++;
+
+            if (!in_closure)
+            {
+                if (strstr(trimmed, "function") || strstr(trimmed, "fn") ||
+                    (strstr(trimmed, "static") && strstr(trimmed, "function")))
+                {
                     in_closure = true;
                 }
             }
-            
-            if (in_closure) {
+
+            if (in_closure)
+            {
                 smart_string_appends(&source, line);
-                for (char *p = line; *p; p++) {
-                    if (*p == '{') brace_depth++;
-                    else if (*p == '}') {
+                for (char *p = line; *p; p++)
+                {
+                    if (*p == '{')
+                        brace_depth++;
+                    else if (*p == '}')
+                    {
                         brace_depth--;
-                        if (brace_depth <= 0) {
+                        if (brace_depth <= 0)
+                        {
                             in_closure = false;
                             break;
                         }
@@ -97,22 +113,24 @@ int kernel_extract_closure_source(zend_object *closure_obj, zend_string **out_so
                 }
             }
         }
-        
-        if (current_line > end_line) break;
+
+        if (current_line > end_line)
+            break;
         current_line++;
     }
-    
+
     fclose(file);
-    
-    if (source.len == 0) {
+
+    if (source.len == 0)
+    {
         smart_string_free(&source);
         return 0;
     }
-    
+
     smart_string_0(&source);
     *out_source = zend_string_init(source.c, source.len, 0);
     smart_string_free(&source);
-    
+
     return 1;
 }
 
@@ -140,7 +158,7 @@ dtype_t map_dtype_string_to_int(zend_string *dtype_str)
     return DTYPE_UNKNOWN;
 }
 
-void add_parameter_to_list(func_parameter_list_t *list, parameter_type_t type, const char *name, dtype_t dtype)
+void add_parameter_to_list(func_parameter_list_t *list, parameter_type_t type, const char *name, dtype_t dtype, int is_array)
 {
 
     list->total++;
@@ -154,13 +172,14 @@ void add_parameter_to_list(func_parameter_list_t *list, parameter_type_t type, c
     strncpy(param->name, name, 31);
     param->name[31] = '\0';
     param->dtype = dtype;
+    param->is_array = is_array;
 
     list->parameters[list->total - 1] = param;
 }
 
 func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
-                                                 zend_class_entry *ce_input_attr,
-                                                 zend_class_entry *ce_output_attr)
+                                                   zend_class_entry *ce_input_attr,
+                                                   zend_class_entry *ce_output_attr)
 {
     if (!fptr || !fptr->common.arg_info)
     {
@@ -224,6 +243,7 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
         {
             zend_string *dtype_str = NULL;
             dtype_t dtype = DTYPE_UNKNOWN;
+            int is_array = 0;
 
             for (uint32_t j = 0; j < matched_attr->argc; j++)
             {
@@ -235,6 +255,8 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
                 {
                     dtype_str = Z_STR(attr_arg->value);
                     dtype = map_dtype_string_to_int(dtype_str);
+                    /** @todo create a real verification  */
+                    is_array = zend_type_is_set(&arg->type) && arg->type.type_mask & (1U << 17);
                     break;
                 }
             }
@@ -242,7 +264,7 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
             /** @todo ensure dtype is ok */
             if (dtype != DTYPE_UNKNOWN)
             {
-                add_parameter_to_list(param_list, current_type, ZSTR_VAL(var_name), dtype);
+                add_parameter_to_list(param_list, current_type, ZSTR_VAL(var_name), dtype, is_array);
             }
         }
     }

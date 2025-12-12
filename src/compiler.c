@@ -8,8 +8,11 @@
 #include "ast_cuda_compiler.h"
 #include "zend_ast.h"
 #include "zend_compile.h"
+#include "ext/standard/php_smart_string.h"
 
 zend_class_entry *cuda_compiler_ce;
+extern zend_class_entry *cuda_attr_input_ce;
+extern zend_class_entry *cuda_attr_output_ce;
 static zend_object_handlers compiler_handlers;
 
 static void compiler_free_object(zend_object *object);
@@ -341,63 +344,19 @@ ZEND_METHOD(Compiler, kernel)
 
     if (fptr->op_array.static_variables != NULL)
     {
-        zend_string *device_class_name =
-            zend_string_init("Cuda\\Device", strlen("Cuda\\Device"), 0);
-
-        zend_class_entry *device_ce = zend_lookup_class(device_class_name);
-        zend_string_release(device_class_name);
-
-        if (!device_ce)
-        {
-            zend_throw_exception_ex(
-                NULL,
-                0,
-                "Class Cuda\\Device not found");
-            return;
-        }
-
-        zend_string *key;
-        zval *zv;
-        ZEND_HASH_FOREACH_STR_KEY_VAL(fptr->op_array.static_variables, key, zv)
-        {
-            if (Z_TYPE_P(zv) != IS_OBJECT)
-            {
-                zend_throw_exception_ex(
-                    NULL,
-                    0,
-                    "Kernel closures may only capture instances of Cuda\\Device; "
-                    "captured variable '%s' is not an object.",
-                    key ? ZSTR_VAL(key) : "<unknown>");
-                return;
-            }
-
-            if (!instanceof_function(Z_OBJCE_P(zv), device_ce))
-            {
-                zend_throw_exception_ex(
-                    NULL,
-                    0,
-                    "Kernel closures may only capture instances of Cuda\\Device; "
-                    "captured variable '%s' is not a Cuda\\Device.",
-                    key ? ZSTR_VAL(key) : "<unknown>");
-                return;
-            }
-
-            cuda_device_object *dev = Z_CUDA_DEVICE_P(zv);
-            zend_string *dev_name = zend_string_copy(dev->name);
-
-            if (!zend_hash_exists(compiler->devices, dev_name))
-            {
-                zend_hash_add_ptr(compiler->devices, dev_name, dev);
-            }
-            else
-            {
-                zend_string_release(dev_name);
-            }
-        }
-        ZEND_HASH_FOREACH_END();
+        zend_throw_exception_ex(
+            NULL,
+            0,
+            "Cuda Runtime cannot outter context variables.");
+        return;
     }
 
     cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_kernel_ce);
+    func_parameter_list_t *params = cuda_extract_parameter_list(fptr, cuda_attr_input_ce, cuda_attr_output_ce);
+
+    init_cuda_headers();
+    cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL,  fargs->name);
+
     if (!fargs)
     {
         return;
@@ -449,6 +408,13 @@ ZEND_METHOD(Compiler, kernel)
     zend_arena *ast_arena = NULL;
     zend_ast *ast = zend_compile_string_to_ast(source_code, &ast_arena, fargs->name);
 
+    if (compile_ast_to_cuda_fn(ctx, ast) != 1)
+    {
+        return;
+    }
+
+    smart_string_0(ctx->cuda_code_buffer);
+
     cuda_kernel_data *kernel = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
     kernel->name = zend_string_copy(fargs->name);
     kernel->target = zend_string_copy(fargs->target);
@@ -491,6 +457,7 @@ ZEND_METHOD(Compiler, kernel)
     kernel->ast = ast;
     kernel->ast_arena = ast_arena;
     kernel->source_code = source_code;
+    kernel->cuda_code = ctx->cuda_code_buffer->c;
 
     kernel->parameters = cuda_extract_parameter_list(fptr, cuda_attr_input_ce, cuda_attr_output_ce);
 
@@ -624,6 +591,7 @@ ZEND_METHOD(Compiler, getKernels)
 
         add_assoc_str(&kernel_info, "name", zend_string_copy(kernel->name));
         add_assoc_str(&kernel_info, "target", zend_string_copy(kernel->target));
+        add_assoc_stringl(&kernel_info, "cuda_code", kernel->cuda_code, strlen(kernel->cuda_code));
 
         zval grid_zv;
         array_init(&grid_zv);

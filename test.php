@@ -3,24 +3,26 @@
 use Cuda\CudaArray;
 use Cuda\Attr as Attr;
 
-use function Cuda\Builtins\{threadIdx};
-
+use Cuda\Runtime;
+use function Cuda\Builtins\{runtime};
 
 $compiler = new Cuda\Compiler;
 
-$device = Cuda\Device::fn(
-    #[Cuda\Attr\Device(name: 'device_test')]
-    function (float $a, int $b): float|int {
-        return $a + $b;
-    }
-);
 
 $compiler->kernel(
+
     #[Cuda\Attr\Kernel(name: 'kernel_test')]
-    function ($a, $b) use ($device): void {
-        $b = $device($b);
+    function (
+        #[Cuda\Attr\Input(dtype: 'float')]array $a,
+        #[Cuda\Attr\Output(dtype: 'float')]array $b
+        ): void {
+        /** 
+         * @var Runtime $cuda 
+         */
+        $idx = $cuda->threadIdx();
+        $b[$idx] = $b[$idx] + $a[$idx];
     }
 );
 
-var_dump($compiler->compile()->getKernels());
+var_dump($compiler->getKernels());
 

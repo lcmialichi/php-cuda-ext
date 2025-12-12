@@ -3,7 +3,13 @@
 namespace Cuda;
 
 class Runtime
-{
+{   
+    public Math $math;
+    public Atomic $atomic;
+    public Memory $memory;
+    public Sync $sync;
+
+
     public function threadIdx(): int {}
     
     public function blockIdx(): int {}

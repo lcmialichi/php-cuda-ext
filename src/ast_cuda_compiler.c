@@ -39,9 +39,6 @@ typedef struct
     dtype_t element_type;
 } array_info_t;
 
-static HashTable *cuda_headers = NULL;
-static HashTable *kernel_functions = NULL;
-
 static int generate_function_signature(cuda_compilation_context_t *context);
 static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast);
 static int handle_ast_stmt_list(cuda_compilation_context_t *context, zend_ast *ast);
@@ -365,25 +362,14 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_PARAM, handle_not_allowed},
 };
 
-void init_cuda_headers()
+static void add_cuda_header(cuda_compilation_context_t *context, const char *header)
 {
-    if (!cuda_headers)
-    {
-        cuda_headers = (HashTable *)emalloc(sizeof(HashTable));
-        zend_hash_init(cuda_headers, 8, NULL, NULL, 0);
-    }
-}
-
-static void add_cuda_header(const char *header)
-{
-    if (!cuda_headers)
-        init_cuda_headers();
-
     zend_string *key = zend_string_init(header, strlen(header), 0);
-    if (!zend_hash_exists(cuda_headers, key))
+    if (!zend_hash_exists(context->headers, key))
     {
-        zend_hash_add_ptr(cuda_headers, key, (void *)header);
+        zend_hash_add_ptr(context->headers, key, (void *)header);
     }
+
     zend_string_release(key);
 }
 
@@ -955,7 +941,7 @@ static int handle_math_method(cuda_compilation_context_t *context,
 
     if (func_info->header)
     {
-        add_cuda_header(func_info->header);
+        add_cuda_header(context, func_info->header);
     }
 
     const char *cuda_func_name = NULL;
@@ -984,10 +970,8 @@ static int handle_math_method(cuda_compilation_context_t *context,
         return 0;
     }
 
-    // Escreve o nome da função
     smart_string_appends(context->cuda_code_buffer, cuda_func_name);
 
-    // Processa argumentos
     smart_string_appendc(context->cuda_code_buffer, '(');
     if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
     {
@@ -995,7 +979,6 @@ static int handle_math_method(cuda_compilation_context_t *context,
     }
     smart_string_appendc(context->cuda_code_buffer, ')');
 
-    // Atualiza tipos de retorno
     context->last_evaluated_first_dtype = return_type;
     context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     context->current_cuda_object = CUDA_OBJ_NONE;
@@ -1003,14 +986,12 @@ static int handle_math_method(cuda_compilation_context_t *context,
     return 1;
 }
 
-// Métodos de $cuda->sync
 static int handle_sync_method(cuda_compilation_context_t *context,
                               const char *method_name,
                               zend_ast *args_ast)
 {
     if (strcmp(method_name, "threads") == 0)
     {
-        // $cuda->sync->threads()
         if (args_ast && zend_ast_get_num_children(args_ast) > 0)
         {
             php_error_docref(NULL, E_WARNING,
@@ -1108,7 +1089,7 @@ static int handle_memory_method(cuda_compilation_context_t *context,
         }
         smart_string_appendc(context->cuda_code_buffer, ')');
 
-        context->last_evaluated_first_dtype = LIST; 
+        context->last_evaluated_first_dtype = LIST;
         context->last_evaluated_second_dtype = FLOAT32;
         context->current_cuda_object = CUDA_OBJ_NONE;
         return 1;
@@ -1239,7 +1220,7 @@ static int handler_ast_allowed_simple(cuda_compilation_context_t *context, zend_
             return 0;
         }
     }
-    
+
     return 1;
 }
 
@@ -1305,7 +1286,7 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
     {
         context->current_cuda_object = CUDA_OBJ_THREADIDX;
         smart_string_appends(context->cuda_code_buffer, "threadIdx");
-        context->last_evaluated_first_dtype = LIST; 
+        context->last_evaluated_first_dtype = LIST;
         context->last_evaluated_second_dtype = INT32;
         return 1;
     }
@@ -1864,7 +1845,7 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
     {
         return 0;
     }
- 
+
     if (prop_ast->kind != ZEND_AST_ZVAL)
     {
         php_error_docref(NULL, E_ERROR, "Property name must be literal.");
@@ -2365,35 +2346,7 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
     return 1;
 }
 
-void cuda_compiler_init()
-{
-    init_cuda_headers();
-
-    if (!kernel_functions)
-    {
-        kernel_functions = (HashTable *)emalloc(sizeof(HashTable));
-        zend_hash_init(kernel_functions, 8, NULL, NULL, 0);
-    }
-}
-
-void cuda_compiler_cleanup()
-{
-    if (cuda_headers)
-    {
-        zend_hash_destroy(cuda_headers);
-        efree(cuda_headers);
-        cuda_headers = NULL;
-    }
-
-    if (kernel_functions)
-    {
-        zend_hash_destroy(kernel_functions);
-        efree(kernel_functions);
-        kernel_functions = NULL;
-    }
-}
-
-char *generate_cuda_headers()
+char *generate_cuda_headers(HashTable* cuda_headers)
 {
     if (!cuda_headers || zend_hash_num_elements(cuda_headers) == 0)
     {
@@ -2440,6 +2393,9 @@ cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameter
     cuda_compilation_context_t *context =
         (cuda_compilation_context_t *)emalloc(sizeof(cuda_compilation_context_t));
 
+    context->headers = (HashTable *)emalloc(sizeof(HashTable));
+    zend_hash_init(context->headers, 8, NULL, NULL, 0);
+
     context->parameters = parameters;
     context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
     context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
@@ -2469,6 +2425,13 @@ void free_cuda_context(cuda_compilation_context_t *context)
         smart_string_free(context->cuda_code_buffer);
         efree(context->cuda_code_buffer);
     }
+
+    if (context->headers)
+    {
+        zend_hash_destroy(context->headers);
+        efree(context->headers);
+    }
+
 
     if (context->parameters)
     {

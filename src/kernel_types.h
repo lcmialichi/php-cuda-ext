@@ -78,6 +78,7 @@ typedef struct
         CUDA_OBJ_BLOCKDIM,
         CUDA_OBJ_GRIDDIM
     } current_cuda_object;
+    HashTable *headers;
     cuda_fn_type fn_type;
     zend_string *name;
     func_parameter_list_t *parameters;

@@ -16,6 +16,7 @@ typedef enum
     BOOL,
     DTYPE_UNKNOWN,
     DTYPE_COUNT,
+    LIST,
     VOID
 } dtype_t;
 

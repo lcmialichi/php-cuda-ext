@@ -68,6 +68,7 @@ static int handler_ast_break_continue(cuda_compilation_context_t *context, zend_
 static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_assign_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast);
 
 static const char *get_ast_kind_name(zend_ast_kind kind)
 {
@@ -310,7 +311,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_BREAK, handler_ast_break_continue},
     {ZEND_AST_CONTINUE, handler_ast_break_continue},
     {ZEND_AST_DIM, handler_ast_dim},
-    {ZEND_AST_PROP, handle_not_allowed},
+    {ZEND_AST_PROP, handler_ast_prop},
     {ZEND_AST_NULLSAFE_PROP, handle_not_allowed},
     {ZEND_AST_STATIC_PROP, handle_not_allowed},
     {ZEND_AST_CALL, handle_not_allowed},
@@ -460,13 +461,78 @@ static const char *get_assign_op_symbol(uint32_t op_type)
     }
 }
 
+static const char *get_cuda_object_name(int obj_type)
+{
+    switch (obj_type)
+    {
+    case CUDA_OBJ_CUDA:
+        return "cuda";
+    case CUDA_OBJ_MATH:
+        return "math";
+    case CUDA_OBJ_ATOMIC:
+        return "atomic";
+    case CUDA_OBJ_MEMORY:
+        return "memory";
+    case CUDA_OBJ_SYNC:
+        return "sync";
+    case CUDA_OBJ_THREADIDX:
+        return "threadIdx";
+    case CUDA_OBJ_BLOCKIDX:
+        return "blockIdx";
+    case CUDA_OBJ_BLOCKDIM:
+        return "blockDim";
+    case CUDA_OBJ_GRIDDIM:
+        return "gridDim";
+    default:
+        return "unknown";
+    }
+}
+
 static const char *get_unary_op_symbol(uint32_t op_type)
 {
     return NULL;
 }
 
-static const char *get_cuda_type_str(dtype_t type)
+static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
 {
+    static char buffer[256];
+
+    if (type == LIST)
+    {
+        const char *base_type;
+
+        switch (second_dtype)
+        {
+        case FLOAT32:
+            base_type = "float";
+            break;
+        case FLOAT64:
+            base_type = "double";
+            break;
+        case INT32:
+            base_type = "int";
+            break;
+        case INT64:
+            base_type = "long long";
+            break;
+        case UINT32:
+            base_type = "unsigned int";
+            break;
+        case UINT64:
+            base_type = "unsigned long long";
+            break;
+        case BOOL:
+            base_type = "bool";
+            break;
+        default:
+            base_type = "void";
+            break;
+        }
+
+        snprintf(buffer, sizeof(buffer), "%s*", base_type);
+        return buffer;
+    }
+
     switch (type)
     {
     case FLOAT32:
@@ -483,6 +549,8 @@ static const char *get_cuda_type_str(dtype_t type)
         return "unsigned long long";
     case BOOL:
         return "bool";
+    case LIST:
+        return "void*";
     default:
         return "void";
     }
@@ -691,7 +759,7 @@ static int generate_function_signature(cuda_compilation_context_t *context)
     {
     case FN_KERNEL:
         qualifier = "__global__";
-        return_type_str = get_cuda_type_str(context->return_dtype);
+        return_type_str = get_cuda_type_str(context->return_dtype, DTYPE_UNKNOWN);
         if (!return_type_str || context->return_dtype == DTYPE_UNKNOWN)
         {
             return_type_str = "void";
@@ -700,7 +768,7 @@ static int generate_function_signature(cuda_compilation_context_t *context)
 
     case FN_DEVICE:
         qualifier = "__device__";
-        return_type_str = get_cuda_type_str(context->return_dtype);
+        return_type_str = get_cuda_type_str(context->return_dtype, DTYPE_UNKNOWN);
         if (!return_type_str)
         {
             return_type_str = "void";
@@ -709,7 +777,7 @@ static int generate_function_signature(cuda_compilation_context_t *context)
 
     case FN_GLOBAL:
         qualifier = "";
-        return_type_str = get_cuda_type_str(context->return_dtype);
+        return_type_str = get_cuda_type_str(context->return_dtype, DTYPE_UNKNOWN);
         if (!return_type_str)
         {
             return_type_str = "void";
@@ -738,6 +806,9 @@ static int generate_function_signature(cuda_compilation_context_t *context)
         {
             func_parameter *param = context->parameters->parameters[i];
 
+            dtype_t first_type = param->dtype;
+            dtype_t second_type = param->second_dtype;
+
             if (strcmp(param->name, "cuda") == 0)
             {
                 php_error_docref(NULL, E_ERROR,
@@ -745,7 +816,7 @@ static int generate_function_signature(cuda_compilation_context_t *context)
                 return 0;
             }
 
-            const char *type_str = get_cuda_type_str(param->dtype);
+            const char *type_str = get_cuda_type_str(first_type, second_type);
             if (!type_str)
             {
                 php_error_docref(NULL, E_ERROR,
@@ -755,12 +826,6 @@ static int generate_function_signature(cuda_compilation_context_t *context)
 
             smart_string_appends(context->cuda_code_buffer, type_str);
             smart_string_appendc(context->cuda_code_buffer, ' ');
-
-            if (param->is_array)
-            {
-                smart_string_appendc(context->cuda_code_buffer, '*');
-            }
-
             smart_string_appends(context->cuda_code_buffer, param->name);
             if (i < context->parameters->total - 1)
             {
@@ -781,7 +846,8 @@ int compile_ast_as_valid_cuda(cuda_compilation_context_t *context, zend_ast *ast
     if (ast->kind != ZEND_AST_STMT_LIST && ast->kind != ZEND_AST_ARG_LIST &&
         ast->kind != ZEND_AST_EXPR_LIST)
     {
-        context->last_evaluated_dtype = DTYPE_UNKNOWN;
+        context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
     handler handler_func = get_ast_handler(ast->kind);
@@ -805,6 +871,260 @@ static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast
     return 0;
 }
 
+static int handle_cuda_direct_method(cuda_compilation_context_t *context,
+                                     const char *method_name,
+                                     zend_ast *args_ast)
+{
+    if (strcmp(method_name, "threadIdx") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->threadIdx() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "threadIdx");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_THREADIDX;
+        return 1;
+    }
+    else if (strcmp(method_name, "blockIdx") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->blockIdx() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "blockIdx");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_BLOCKIDX;
+        return 1;
+    }
+    else if (strcmp(method_name, "blockDim") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->blockDim() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "blockDim");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_BLOCKDIM;
+        return 1;
+    }
+    else if (strcmp(method_name, "gridDim") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->gridDim() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "gridDim");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_GRIDDIM;
+        return 1;
+    }
+
+    php_error_docref(NULL, E_ERROR,
+                     "Method $cuda->%s() is not supported.", method_name);
+    return 0;
+}
+
+static int handle_math_method(cuda_compilation_context_t *context,
+                              const char *method_name,
+                              zend_ast *args_ast)
+{
+    const cuda_function_info_t *func_info = find_cuda_function(method_name);
+    if (!func_info)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Method $cuda->math->%s() is not supported.", method_name);
+        return 0;
+    }
+
+    if (func_info->header)
+    {
+        add_cuda_header(func_info->header);
+    }
+
+    const char *cuda_func_name = NULL;
+    dtype_t return_type = DTYPE_UNKNOWN;
+
+    if (func_info->cuda_name_f32)
+    {
+        cuda_func_name = func_info->cuda_name_f32;
+        return_type = func_info->return_type_f32;
+    }
+    else if (func_info->cuda_name_f64)
+    {
+        cuda_func_name = func_info->cuda_name_f64;
+        return_type = func_info->return_type_f64;
+    }
+    else if (func_info->cuda_name_i32)
+    {
+        cuda_func_name = func_info->cuda_name_i32;
+        return_type = func_info->return_type_i32;
+    }
+
+    if (!cuda_func_name)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "No CUDA implementation for math->%s()", method_name);
+        return 0;
+    }
+
+    // Escreve o nome da função
+    smart_string_appends(context->cuda_code_buffer, cuda_func_name);
+
+    // Processa argumentos
+    smart_string_appendc(context->cuda_code_buffer, '(');
+    if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
+    {
+        return 0;
+    }
+    smart_string_appendc(context->cuda_code_buffer, ')');
+
+    // Atualiza tipos de retorno
+    context->last_evaluated_first_dtype = return_type;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    context->current_cuda_object = CUDA_OBJ_NONE;
+
+    return 1;
+}
+
+// Métodos de $cuda->sync
+static int handle_sync_method(cuda_compilation_context_t *context,
+                              const char *method_name,
+                              zend_ast *args_ast)
+{
+    if (strcmp(method_name, "threads") == 0)
+    {
+        // $cuda->sync->threads()
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->sync->threads() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "__syncthreads()");
+        context->last_evaluated_first_dtype = VOID;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+        context->current_cuda_object = CUDA_OBJ_NONE;
+        return 1;
+    }
+    else if (strcmp(method_name, "warp") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->sync->warp() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "__syncwarp()");
+        context->last_evaluated_first_dtype = VOID;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+        context->current_cuda_object = CUDA_OBJ_NONE;
+        return 1;
+    }
+
+    php_error_docref(NULL, E_ERROR,
+                     "Method $cuda->sync->%s() is not supported.", method_name);
+    return 0;
+}
+
+static int handle_atomic_method(cuda_compilation_context_t *context,
+                                const char *method_name,
+                                zend_ast *args_ast)
+{
+    const char *cuda_func_name = NULL;
+    dtype_t return_type = DTYPE_UNKNOWN;
+
+    if (strcmp(method_name, "add") == 0)
+    {
+        cuda_func_name = "atomicAdd";
+        return_type = FLOAT32;
+    }
+    else if (strcmp(method_name, "sub") == 0)
+    {
+        cuda_func_name = "atomicSub";
+        return_type = FLOAT32;
+    }
+    else if (strcmp(method_name, "max") == 0)
+    {
+        cuda_func_name = "atomicMax";
+        return_type = INT32;
+    }
+    else if (strcmp(method_name, "min") == 0)
+    {
+        cuda_func_name = "atomicMin";
+        return_type = INT32;
+    }
+    else
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Method $cuda->atomic->%s() is not supported.", method_name);
+        return 0;
+    }
+
+    smart_string_appends(context->cuda_code_buffer, cuda_func_name);
+
+    smart_string_appendc(context->cuda_code_buffer, '(');
+    if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
+    {
+        return 0;
+    }
+    smart_string_appendc(context->cuda_code_buffer, ')');
+
+    context->last_evaluated_first_dtype = return_type;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    context->current_cuda_object = CUDA_OBJ_NONE;
+
+    return 1;
+}
+
+static int handle_memory_method(cuda_compilation_context_t *context,
+                                const char *method_name,
+                                zend_ast *args_ast)
+{
+    if (strcmp(method_name, "shared") == 0)
+    {
+        smart_string_appends(context->cuda_code_buffer, "shared_memory");
+
+        smart_string_appendc(context->cuda_code_buffer, '(');
+        if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
+        {
+            return 0;
+        }
+        smart_string_appendc(context->cuda_code_buffer, ')');
+
+        context->last_evaluated_first_dtype = LIST; 
+        context->last_evaluated_second_dtype = FLOAT32;
+        context->current_cuda_object = CUDA_OBJ_NONE;
+        return 1;
+    }
+    else if (strcmp(method_name, "global") == 0)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "$cuda->memory->global() not implemented yet.");
+        return 0;
+    }
+
+    php_error_docref(NULL, E_ERROR,
+                     "Method $cuda->memory->%s() is not supported.", method_name);
+    return 0;
+}
+
 static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast *ast)
 {
     uint32_t num_children = zend_ast_get_num_children(ast);
@@ -818,31 +1138,47 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
     zend_ast *method_name_ast = ast->child[1];
     zend_ast *args_ast = ast->child[2];
 
-    if (object_ast->kind != ZEND_AST_VAR)
+    if (object_ast->kind == ZEND_AST_VAR)
     {
-        php_error_docref(NULL, E_ERROR, "Only method calls on $this are allowed.");
-        return 0;
+        zend_ast *var_name_ast = object_ast->child[0];
+        if (var_name_ast->kind == ZEND_AST_ZVAL)
+        {
+            zval *obj_zv = zend_ast_get_zval(var_name_ast);
+            if (obj_zv && Z_TYPE_P(obj_zv) == IS_STRING)
+            {
+                zend_string *obj_name = Z_STR_P(obj_zv);
+                if (zend_string_equals_literal(obj_name, "cuda"))
+                {
+                    context->current_cuda_object = CUDA_OBJ_CUDA;
+                }
+                else
+                {
+                    php_error_docref(NULL, E_ERROR,
+                                     "Only $cuda object calls are allowed, got $%s",
+                                     ZSTR_VAL(obj_name));
+                    return 0;
+                }
+            }
+        }
     }
-
-    zend_ast *var_name_ast = object_ast->child[0];
-    if (var_name_ast->kind != ZEND_AST_ZVAL)
+    else if (object_ast->kind == ZEND_AST_PROP)
     {
-        php_error_docref(NULL, E_ERROR, "Complex object access not allowed.");
-        return 0;
+        if (!handler_ast_prop(context, object_ast))
+        {
+            return 0;
+        }
     }
-
-    zval *obj_zv = zend_ast_get_zval(var_name_ast);
-    if (!obj_zv || Z_TYPE_P(obj_zv) != IS_STRING)
+    else if (object_ast->kind == ZEND_AST_METHOD_CALL)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid object name.");
-        return 0;
+        if (!handler_ast_method_call(context, object_ast))
+        {
+            return 0;
+        }
     }
-
-    zend_string *obj_name = Z_STR_P(obj_zv);
-    if (!zend_string_equals_literal(obj_name, "cuda"))
+    else
     {
         php_error_docref(NULL, E_ERROR,
-                         "Only $cuda objects calls are allowed, got $%s", ZSTR_VAL(obj_name));
+                         "Invalid object for method call.");
         return 0;
     }
 
@@ -862,69 +1198,35 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
     zend_string *method_name = Z_STR_P(method_zv);
     const char *method_name_c = ZSTR_VAL(method_name);
 
-    if (strcmp(method_name_c, "threadIdx") == 0)
+    switch (context->current_cuda_object)
     {
-        smart_string_appends(context->cuda_code_buffer, "threadIdx.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
+    case CUDA_OBJ_CUDA:
+        return handle_cuda_direct_method(context, method_name_c, args_ast);
 
-    if (strcmp(method_name_c, "blockIdx") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "blockIdx.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
+    case CUDA_OBJ_MATH:
+        return handle_math_method(context, method_name_c, args_ast);
 
-    if (strcmp(method_name_c, "blockDim") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "blockDim.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
+    case CUDA_OBJ_ATOMIC:
+        return handle_atomic_method(context, method_name_c, args_ast);
 
-    if (strcmp(method_name_c, "gridDim") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "gridDim.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
+    case CUDA_OBJ_MEMORY:
+        return handle_memory_method(context, method_name_c, args_ast);
 
-    const cuda_function_info_t *func_info = find_cuda_function(method_name_c);
-    if (!func_info)
-    {
+    case CUDA_OBJ_SYNC:
+        return handle_sync_method(context, method_name_c, args_ast);
+
+    case CUDA_OBJ_THREADIDX:
+    case CUDA_OBJ_BLOCKIDX:
+    case CUDA_OBJ_BLOCKDIM:
+    case CUDA_OBJ_GRIDDIM:
         php_error_docref(NULL, E_ERROR,
-                         "Method $this->%s() is not supported in CUDA.", method_name_c);
+                         "Use property access (->x) not method call for CUDA object members.");
+        return 0;
+
+    default:
+        php_error_docref(NULL, E_ERROR, "Invalid CUDA object access.");
         return 0;
     }
-
-    if (func_info->num_params == 0 || !args_ast)
-    {
-        if (func_info->cuda_name_f32)
-        {
-            add_cuda_header(func_info->header);
-            smart_string_appends(context->cuda_code_buffer, func_info->cuda_name_f32);
-            context->last_evaluated_dtype = func_info->return_type_f32;
-        }
-    }
-    else
-    {
-        add_cuda_header(func_info->header);
-        if (func_info->cuda_name_f32)
-        {
-            smart_string_appends(context->cuda_code_buffer, func_info->cuda_name_f32);
-            context->last_evaluated_dtype = func_info->return_type_f32;
-        }
-    }
-
-    smart_string_appendc(context->cuda_code_buffer, '(');
-    if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
-    {
-        return 0;
-    }
-    smart_string_appendc(context->cuda_code_buffer, ')');
-
-    return 1;
 }
 
 static int handler_ast_allowed_simple(cuda_compilation_context_t *context, zend_ast *ast)
@@ -937,6 +1239,7 @@ static int handler_ast_allowed_simple(cuda_compilation_context_t *context, zend_
             return 0;
         }
     }
+    
     return 1;
 }
 
@@ -974,7 +1277,6 @@ static int handle_ast_stmt_list(cuda_compilation_context_t *context, zend_ast *a
     }
     return 1;
 }
-
 static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
 {
     zend_ast *name_node = ast->child[0];
@@ -994,11 +1296,53 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
 
     zend_string *var_name_zend = Z_STR(var_name_node->val);
     const char *name_c = ZSTR_VAL(var_name_zend);
+    if (strcmp(name_c, "cuda") == 0)
+    {
+        context->current_cuda_object = CUDA_OBJ_CUDA;
+        return 1;
+    }
+    if (strcmp(name_c, "threadIdx") == 0)
+    {
+        context->current_cuda_object = CUDA_OBJ_THREADIDX;
+        smart_string_appends(context->cuda_code_buffer, "threadIdx");
+        context->last_evaluated_first_dtype = LIST; 
+        context->last_evaluated_second_dtype = INT32;
+        return 1;
+    }
+
+    if (strcmp(name_c, "blockIdx") == 0)
+    {
+        context->current_cuda_object = CUDA_OBJ_BLOCKIDX;
+        smart_string_appends(context->cuda_code_buffer, "blockIdx");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+        return 1;
+    }
+
+    if (strcmp(name_c, "blockDim") == 0)
+    {
+        context->current_cuda_object = CUDA_OBJ_BLOCKDIM;
+        smart_string_appends(context->cuda_code_buffer, "blockDim");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+        return 1;
+    }
+
+    if (strcmp(name_c, "gridDim") == 0)
+    {
+        context->current_cuda_object = CUDA_OBJ_GRIDDIM;
+        smart_string_appends(context->cuda_code_buffer, "gridDim");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+        return 1;
+    }
 
     func_parameter *param = find_kernel_parameter(context->parameters, name_c);
     if (param)
     {
-        context->last_evaluated_dtype = param->dtype;
+        context->last_evaluated_first_dtype = param->dtype;
+        context->last_evaluated_second_dtype = param->second_dtype;
+
         smart_string_appendl(context->cuda_code_buffer, name_c, ZSTR_LEN(var_name_zend));
         return 1;
     }
@@ -1006,36 +1350,10 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
     local_variable_t *local = zend_hash_find_ptr(&context->local_variables, var_name_zend);
     if (local)
     {
-        context->last_evaluated_dtype = local->dtype;
+        context->last_evaluated_first_dtype = local->dtype;
+        context->last_evaluated_second_dtype = local->second_dtype;
+
         smart_string_appendl(context->cuda_code_buffer, name_c, ZSTR_LEN(var_name_zend));
-        return 1;
-    }
-
-    if (strcmp(name_c, "threadIdx") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "threadIdx.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
-
-    if (strcmp(name_c, "blockIdx") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "blockIdx.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
-
-    if (strcmp(name_c, "blockDim") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "blockDim.x");
-        context->last_evaluated_dtype = INT32;
-        return 1;
-    }
-
-    if (strcmp(name_c, "gridDim") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "gridDim.x");
-        context->last_evaluated_dtype = INT32;
         return 1;
     }
 
@@ -1063,7 +1381,8 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
         return 0;
     }
 
-    dtype_t rvalue_type = context->last_evaluated_dtype;
+    dtype_t rvalue_type = context->last_evaluated_first_dtype;
+    dtype_t rvalue_second_type = context->last_evaluated_second_dtype;
 
     context->cuda_code_buffer = original_buffer;
 
@@ -1089,16 +1408,18 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
             local_variable_t *new_var = (local_variable_t *)ecalloc(1, sizeof(local_variable_t));
             new_var->name = zend_string_copy(var_name_zend);
             new_var->dtype = rvalue_type;
+            new_var->second_dtype = rvalue_second_type;
 
             zend_hash_add_ptr(&context->local_variables, var_name_zend, new_var);
 
-            smart_string_appends(context->cuda_code_buffer, get_cuda_type_str(rvalue_type));
+            smart_string_appends(context->cuda_code_buffer, get_cuda_type_str(rvalue_type, rvalue_second_type));
             smart_string_appendc(context->cuda_code_buffer, ' ');
             smart_string_appendl(context->cuda_code_buffer, name_c, ZSTR_LEN(var_name_zend));
         }
         else
         {
             dtype_t lvalue_type = param ? param->dtype : local->dtype;
+            dtype_t lvalue_second_type = param ? param->second_dtype : local->second_dtype;
 
             if (lvalue_type != rvalue_type && rvalue_type != DTYPE_UNKNOWN)
             {
@@ -1107,8 +1428,28 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
                     smart_string_free(&rvalue_buffer);
                     php_error_docref(NULL, E_ERROR,
                                      "Type mismatch for '$%s'. Expected %s, got %s.",
-                                     name_c, get_cuda_type_str(lvalue_type), get_cuda_type_str(rvalue_type));
+                                     name_c, get_cuda_type_str(lvalue_type, DTYPE_UNKNOWN), get_cuda_type_str(rvalue_type, DTYPE_UNKNOWN));
                     return 0;
+                }
+
+                if (lvalue_second_type != rvalue_second_type && rvalue_type != DTYPE_UNKNOWN)
+                {
+                    smart_string_free(&rvalue_buffer);
+
+                    if (lvalue_second_type == LIST && rvalue_second_type != LIST)
+                    {
+                        php_error_docref(NULL, E_ERROR,
+                                         "Type mismatch for '$%s'. Expected Array[%s], got %s.",
+                                         name_c, get_cuda_type_str(lvalue_type, DTYPE_UNKNOWN), get_cuda_type_str(rvalue_type, DTYPE_UNKNOWN));
+                        return 0;
+                    }
+                    else if (lvalue_second_type != LIST && rvalue_second_type == LIST)
+                    {
+                        php_error_docref(NULL, E_ERROR,
+                                         "Type mismatch for '$%s'. Expected %s, got Array[%s].",
+                                         name_c, get_cuda_type_str(lvalue_type, DTYPE_UNKNOWN), get_cuda_type_str(rvalue_type, DTYPE_UNKNOWN));
+                        return 0;
+                    }
                 }
             }
 
@@ -1340,16 +1681,6 @@ static int handler_ast_return(cuda_compilation_context_t *context, zend_ast *ast
         {
             return 0;
         }
-
-        // if (context->return_dtype != DTYPE_UNKNOWN &&
-        //     context->last_evaluated_dtype != DTYPE_UNKNOWN &&
-        //     context->return_dtype != context->last_evaluated_dtype)
-        // {
-        //     php_error_docref(NULL, E_WARNING,
-        //                      "Return type mismatch. Expected %s, got %s.",
-        //                      get_cuda_type_str(context->return_dtype),
-        //                      get_cuda_type_str(context->last_evaluated_dtype));
-        // }
     }
 
     return 1;
@@ -1365,11 +1696,18 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
         return 0;
     }
 
+    dtype_t first_dtype = context->last_evaluated_first_dtype;
+    dtype_t second_dtype = context->last_evaluated_second_dtype;
+
     smart_string_appendc(context->cuda_code_buffer, '[');
     if (!compile_ast_as_valid_cuda(context, index_expr))
     {
         return 0;
     }
+
+    context->last_evaluated_first_dtype = second_dtype;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
     smart_string_appendc(context->cuda_code_buffer, ']');
     return 1;
 }
@@ -1389,17 +1727,20 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     case IS_LONG:
     {
         smart_string_append_long(context->cuda_code_buffer, Z_LVAL_P(zv));
-        context->last_evaluated_dtype = INT32;
+        context->last_evaluated_first_dtype = INT32;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
         break;
     }
     case IS_DOUBLE:
     {
         char buffer[64];
         double value = Z_DVAL_P(zv);
-        if (context->last_evaluated_dtype == FLOAT64) // context->return_dtype == FLOAT64 ||
+        if (context->last_evaluated_first_dtype == FLOAT64)
         {
             snprintf(buffer, sizeof(buffer), "%.17g", value);
-            context->last_evaluated_dtype = FLOAT64;
+            context->last_evaluated_first_dtype = FLOAT64;
+            context->last_evaluated_second_dtype = 0;
         }
         else
         {
@@ -1422,7 +1763,8 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
             }
 
             strcat(buffer, "f");
-            context->last_evaluated_dtype = FLOAT32;
+            context->last_evaluated_first_dtype = FLOAT32;
+            context->last_evaluated_second_dtype = 0;
         }
 
         smart_string_appends(context->cuda_code_buffer, buffer);
@@ -1430,14 +1772,19 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     }
     case IS_TRUE:
         smart_string_appends(context->cuda_code_buffer, "true");
-        context->last_evaluated_dtype = BOOL;
+        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_second_dtype = 0;
+
         break;
     case IS_FALSE:
         smart_string_appends(context->cuda_code_buffer, "false");
-        context->last_evaluated_dtype = BOOL;
+        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_second_dtype = 0;
+
         break;
     case IS_STRING:
     {
+        context->last_evaluated_second_dtype = 0;
         zend_string *str = Z_STR_P(zv);
         const char *str_val = ZSTR_VAL(str);
 
@@ -1471,11 +1818,13 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
             func_parameter *param = find_kernel_parameter(context->parameters, str_val);
             if (param)
             {
-                context->last_evaluated_dtype = param->dtype;
+                context->last_evaluated_first_dtype = param->dtype;
+                context->last_evaluated_second_dtype = param->second_dtype;
             }
             else
             {
-                context->last_evaluated_dtype = DTYPE_UNKNOWN;
+                context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+                context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
             }
         }
         else if (ZSTR_LEN(str) < 32)
@@ -1483,7 +1832,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
             smart_string_appendc(context->cuda_code_buffer, '"');
             smart_string_appendl(context->cuda_code_buffer, str_val, ZSTR_LEN(str));
             smart_string_appendc(context->cuda_code_buffer, '"');
-            context->last_evaluated_dtype = DTYPE_UNKNOWN;
+            context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
         }
         else
         {
@@ -1494,16 +1843,123 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     }
     case IS_NULL:
         smart_string_appends(context->cuda_code_buffer, "NULL");
-        context->last_evaluated_dtype = DTYPE_UNKNOWN;
-        fprintf(stderr, "DEBUG: NULL literal\n");
+        context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
         break;
     default:
-        fprintf(stderr, "DEBUG: Unhandled zval type: %d\n", Z_TYPE_P(zv));
         php_error_docref(NULL, E_ERROR, "Literal type %d is not allowed in CUDA kernel.", Z_TYPE_P(zv));
         return 0;
     }
 
     return 1;
+}
+
+static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    zend_ast *obj_ast = ast->child[0];
+    zend_ast *prop_ast = ast->child[1];
+
+    if (!compile_ast_as_valid_cuda(context, obj_ast))
+    {
+        return 0;
+    }
+ 
+    if (prop_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Property name must be literal.");
+        return 0;
+    }
+
+    zval *prop_zv = zend_ast_get_zval(prop_ast);
+    if (!prop_zv || Z_TYPE_P(prop_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid property name.");
+        return 0;
+    }
+
+    zend_string *prop_name = Z_STR_P(prop_zv);
+    const char *prop_name_c = ZSTR_VAL(prop_name);
+
+    if (context->current_cuda_object == CUDA_OBJ_CUDA)
+    {
+        if (strcmp(prop_name_c, "math") == 0)
+        {
+            context->current_cuda_object = CUDA_OBJ_MATH;
+            return 1;
+        }
+        else if (strcmp(prop_name_c, "atomic") == 0)
+        {
+            context->current_cuda_object = CUDA_OBJ_ATOMIC;
+            return 1;
+        }
+        else if (strcmp(prop_name_c, "memory") == 0)
+        {
+            context->current_cuda_object = CUDA_OBJ_MEMORY;
+            return 1;
+        }
+        else if (strcmp(prop_name_c, "sync") == 0)
+        {
+            context->current_cuda_object = CUDA_OBJ_SYNC;
+            return 1;
+        }
+        else
+        {
+            php_error_docref(NULL, E_ERROR,
+                             "Invalid property '%s' on $cuda object.", prop_name_c);
+            return 0;
+        }
+    }
+    else if (context->current_cuda_object == CUDA_OBJ_THREADIDX ||
+             context->current_cuda_object == CUDA_OBJ_BLOCKIDX ||
+             context->current_cuda_object == CUDA_OBJ_BLOCKDIM ||
+             context->current_cuda_object == CUDA_OBJ_GRIDDIM)
+    {
+        const char *valid_members[] = {"x", "y", "z", "width", "height", "depth"};
+        int valid = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            if (strcmp(prop_name_c, valid_members[i]) == 0)
+            {
+                valid = 1;
+                break;
+            }
+        }
+
+        if (!valid)
+        {
+            php_error_docref(NULL, E_ERROR,
+                             "Invalid member '%s' for CUDA object.", prop_name_c);
+            return 0;
+        }
+
+        smart_string_appendc(context->cuda_code_buffer, '.');
+        smart_string_appends(context->cuda_code_buffer, prop_name_c);
+
+        context->last_evaluated_first_dtype = INT32;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
+        context->current_cuda_object = CUDA_OBJ_NONE;
+
+        return 1;
+    }
+    else if (context->current_cuda_object == CUDA_OBJ_MATH ||
+             context->current_cuda_object == CUDA_OBJ_ATOMIC ||
+             context->current_cuda_object == CUDA_OBJ_MEMORY ||
+             context->current_cuda_object == CUDA_OBJ_SYNC)
+    {
+
+        php_error_docref(NULL, E_ERROR,
+                         "Method call expected after %s object.",
+                         get_cuda_object_name(context->current_cuda_object));
+        return 0;
+    }
+    else
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Property access not allowed in this context.");
+        return 0;
+    }
 }
 
 static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *ast)
@@ -1526,7 +1982,8 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
     {
         return 0;
     }
-    dtype_t left_type = context->last_evaluated_dtype;
+    dtype_t left_type = context->last_evaluated_first_dtype;
+    dtype_t left_second_type = context->last_evaluated_second_dtype;
 
     smart_string_appends(context->cuda_code_buffer, op_symbol);
 
@@ -1534,7 +1991,25 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
     {
         return 0;
     }
-    dtype_t right_type = context->last_evaluated_dtype;
+
+    dtype_t right_type = context->last_evaluated_first_dtype;
+    dtype_t right_second_type = context->last_evaluated_second_dtype;
+
+    if (right_type == LIST && left_type != LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Type mismatch Expected %s, got Array[%s].",
+                         get_cuda_type_str(left_type, DTYPE_UNKNOWN), get_cuda_type_str(right_type, right_second_type));
+        return 0;
+    }
+
+    if (left_type == LIST && right_type != LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Type mismatch Expected Array[%s], got %s.",
+                         get_cuda_type_str(right_type, DTYPE_UNKNOWN), get_cuda_type_str(left_type, left_second_type));
+        return 0;
+    }
 
     /**
      * @todo maybe we can see if right and left type can be casted
@@ -1548,30 +2023,32 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
 
         if (left_type == FLOAT64 || right_type == FLOAT64)
         {
-            context->last_evaluated_dtype = FLOAT64;
+            context->last_evaluated_first_dtype = FLOAT64;
         }
         else if (left_type == FLOAT32 || right_type == FLOAT32)
         {
-            context->last_evaluated_dtype = FLOAT32;
+            context->last_evaluated_first_dtype = FLOAT32;
         }
         else if (left_type == INT64 || right_type == INT64)
         {
-            context->last_evaluated_dtype = INT64;
+            context->last_evaluated_first_dtype = INT64;
         }
         else if (left_type == INT32 || right_type == INT32)
         {
-            context->last_evaluated_dtype = INT32;
+            context->last_evaluated_first_dtype = INT32;
         }
         else
         {
-            context->last_evaluated_dtype = DTYPE_UNKNOWN;
+            context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
         }
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
     else if (ast->attr == ZEND_IS_EQUAL || ast->attr == ZEND_IS_NOT_EQUAL ||
              ast->attr == ZEND_IS_IDENTICAL || ast->attr == ZEND_IS_NOT_IDENTICAL ||
              ast->attr == ZEND_IS_SMALLER || ast->attr == ZEND_IS_SMALLER_OR_EQUAL)
     {
-        context->last_evaluated_dtype = BOOL;
+        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
     return 1;
@@ -1598,7 +2075,8 @@ static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *a
 
     if (ast->attr == ZEND_BOOL_NOT)
     {
-        context->last_evaluated_dtype = BOOL;
+        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
     return 1;
@@ -1639,7 +2117,8 @@ static int handler_ast_comp_op(cuda_compilation_context_t *context, zend_ast *as
     }
     smart_string_appendc(context->cuda_code_buffer, ')');
 
-    context->last_evaluated_dtype = BOOL;
+    context->last_evaluated_first_dtype = BOOL;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     return 1;
 }
 
@@ -1677,7 +2156,8 @@ static int handler_ast_cast(cuda_compilation_context_t *context, zend_ast *ast)
     }
 
     smart_string_appendc(context->cuda_code_buffer, ')');
-    context->last_evaluated_dtype = target_type;
+    context->last_evaluated_first_dtype = target_type;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
     return 1;
 }
@@ -1701,7 +2181,8 @@ static int handler_ast_conditional(cuda_compilation_context_t *context, zend_ast
     {
         return 0;
     }
-    dtype_t true_type = context->last_evaluated_dtype;
+    dtype_t true_type = context->last_evaluated_first_dtype;
+    dtype_t true_second_type = context->last_evaluated_second_dtype;
 
     smart_string_appends(context->cuda_code_buffer, " : ");
 
@@ -1709,25 +2190,46 @@ static int handler_ast_conditional(cuda_compilation_context_t *context, zend_ast
     {
         return 0;
     }
-    dtype_t false_type = context->last_evaluated_dtype;
+    dtype_t false_type = context->last_evaluated_first_dtype;
+    dtype_t false_second_type = context->last_evaluated_second_dtype;
+
+    if (false_type == LIST && true_type != LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Type mismatch Expected %s, got Array[%s].",
+                         get_cuda_type_str(false_type, false_second_type), get_cuda_type_str(true_type, DTYPE_UNKNOWN));
+        return 0;
+    }
+
+    if (true_type == LIST && false_type != LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Type mismatch Expected Array[%s], got %s.",
+                         get_cuda_type_str(true_type, true_second_type), get_cuda_type_str(false_type, DTYPE_UNKNOWN));
+        return 0;
+    }
 
     smart_string_appendc(context->cuda_code_buffer, ')');
 
     if (true_type == false_type)
     {
-        context->last_evaluated_dtype = true_type;
+        context->last_evaluated_first_dtype = true_type == LIST ? true_second_type : true_type;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
     else if (true_type == FLOAT64 || false_type == FLOAT64)
     {
-        context->last_evaluated_dtype = FLOAT64;
+        context->last_evaluated_first_dtype = FLOAT64;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
     else if (true_type == FLOAT32 || false_type == FLOAT32)
     {
-        context->last_evaluated_dtype = FLOAT32;
+        context->last_evaluated_first_dtype = FLOAT32;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
     else
     {
-        context->last_evaluated_dtype = true_type;
+        context->last_evaluated_first_dtype = true_type == LIST ? true_second_type : true_type;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
     return 1;
@@ -1939,12 +2441,14 @@ cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameter
         (cuda_compilation_context_t *)emalloc(sizeof(cuda_compilation_context_t));
 
     context->parameters = parameters;
-    context->last_evaluated_dtype = DTYPE_UNKNOWN;
+    context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    context->current_cuda_object = CUDA_OBJ_NONE;
     context->return_dtype = DTYPE_UNKNOWN;
     context->loop_depth = 0;
     context->name = name;
     context->fn_type = fn_type;
-
+    context->dim_access = 0;
     zend_hash_init(&context->local_variables, 8, NULL, destroy_local_variable, 0);
 
     context->cuda_code_buffer = (smart_string *)ecalloc(1, sizeof(smart_string));

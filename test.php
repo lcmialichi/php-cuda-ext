@@ -8,40 +8,66 @@ use Cuda\Runtime;
 $compiler = new Cuda\Compiler();
 
 $compiler->kernel(
-    #[Attr\Kernel(name: 'vector_reduction')]
-    function (
-        #[Attr\Input(dtype: 'float')] array $input,
-        #[Attr\Output(dtype: 'float')] array $partial_sums,
-        #[Attr\Input(dtype: 'int')] int $size
+    #[Attr\Kernel(name: 'convolution_2d_optimized')]
+    function (#[Attr\Input(dtype: 'float32')] array $input,
+        #[Attr\Input(dtype: 'float32')] array $kernel,
+        #[Attr\Output(dtype: 'float32')] array &$output,
+        #[Attr\Input(dtype: 'int32')] int $width,
+        #[Attr\Input(dtype: 'int32')] int $height,
+        #[Attr\Input(dtype: 'int32')] int $kernelSize
     ): void {
         /** @var \Cuda\Runtime $cuda */
-        $threadId = $cuda->threadIdx();
-        $blockId = $cuda->blockIdx();
-        $blockDim = $cuda->blockDim();
-        
-        $globalId = $threadId + $blockId * $blockDim;
-        $stride = $blockDim * $cuda->gridDim();
-        
-        $shared = 0.0;
 
-        $shared[$threadId] = 0.0;
-                
-        $sum = 0.0;
-        for ($i = $globalId; $i < $size; $i += $stride) {
-            $sum += $input[$i];
-        }
-        $shared[$threadId] = $sum;
-        
-        for ($s = $blockDim / 2; $s > 0; $s >>= 1) {
-            if ($threadId < $s) {
-                $shared[$threadId] += $shared[$threadId + $s];
+        // Coordenadas do thread
+        $threadX = $cuda->threadIdx()->x;
+        $threadY = $cuda->threadIdx()->y;
+        $blockX = $cuda->blockIdx()->x;
+        $blockY = $cuda->blockIdx()->y;
+
+        // Tamanho do bloco (deve ser configurado como 16x16 ou 32x32)
+        $blockWidth = $cuda->blockDim()->x;
+        $blockHeight = $cuda->blockDim()->y;
+
+        // Coordenadas globais da imagem
+        $x = $blockX * $blockWidth + $threadX;
+        $y = $blockY * $blockHeight + $threadY;
+
+        // Tamanho do kernel e padding
+        $halfKernel = ($kernelSize - 1) / 2;
+
+        // Verifica se o thread está dentro dos limites válidos
+        if (
+            $x >= $halfKernel && $x < $width - $halfKernel &&
+            $y >= $halfKernel && $y < $height - $halfKernel
+        ) {
+
+            // Inicializa acumulador
+            $sum = 0.0;
+
+            // Convolução 2D
+            for ($ky = 0; $ky < $kernelSize; $ky++) {
+                for ($kx = 0; $kx < $kernelSize; $kx++) {
+                    // Coordenadas na imagem de entrada
+                    $pixelX = $x + $kx - $halfKernel;
+                    $pixelY = $y + $ky - $halfKernel;
+
+                    // Índices lineares
+                    $inputIdx = $pixelY * $width + $pixelX;
+                    $kernelIdx = $ky * $kernelSize + $kx;
+
+                    // Acumula produto
+                    $sum += $input[$inputIdx] * $kernel[$kernelIdx];
+                }
             }
+
+            // Escreve resultado
+            $outputIdx = $y * $width + $x;
+            $output[$outputIdx] = $sum;
         }
-        
-        if ($threadId == 0) {
-            $partial_sums[$blockId] = $shared[0];
-        }
+
+        // Sincronização opcional (se houver shared memory depois)
+        // $cuda->sync->threads();
     }
 );
 
-var_dump($compiler->getKernels()['vector_reduction']['cuda_code']);
+var_dump($compiler->getKernels()['convolution_2d_optimized']['cuda_code']);

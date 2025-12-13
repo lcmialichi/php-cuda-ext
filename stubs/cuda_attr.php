@@ -28,7 +28,7 @@ class Device
 class Input
 {
     public function __construct(
-        public string $dtype = 'float',
+        public string $dtype = 'float32',
     ) {
     }
 }
@@ -37,7 +37,7 @@ class Input
 class Output
 {
     public function __construct(
-        public string $dtype = 'float',
+        public string $dtype = 'float32',
     ) {
     }
 

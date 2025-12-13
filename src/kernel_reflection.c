@@ -9,6 +9,9 @@
 #include "ext/standard/php_smart_string.h"
 #include <stdio.h>
 
+#define ZEND_TYPE_IS_ARRAY(type) \
+    (ZEND_TYPE_IS_SET(type) && (ZEND_TYPE_PURE_MASK(type) & MAY_BE_ARRAY))
+
 zend_array *kernel_get_closure_use_vars(zend_object *closure_obj)
 {
     const zend_function *func = zend_get_closure_method_def(closure_obj);
@@ -16,10 +19,6 @@ zend_array *kernel_get_closure_use_vars(zend_object *closure_obj)
     {
         return NULL;
     }
-
-    // Infelizmente, não há função pública para acessar use_vars diretamente
-    // Mas podemos tentar através da propriedade dinâmica "__use_vars"
-    // (Esta é uma propriedade interna usada pelo PHP)
 
     zval *use_vars_zv = zend_read_property(zend_ce_closure, closure_obj, "__use_vars", sizeof("__use_vars") - 1, 1, NULL);
     if (use_vars_zv && Z_TYPE_P(use_vars_zv) == IS_ARRAY)
@@ -139,22 +138,23 @@ dtype_t map_dtype_string_to_int(zend_string *dtype_str)
     if (!dtype_str)
         return DTYPE_UNKNOWN;
 
-    if (zend_string_equals_literal_ci(dtype_str, "float"))
+    if (zend_string_equals_literal_ci(dtype_str, "float32"))
     {
         return FLOAT32;
     }
-    if (zend_string_equals_literal_ci(dtype_str, "int"))
+    if (zend_string_equals_literal_ci(dtype_str, "int32"))
     {
         return INT32;
     }
     if (zend_string_equals_literal_ci(dtype_str, "double"))
     {
-        return FLOAT64;
+        return INT64;
     }
     if (zend_string_equals_literal_ci(dtype_str, "bool"))
     {
         return BOOL;
     }
+
     return DTYPE_UNKNOWN;
 }
 
@@ -171,8 +171,8 @@ void add_parameter_to_list(func_parameter_list_t *list, parameter_type_t type, c
     param->type = type;
     strncpy(param->name, name, 31);
     param->name[31] = '\0';
-    param->dtype = dtype;
-    param->is_array = is_array;
+    param->dtype = is_array ? LIST : dtype;
+    param->second_dtype = is_array ? dtype :DTYPE_UNKNOWN;
 
     list->parameters[list->total - 1] = param;
 }
@@ -197,7 +197,6 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
     }
 
     HashTable *attributes = fptr->common.attributes;
-
     if (!attributes)
     {
         efree(param_list);
@@ -217,8 +216,19 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
             continue;
         }
 
-        uint32_t offset = i;
+        if (ZEND_TYPE_IS_UNION(arg->type))
+        {
+            zend_error(E_ERROR, "CUDA: Union types are not supported for parameter '%s'", ZSTR_VAL(var_name));
+            continue;
+        }
 
+        if (ZEND_TYPE_IS_INTERSECTION(arg->type))
+        {
+            zend_error(E_ERROR, "CUDA: Intersection types are not supported for parameter '%s'", ZSTR_VAL(var_name));
+            continue;
+        }
+
+        uint32_t offset = i;
         zend_attribute *matched_attr = NULL;
         parameter_type_t current_type = DTYPE_UNKNOWN;
         const char *type_name = NULL;
@@ -239,34 +249,42 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
             }
         }
 
-        if (matched_attr)
+        if (!matched_attr)
         {
-            zend_string *dtype_str = NULL;
-            dtype_t dtype = DTYPE_UNKNOWN;
-            int is_array = 0;
+            continue;
+        }
 
-            for (uint32_t j = 0; j < matched_attr->argc; j++)
+        zend_string *dtype_str = NULL;
+        dtype_t dtype = DTYPE_UNKNOWN;
+        int is_array = 0;
+
+        for (uint32_t j = 0; j < matched_attr->argc; j++)
+        {
+            zend_attribute_arg *attr_arg = &matched_attr->args[j];
+            if (attr_arg->name &&
+                zend_string_equals_literal(attr_arg->name, "dtype") &&
+                Z_TYPE(attr_arg->value) == IS_STRING)
             {
-                zend_attribute_arg *attr_arg = &matched_attr->args[j];
-
-                if (attr_arg->name &&
-                    zend_string_equals_literal(attr_arg->name, "dtype") &&
-                    Z_TYPE(attr_arg->value) == IS_STRING)
+                dtype_str = Z_STR(attr_arg->value);
+                dtype = map_dtype_string_to_int(dtype_str);
+                is_array = ZEND_TYPE_IS_ARRAY(arg->type);
+                if (dtype == DTYPE_UNKNOWN)
                 {
-                    dtype_str = Z_STR(attr_arg->value);
-                    dtype = map_dtype_string_to_int(dtype_str);
-                    /** @todo create a real verification  */
-                    is_array = ZEND_TYPE_IS_SET(arg->type) && arg->type.type_mask & (1U << 17);
-                    break;
+                    zend_error(E_WARNING, "CUDA: Unknown dtype '%s' for parameter '%s'",
+                               ZSTR_VAL(dtype_str), ZSTR_VAL(var_name));
+                    continue;
                 }
-            }
-
-            /** @todo ensure dtype is ok */
-            if (dtype != DTYPE_UNKNOWN)
-            {
-                add_parameter_to_list(param_list, current_type, ZSTR_VAL(var_name), dtype, is_array);
+                break;
             }
         }
+
+        if (dtype == DTYPE_UNKNOWN)
+        {
+            zend_error(E_WARNING, "CUDA: Missing or invalid dtype for parameter '%s'", ZSTR_VAL(var_name));
+            continue;
+        }
+
+        add_parameter_to_list(param_list, current_type, ZSTR_VAL(var_name), dtype, is_array);
     }
 
     zend_string_release(input_lcname);

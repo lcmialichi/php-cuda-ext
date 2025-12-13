@@ -9,6 +9,8 @@ typedef struct
 {
     zend_string *name;
     dtype_t dtype;
+    dtype_t second_dtype;
+    int is_array;
 
 } local_variable_t;
 
@@ -34,8 +36,8 @@ typedef struct
 {
     char name[32];
     dtype_t dtype;
+    dtype_t second_dtype;
     parameter_type_t type;
-    int is_array;
 } func_parameter;
 
 typedef struct
@@ -58,17 +60,32 @@ typedef enum
     FN_KERNEL,
     FN_DEVICE,
     FN_GLOBAL
-    
+
 } cuda_fn_type;
 
 typedef struct
 {
+    enum
+    {
+        CUDA_OBJ_NONE,
+        CUDA_OBJ_CUDA,
+        CUDA_OBJ_MATH,
+        CUDA_OBJ_ATOMIC,
+        CUDA_OBJ_MEMORY,
+        CUDA_OBJ_SYNC,
+        CUDA_OBJ_THREADIDX,
+        CUDA_OBJ_BLOCKIDX,
+        CUDA_OBJ_BLOCKDIM,
+        CUDA_OBJ_GRIDDIM
+    } current_cuda_object;
     cuda_fn_type fn_type;
-    zend_string * name;
+    zend_string *name;
     func_parameter_list_t *parameters;
     HashTable local_variables;
     smart_string *cuda_code_buffer;
-    dtype_t last_evaluated_dtype;
+    int dim_access;
+    dtype_t last_evaluated_first_dtype;
+    dtype_t last_evaluated_second_dtype;
     dtype_t return_dtype;
     int loop_depth;
 } cuda_compilation_context_t;

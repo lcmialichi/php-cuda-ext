@@ -53,6 +53,6 @@ function conv_3D(
 
 $compiler->kernel(conv_3D(...));
 
-$kernels = $compiler->getKernels();
+$compiled = $compiler->compile(debug: true);
 
-var_dump($kernels['convolution_3d_volume']['cuda_code']);
+var_dump($compiled);

@@ -9,6 +9,10 @@
 #include "zend_ast.h"
 #include "zend_compile.h"
 #include "ext/standard/php_smart_string.h"
+#include "cuda_globals.h"
+
+#include <nvrtc.h>
+#include <cuda.h>
 
 zend_class_entry *cuda_compiler_ce;
 extern zend_class_entry *cuda_attr_input_ce;
@@ -17,6 +21,67 @@ static zend_object_handlers compiler_handlers;
 
 static void compiler_free_object(zend_object *object);
 static zend_object *compiler_create_object(zend_class_entry *class_type);
+
+static const char *get_nvrtc_error_string(nvrtcResult result)
+{
+    switch (result)
+    {
+    case NVRTC_SUCCESS:
+        return "NVRTC_SUCCESS";
+    case NVRTC_ERROR_OUT_OF_MEMORY:
+        return "NVRTC_ERROR_OUT_OF_MEMORY";
+    case NVRTC_ERROR_PROGRAM_CREATION_FAILURE:
+        return "NVRTC_ERROR_PROGRAM_CREATION_FAILURE";
+    case NVRTC_ERROR_INVALID_INPUT:
+        return "NVRTC_ERROR_INVALID_INPUT";
+    case NVRTC_ERROR_INVALID_PROGRAM:
+        return "NVRTC_ERROR_INVALID_PROGRAM";
+    case NVRTC_ERROR_INVALID_OPTION:
+        return "NVRTC_ERROR_INVALID_OPTION";
+    case NVRTC_ERROR_COMPILATION:
+        return "NVRTC_ERROR_COMPILATION";
+    case NVRTC_ERROR_BUILTIN_OPERATION_FAILURE:
+        return "NVRTC_ERROR_BUILTIN_OPERATION_FAILURE";
+    case NVRTC_ERROR_NO_NAME_EXPRESSIONS_AFTER_COMPILATION:
+        return "NVRTC_ERROR_NO_NAME_EXPRESSIONS_AFTER_COMPILATION";
+    case NVRTC_ERROR_NO_LOWERED_NAMES_BEFORE_COMPILATION:
+        return "NVRTC_ERROR_NO_LOWERED_NAMES_BEFORE_COMPILATION";
+    case NVRTC_ERROR_NAME_EXPRESSION_NOT_VALID:
+        return "NVRTC_ERROR_NAME_EXPRESSION_NOT_VALID";
+    case NVRTC_ERROR_INTERNAL_ERROR:
+        return "NVRTC_ERROR_INTERNAL_ERROR";
+    default:
+        return "Unknown NVRTC error";
+    }
+}
+
+static const char *get_cuda_error_string(CUresult result)
+{
+    switch (result)
+    {
+    case CUDA_SUCCESS:
+        return "CUDA_SUCCESS";
+    case CUDA_ERROR_INVALID_VALUE:
+        return "CUDA_ERROR_INVALID_VALUE";
+    case CUDA_ERROR_OUT_OF_MEMORY:
+        return "CUDA_ERROR_OUT_OF_MEMORY";
+    case CUDA_ERROR_NOT_INITIALIZED:
+        return "CUDA_ERROR_NOT_INITIALIZED";
+    case CUDA_ERROR_DEINITIALIZED:
+        return "CUDA_ERROR_DEINITIALIZED";
+    case CUDA_ERROR_PROFILER_DISABLED:
+        return "CUDA_ERROR_PROFILER_DISABLED";
+    case CUDA_ERROR_PROFILER_NOT_INITIALIZED:
+        return "CUDA_ERROR_PROFILER_NOT_INITIALIZED";
+    case CUDA_ERROR_PROFILER_ALREADY_STARTED:
+        return "CUDA_ERROR_PROFILER_ALREADY_STARTED";
+    case CUDA_ERROR_PROFILER_ALREADY_STOPPED:
+        return "CUDA_ERROR_PROFILER_ALREADY_STOPPED";
+    default:
+        return "Unknown CUDA error";
+    }
+}
+
 static int indent_level = 0;
 static void print_indent()
 {
@@ -270,6 +335,63 @@ static char *extract_function_body_for_ast(
 
     efree(line_offsets);
     return out;
+}
+
+static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t *out_len)
+{
+    smart_string program = {0};
+
+    smart_string_appendl(&program, "#include <cuda_runtime.h>\n", strlen("#include <cuda_runtime.h>\n"));
+    smart_string_appendl(&program, "#include <device_launch_parameters.h>\n", strlen("#include <device_launch_parameters.h>\n"));
+    smart_string_appendl(&program, "#include <cuda_fp16.h>\n", strlen("#include <cuda_fp16.h>\n"));
+    smart_string_appendl(&program, "\n// Math function wrappers\n", strlen("\n// Math function wrappers\n"));
+    smart_string_appendl(&program, "#ifndef M_PI\n", strlen("#ifndef M_PI\n"));
+    smart_string_appendl(&program, "#define M_PI 3.14159265358979323846\n", strlen("#define M_PI 3.14159265358979323846\n"));
+    smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
+
+    zval *header_zv;
+    ZEND_HASH_FOREACH_VAL(compiler->headers, header_zv)
+    {
+        if (Z_TYPE_P(header_zv) == IS_STRING)
+        {
+            smart_string_appendl(&program, Z_STRVAL_P(header_zv), Z_STRLEN_P(header_zv));
+            smart_string_appendc(&program, '\n');
+        }
+    }
+    ZEND_HASH_FOREACH_END();
+
+    cuda_device_object *device;
+    ZEND_HASH_FOREACH_PTR(compiler->devices, device)
+    {
+        smart_string_appendl(&program, "\n// Device function: ", strlen("\n// Device function: "));
+        smart_string_appendl(&program, ZSTR_VAL(device->name), ZSTR_LEN(device->name));
+        smart_string_appendl(&program, "\n", 1);
+    }
+    ZEND_HASH_FOREACH_END();
+
+    cuda_kernel_data *kernel;
+    ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
+    {
+        smart_string_appendl(&program, "\n// Kernel: ", strlen("\n// Kernel: "));
+        smart_string_appendl(&program, ZSTR_VAL(kernel->name), ZSTR_LEN(kernel->name));
+        smart_string_appendl(&program, "\n", 1);
+
+        if (kernel->cuda_code)
+        {
+            smart_string_appendl(&program, kernel->cuda_code, strlen(kernel->cuda_code));
+        }
+        smart_string_appendl(&program, "\n", 1);
+    }
+    ZEND_HASH_FOREACH_END();
+
+    smart_string_0(&program);
+
+    if (out_len)
+    {
+        *out_len = program.len;
+    }
+
+    return program.c;
 }
 
 ZEND_METHOD(Compiler, __construct)
@@ -547,31 +669,279 @@ ZEND_METHOD(Compiler, compile)
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
 
-    zend_string *module_class_name = zend_string_init("Cuda\\CompiledModule", strlen("Cuda\\CompiledModule"), 0);
+    size_t program_len;
+    char *cuda_program = build_complete_cuda_program(compiler, &program_len);
+
+    if (!cuda_program || program_len == 0)
+    {
+        if (cuda_program)
+            efree(cuda_program);
+        zend_throw_exception_ex(NULL, 0, "Failed to build CUDA program");
+        RETURN_NULL();
+    }
+
+    smart_string opts = {0};
+
+    if (target && target_len > 0)
+    {
+        smart_string_appendl(&opts, "-arch=", 6);
+        smart_string_appendl(&opts, target, target_len);
+        smart_string_appendc(&opts, ' ');
+    }
+    else if (compiler->target_device)
+    {
+        smart_string_appendl(&opts, "-arch=", 6);
+        smart_string_appendl(&opts, compiler->target_device, strlen(compiler->target_device));
+        smart_string_appendc(&opts, ' ');
+    }
+    else
+    {
+        smart_string_appendl(&opts, "-arch=sm_60 ", 12);
+    }
+
+    if (optimize && !debug)
+    {
+        if (compiler->fast_math)
+        {
+            smart_string_appendl(&opts, "-use_fast_math ", 15);
+        }
+    }
+    else if (debug)
+    {
+        smart_string_appendl(&opts, "-G ", 3);
+        smart_string_appendl(&opts, "-lineinfo ", 10);
+    }
+    else
+    {
+        char opt_level[8];
+        snprintf(opt_level, sizeof(opt_level), "-O%d ", compiler->optimization_level);
+        smart_string_appendl(&opts, opt_level, strlen(opt_level));
+    }
+
+    char include_path[512];
+
+    smart_string_appendl(&opts, CUDA_INCLUDE_PATH_STR, strlen(CUDA_INCLUDE_PATH_STR));
+    smart_string_appendc(&opts, ' ');
+
+    smart_string_appendl(&opts, CUDA_CRT_INCLUDE_STR, strlen(CUDA_CRT_INCLUDE_STR));
+    smart_string_appendc(&opts, ' ');
+    smart_string_appendl(&opts, "-I. ", 4);
+    smart_string_appendl(&opts, "-std=c++11 ", 11);
+    smart_string_appendl(&opts, "-restrict ", 10);
+
+    smart_string_0(&opts);
+
+    const int MAX_OPTIONS = 32;
+    const char *options[MAX_OPTIONS];
+    int option_count = 0;
+
+    char *token = strtok(opts.c, " ");
+    while (token && option_count < MAX_OPTIONS)
+    {
+        options[option_count++] = token;
+        token = strtok(NULL, " ");
+    }
+
+    if (debug)
+    {
+        php_printf("NVRTC Compilation Options (%d):\n", option_count);
+        for (int i = 0; i < option_count; i++)
+        {
+            php_printf("  [%d] %s\n", i, options[i]);
+        }
+        php_printf("\nCUDA Program (first 1000 chars):\n%.1000s\n", cuda_program);
+    }
+
+    nvrtcProgram prog;
+    nvrtcResult nvrtc_result;
+
+    nvrtc_result = nvrtcCreateProgram(&prog,
+                                      cuda_program,
+                                      "kernel.cu",
+                                      0,
+                                      NULL,
+                                      NULL);
+
+    if (nvrtc_result != NVRTC_SUCCESS)
+    {
+        efree(cuda_program);
+        smart_string_free(&opts);
+        zend_throw_exception_ex(NULL, 0,
+                                "NVRTC program creation failed: %s (code: %d)",
+                                get_nvrtc_error_string(nvrtc_result), nvrtc_result);
+        RETURN_NULL();
+    }
+
+    nvrtc_result = nvrtcCompileProgram(prog, option_count, options);
+
+    size_t log_size;
+    nvrtcGetProgramLogSize(prog, &log_size);
+
+    if (log_size > 1)
+    {
+        char *compile_log = (char *)emalloc(log_size);
+        nvrtcGetProgramLog(prog, compile_log);
+
+        if (debug || strstr(compile_log, "error") || strstr(compile_log, "Error"))
+        {
+            php_printf("NVRTC Compilation Log:\n%s\n", compile_log);
+        }
+
+        efree(compile_log);
+    }
+
+    if (nvrtc_result != NVRTC_SUCCESS)
+    {
+        smart_string_free(&opts);
+        efree(cuda_program);
+        nvrtcDestroyProgram(&prog);
+        zend_throw_exception_ex(NULL, 0,
+                                "NVRTC compilation failed: %s (code: %d)",
+                                get_nvrtc_error_string(nvrtc_result), nvrtc_result);
+        RETURN_NULL();
+    }
+
+    size_t ptx_size;
+    nvrtc_result = nvrtcGetPTXSize(prog, &ptx_size);
+
+    if (nvrtc_result != NVRTC_SUCCESS)
+    {
+        smart_string_free(&opts);
+        efree(cuda_program);
+        nvrtcDestroyProgram(&prog);
+        zend_throw_exception_ex(NULL, 0,
+                                "Failed to get PTX size: %s",
+                                get_nvrtc_error_string(nvrtc_result));
+        RETURN_NULL();
+    }
+
+    char *ptx_code = (char *)emalloc(ptx_size + 1);
+    nvrtc_result = nvrtcGetPTX(prog, ptx_code);
+    ptx_code[ptx_size] = '\0';
+
+    smart_string_free(&opts);
+    efree(cuda_program);
+    nvrtcDestroyProgram(&prog);
+
+    if (nvrtc_result != NVRTC_SUCCESS)
+    {
+        efree(ptx_code);
+        zend_throw_exception_ex(NULL, 0,
+                                "Failed to get PTX code: %s",
+                                get_nvrtc_error_string(nvrtc_result));
+        RETURN_NULL();
+    }
+
+    if (debug)
+    {
+        php_printf("PTX size: %zu bytes\n", ptx_size);
+        php_printf("First 500 chars of PTX:\n%.12792s\n", ptx_code);
+    }
+
+    zend_string *module_class_name = zend_string_init("Cuda\\CompiledModule",
+                                                      strlen("Cuda\\CompiledModule"), 0);
     zend_class_entry *module_ce = zend_lookup_class(module_class_name);
+    zend_string_release(module_class_name);
+
+    if (!module_ce)
+    {
+        efree(ptx_code);
+        zend_throw_exception_ex(NULL, 0,
+                                "CompiledModule class not found");
+        return;
+    }
 
     zval module_zv;
     object_init_ex(&module_zv, module_ce);
-
+    printf("here1\n");
     cuda_module_object *module = Z_CUDA_MODULE_P(&module_zv);
 
-    module->ptx_code = estrdup("// Placeholder PTX code\n.version 7.5\n.target sm_60");
-    module->ptx_size = strlen(module->ptx_code);
-
-    module->functions = emalloc(sizeof(HashTable));
-    zend_hash_init(module->functions, 8, NULL, NULL, 0);
+    module->ptx_code = ptx_code;
+    module->ptx_size = ptx_size;
 
     module->kernel_functions = emalloc(sizeof(HashTable));
     zend_hash_init(module->kernel_functions, 8, NULL, NULL, 0);
 
-    cuda_kernel_object *kernel;
+    module->kernel_functions = emalloc(sizeof(HashTable));
+    zend_hash_init(module->kernel_functions, 8, NULL, NULL, 0);
+
+    cuda_kernel_data *kernel;
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
-        zval kernel_name;
-        ZVAL_STR(&kernel_name, zend_string_copy(kernel->name));
-        zend_hash_add(module->kernel_functions, kernel->name, &kernel_name);
+        if (!kernel || !kernel->name)
+            continue;
+
+
+        cuda_kernel_data *kernel_copy = (cuda_kernel_data *)emalloc(sizeof(cuda_kernel_data));
+        memset(kernel_copy, 0, sizeof(cuda_kernel_data));
+
+        kernel_copy->name = zend_string_copy(kernel->name);
+        if (kernel->target)
+        {
+            kernel_copy->target = zend_string_copy(kernel->target);
+        }
+
+        kernel_copy->fcc = kernel->fcc;
+        kernel_copy->fcc = kernel->fcc;
+
+        memcpy(kernel_copy->grid, kernel->grid, sizeof(kernel->grid));
+        memcpy(kernel_copy->block, kernel->block, sizeof(kernel->block));
+        kernel_copy->source_code = kernel->source_code ? zend_string_copy(kernel->source_code) : NULL;
+
+        if (kernel->cuda_code)
+        {
+            kernel_copy->cuda_code = estrdup(kernel->cuda_code);
+        }
+
+        kernel_copy->parameters = kernel->parameters;
+        kernel_copy->used_devices = kernel->used_devices;
+        zend_hash_add_ptr(module->kernel_functions, kernel->name, kernel_copy);
+
     }
     ZEND_HASH_FOREACH_END();
+
+    if (debug)
+    {
+        CUresult cu_result = cuInit(0);
+        if (cu_result == CUDA_SUCCESS)
+        {
+            CUdevice cuDevice;
+            cu_result = cuDeviceGet(&cuDevice, 0);
+
+            if (cu_result == CUDA_SUCCESS)
+            {
+                CUcontext cuContext;
+                cu_result = cuCtxCreate(&cuContext, 0, cuDevice);
+
+                if (cu_result == CUDA_SUCCESS)
+                {
+                    CUmodule cuModule;
+                    cu_result = cuModuleLoadDataEx(&cuModule, ptx_code, 0, NULL, NULL);
+
+                    if (cu_result == CUDA_SUCCESS)
+                    {
+                        ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
+                        {
+                            CUfunction cuFunc;
+                            cu_result = cuModuleGetFunction(&cuFunc, cuModule,
+                                                            ZSTR_VAL(kernel->name));
+
+                            if (cu_result != CUDA_SUCCESS)
+                            {
+                                php_printf("Warning: Kernel '%s' not found in compiled module\n",
+                                           ZSTR_VAL(kernel->name));
+                            }
+                        }
+                        ZEND_HASH_FOREACH_END();
+
+                        cuModuleUnload(cuModule);
+                    }
+                    cuCtxDestroy(cuContext);
+                }
+            }
+        }
+    }
+
     RETURN_ZVAL(&module_zv, 1, 0);
 }
 

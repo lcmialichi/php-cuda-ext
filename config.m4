@@ -19,7 +19,8 @@ if test "$PHP_CUDA" != "no"; then
 
     AC_DEFINE_UNQUOTED(CUDA_INCLUDE_PATH_STR, "-I$PHP_CUDA/include", [inclusion path for NVRTC JIT])
     AC_DEFINE_UNQUOTED(CUDA_CRT_INCLUDE_STR, "-I$PHP_CUDA/include/crt", [ C++ inclusion path for NVRTC JIT])
-
+    AC_DEFINE(HAVE_CUDA, 1, [Define if CUDA support is enabled])
+    
     PHP_CHECK_LIBRARY(nvrtc, nvrtcCreateProgram, [
     PHP_ADD_LIBRARY_WITH_PATH(nvrtc, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
     ], [

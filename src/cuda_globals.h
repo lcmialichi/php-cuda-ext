@@ -2,6 +2,7 @@
 #define CUDA_GLOBALS_H
 
 #include "php.h"
+#include "config.h"
 
 #ifdef ZTS
 #include "TSRM.h"

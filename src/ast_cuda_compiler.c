@@ -777,6 +777,7 @@ static int generate_function_signature(cuda_compilation_context_t *context)
 
     if (qualifier && qualifier[0] != '\0')
     {
+        smart_string_appends(context->cuda_code_buffer, "extern \"C\" ");
         smart_string_appends(context->cuda_code_buffer, qualifier);
         smart_string_appendc(context->cuda_code_buffer, ' ');
     }

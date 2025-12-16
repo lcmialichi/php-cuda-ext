@@ -46,7 +46,7 @@ static int handler_ast_if(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_for(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_while(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_do_while(cuda_compilation_context_t *context, zend_ast *ast);
-static int handle_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_return(cuda_compilation_context_t *context, zend_ast *ast);
@@ -330,7 +330,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_STATIC, handle_not_allowed},
     {ZEND_AST_WHILE, handler_ast_while},
     {ZEND_AST_DO_WHILE, handler_ast_do_while},
-    {ZEND_AST_IF_ELEM, handle_ast_if_elem},
+    {ZEND_AST_IF_ELEM, handler_ast_if_elem},
     {ZEND_AST_SWITCH, handler_ast_switch},
     {ZEND_AST_SWITCH_CASE, handler_ast_switch_case},
     {ZEND_AST_DECLARE, handle_not_allowed},
@@ -1490,29 +1490,76 @@ static int handler_ast_assign_op(cuda_compilation_context_t *context, zend_ast *
 static int handler_ast_if(cuda_compilation_context_t *context, zend_ast *ast)
 {
     zend_ast_list *list = (zend_ast_list *)ast;
+    int has_else = 0;
+
     for (uint32_t i = 0; i < list->children; i++)
     {
-        if (!compile_ast_as_valid_cuda(context, list->child[i]))
+        if (list->child[i]->kind == ZEND_AST_IF_ELEM)
         {
-            return 0;
+            zend_ast *if_elem = list->child[i];
+            uint32_t elem_children = zend_ast_get_num_children(if_elem);
+
+            if (elem_children >= 1)
+            {
+                zend_ast *cond = if_elem->child[0];
+
+                if (cond == NULL || (cond->kind == ZEND_AST_ZVAL && zend_ast_get_zval(cond) == NULL))
+                {
+                    has_else = 1;
+                    smart_string_appends(context->cuda_code_buffer, "} else {\n");
+
+                    if (elem_children >= 2 && !compile_ast_as_valid_cuda(context, if_elem->child[1]))
+                    {
+                        return 0;
+                    }
+                    smart_string_appends(context->cuda_code_buffer, "}\n");
+                }
+                else
+                {
+                    if (i == 0)
+                    {
+                        smart_string_appends(context->cuda_code_buffer, "if (");
+                    }
+                    else
+                    {
+                        smart_string_appends(context->cuda_code_buffer, "} else if (");
+                    }
+
+                    if (!compile_ast_as_valid_cuda(context, cond))
+                    {
+                        return 0;
+                    }
+                    smart_string_appends(context->cuda_code_buffer, ") {\n");
+
+                    if (elem_children >= 2 && !compile_ast_as_valid_cuda(context, if_elem->child[1]))
+                    {
+                        return 0;
+                    }
+                }
+            }
         }
     }
+
+    if (!has_else)
+    {
+        smart_string_appends(context->cuda_code_buffer, "}\n");
+    }
+
     return 1;
 }
 
-static int handle_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast)
+static int handler_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast)
 {
     uint32_t num_children = zend_ast_get_num_children(ast);
-
-    zend_ast *cond = ast->child[0];
-    zend_ast *stmt = ast->child[1];
-    zend_ast *else_stmt = (num_children > 2) ? ast->child[2] : NULL;
-    ;
 
     if (num_children < 2)
     {
         return 0;
     }
+
+    zend_ast *cond = ast->child[0];
+    zend_ast *stmt = ast->child[1];
+    zend_ast *else_stmt = (num_children > 2) ? ast->child[2] : NULL;
 
     smart_string_appends(context->cuda_code_buffer, "if (");
     if (!compile_ast_as_valid_cuda(context, cond))
@@ -1525,7 +1572,6 @@ static int handle_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast
     {
         return 0;
     }
-
     smart_string_appends(context->cuda_code_buffer, "}\n");
 
     if (else_stmt)
@@ -1533,9 +1579,15 @@ static int handle_ast_if_elem(cuda_compilation_context_t *context, zend_ast *ast
         if (else_stmt->kind == ZEND_AST_IF)
         {
             smart_string_appends(context->cuda_code_buffer, "else ");
-            if (!handler_ast_if(context, else_stmt))
+
+            zend_ast_list *if_list = (zend_ast_list *)else_stmt;
+
+            if (if_list->children > 0 && if_list->child[0]->kind == ZEND_AST_IF_ELEM)
             {
-                return 0;
+                if (!handler_ast_if_elem(context, if_list->child[0]))
+                {
+                    return 0;
+                }
             }
         }
         else
@@ -2038,6 +2090,11 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
 
 static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *ast)
 {
+    if (ast->attr == ZEND_NOP)
+    {
+        return compile_ast_as_valid_cuda(context, ast->child[0]);
+    }
+
     const char *op_symbol = get_unary_op_symbol(ast->attr);
     if (!op_symbol)
     {
@@ -2393,8 +2450,7 @@ cuda_compilation_context_t *create_cuda_context(
     func_parameter_list_t *parameters,
     cuda_fn_type fn_type,
     zend_string *name,
-    HashTable * headers
-)
+    HashTable *headers)
 {
     cuda_compilation_context_t *context =
         (cuda_compilation_context_t *)emalloc(sizeof(cuda_compilation_context_t));

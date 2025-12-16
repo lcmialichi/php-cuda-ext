@@ -6,15 +6,9 @@
 #include "cuda_wrapper.h"
 #include "tensor.h"
 #include "cuda.h"
+#include "ca_struct.h"
 
 extern zend_class_entry *cuda_array_ce;
-
-typedef struct
-{
-    tensor_t *tensor_handle;
-    zend_array *shape;
-    zend_object obj;
-} cuda_array_obj;
 
 int cuda_array_init(size_t size);
 void cuda_array_shutdown();

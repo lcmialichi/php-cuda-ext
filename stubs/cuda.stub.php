@@ -27,10 +27,22 @@ class Device
     }
 }
 
+/**
+ * Compiled CUDA module containing PTX code and kernel functions.
+ * 
+ * @method bool run(string $name) Execute kernel with default configuration and no arguments
+ * @method bool run(string $name, array $config) Execute kernel with configuration but no arguments
+ * @method bool run(string $name, array $config, array $args) Execute kernel with configuration and arguments
+ * @method bool run(string $name, array $config = [], array $args = []) Execute kernel with optional configuration and arguments
+ * 
+ * @package Cuda
+ */
 class CompiledModule
 {
-    public function run(string $kernel, ...$params): void
+
+    public function run(string $name, array $config = [], array $args): bool
     {
+        return true;
     }
 
     public function hasKernel(string $kernel): bool
@@ -48,7 +60,8 @@ class CompiledModule
 
     }
 
-    public function save(){
+    public function save(string $path)
+    {
 
     }
 }

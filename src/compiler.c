@@ -225,7 +225,6 @@ static void print_ast_recursive(zend_ast *ast)
     }
 
     indent_level++;
-
     if (zend_ast_is_list(ast))
     {
         zend_ast_list *list = (zend_ast_list *)ast;
@@ -345,8 +344,30 @@ static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t 
     smart_string_appendl(&program, "#include <device_launch_parameters.h>\n", strlen("#include <device_launch_parameters.h>\n"));
     smart_string_appendl(&program, "#include <cuda_fp16.h>\n", strlen("#include <cuda_fp16.h>\n"));
     smart_string_appendl(&program, "\n// Math function wrappers\n", strlen("\n// Math function wrappers\n"));
+
+    smart_string_appendl(&program, "// Math constants for CUDA\n", strlen("// Math constants for CUDA\n"));
     smart_string_appendl(&program, "#ifndef M_PI\n", strlen("#ifndef M_PI\n"));
-    smart_string_appendl(&program, "#define M_PI 3.14159265358979323846\n", strlen("#define M_PI 3.14159265358979323846\n"));
+    smart_string_appendl(&program, "#define M_PI 3.14159265358979323846f\n", strlen("#define M_PI 3.14159265358979323846f\n"));
+    smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
+
+    smart_string_appendl(&program, "#ifndef INFINITY\n", strlen("#ifndef INFINITY\n"));
+    smart_string_appendl(&program, "#define INFINITY __int_as_float(0x7f800000)\n", strlen("#define INFINITY __int_as_float(0x7f800000)\n"));
+    smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
+
+    smart_string_appendl(&program, "#ifndef NAN\n", strlen("#ifndef NAN\n"));
+    smart_string_appendl(&program, "#define NAN __int_as_float(0x7fffffff)\n", strlen("#define NAN __int_as_float(0x7fffffff)\n"));
+    smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
+
+    smart_string_appendl(&program, "#ifndef FLT_MAX\n", strlen("#ifndef FLT_MAX\n"));
+    smart_string_appendl(&program, "#define FLT_MAX 3.402823466e+38f\n", strlen("#define FLT_MAX 3.402823466e+38f\n"));
+    smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
+
+    smart_string_appendl(&program, "#ifndef FLT_MIN\n", strlen("#ifndef FLT_MIN\n"));
+    smart_string_appendl(&program, "#define FLT_MIN 1.175494351e-38f\n", strlen("#define FLT_MIN 1.175494351e-38f\n"));
+    smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
+
+    smart_string_appendl(&program, "#ifndef INF\n", strlen("#ifndef INF\n"));
+    smart_string_appendl(&program, "#define INF INFINITY\n", strlen("#define INF INFINITY\n"));
     smart_string_appendl(&program, "#endif\n\n", strlen("#endif\n\n"));
 
     zval *header_zv;
@@ -541,12 +562,12 @@ ZEND_METHOD(Compiler, kernel)
     kernel->fci = fci;
     kernel->fcc = fcc;
 
-    kernel->grid[0] = 1;
-    kernel->grid[1] = 1;
-    kernel->grid[2] = 1;
-    kernel->block[0] = 256;
-    kernel->block[1] = 1;
-    kernel->block[2] = 1;
+    kernel->grid[0] = 4;
+    kernel->grid[1] = 4;
+    kernel->grid[2] = 4;
+    kernel->block[0] = 16;
+    kernel->block[1] = 16;
+    kernel->block[2] = 16;
 
     if (grid_zv && Z_TYPE_P(grid_zv) == IS_ARRAY)
     {
@@ -832,12 +853,6 @@ ZEND_METHOD(Compiler, compile)
         RETURN_NULL();
     }
 
-    if (debug)
-    {
-        php_printf("PTX size: %zu bytes\n", ptx_size);
-        php_printf("First 500 chars of PTX:\n%.12792s\n", ptx_code);
-    }
-
     zend_string *module_class_name = zend_string_init("Cuda\\CompiledModule",
                                                       strlen("Cuda\\CompiledModule"), 0);
     zend_class_entry *module_ce = zend_lookup_class(module_class_name);
@@ -853,7 +868,6 @@ ZEND_METHOD(Compiler, compile)
 
     zval module_zv;
     object_init_ex(&module_zv, module_ce);
-    printf("here1\n");
     cuda_module_object *module = Z_CUDA_MODULE_P(&module_zv);
 
     module->ptx_code = ptx_code;
@@ -870,7 +884,6 @@ ZEND_METHOD(Compiler, compile)
     {
         if (!kernel || !kernel->name)
             continue;
-
 
         cuda_kernel_data *kernel_copy = (cuda_kernel_data *)emalloc(sizeof(cuda_kernel_data));
         memset(kernel_copy, 0, sizeof(cuda_kernel_data));
@@ -896,7 +909,6 @@ ZEND_METHOD(Compiler, compile)
         kernel_copy->parameters = kernel->parameters;
         kernel_copy->used_devices = kernel->used_devices;
         zend_hash_add_ptr(module->kernel_functions, kernel->name, kernel_copy);
-
     }
     ZEND_HASH_FOREACH_END();
 

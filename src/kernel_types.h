@@ -20,6 +20,7 @@ typedef struct
     dtype_t return_type;
 } cuda_function_match_t;
 
+
 typedef struct _kernel_obj
 {
     zend_object obj;

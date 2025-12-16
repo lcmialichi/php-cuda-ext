@@ -5,9 +5,10 @@
 
 #define MODULE_CLASS_NAME "Cuda\\CompiledModule"
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_module_run, 0, 0, 1)
-    ZEND_ARG_INFO(0, kernel_name)
-    ZEND_ARG_VARIADIC_INFO(0, args)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_module_run, 0, 1, _IS_BOOL, 0)
+    ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, config, IS_ARRAY, 1, "[]")
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, args, IS_ARRAY, 1, "[]")
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_module_has_kernel, 0, 0, 1)

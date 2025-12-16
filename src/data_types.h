@@ -20,5 +20,4 @@ typedef enum
     VOID
 } dtype_t;
 
-
 #endif

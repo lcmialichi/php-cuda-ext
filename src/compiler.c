@@ -37,7 +37,6 @@ static const char *get_ast_kind_name(zend_ast *ast)
         return "LITERAL";
     case ZEND_AST_CONSTANT:
         return "CONSTANT";
-
     case ZEND_AST_STMT_LIST:
         return "STMT_LIST";
     case ZEND_AST_IF:
@@ -354,7 +353,7 @@ ZEND_METHOD(Compiler, kernel)
     cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_kernel_ce);
     func_parameter_list_t *params = cuda_extract_parameter_list(fptr, cuda_attr_input_ce, cuda_attr_output_ce);
 
-    cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL, fargs->name);
+    cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL, fargs->name, compiler->headers);
 
     if (!fargs)
     {
@@ -676,6 +675,8 @@ static zend_object *compiler_create_object(zend_class_entry *class_type)
 
     zend_object_std_init(&compiler->std, class_type);
     compiler->std.handlers = &compiler_handlers;
+    compiler->headers = (HashTable *)emalloc(sizeof(HashTable));
+    zend_hash_init(compiler->headers, 8, NULL, NULL, 0);
 
     compiler->target_device = NULL;
     compiler->optimization_level = 3;

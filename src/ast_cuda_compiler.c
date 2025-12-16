@@ -2346,7 +2346,7 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
     return 1;
 }
 
-char *generate_cuda_headers(HashTable* cuda_headers)
+char *generate_cuda_headers(HashTable *cuda_headers)
 {
     if (!cuda_headers || zend_hash_num_elements(cuda_headers) == 0)
     {
@@ -2388,14 +2388,17 @@ static void destroy_local_variable(zval *zv)
     }
 }
 
-cuda_compilation_context_t *create_cuda_context(func_parameter_list_t *parameters, cuda_fn_type fn_type, zend_string *name)
+cuda_compilation_context_t *create_cuda_context(
+    func_parameter_list_t *parameters,
+    cuda_fn_type fn_type,
+    zend_string *name,
+    HashTable * headers
+)
 {
     cuda_compilation_context_t *context =
         (cuda_compilation_context_t *)emalloc(sizeof(cuda_compilation_context_t));
 
-    context->headers = (HashTable *)emalloc(sizeof(HashTable));
-    zend_hash_init(context->headers, 8, NULL, NULL, 0);
-
+    context->headers = headers;
     context->parameters = parameters;
     context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
     context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
@@ -2431,7 +2434,6 @@ void free_cuda_context(cuda_compilation_context_t *context)
         zend_hash_destroy(context->headers);
         efree(context->headers);
     }
-
 
     if (context->parameters)
     {

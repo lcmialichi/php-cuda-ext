@@ -10,13 +10,13 @@ class Runtime
     public Sync $sync;
 
 
-    public function threadIdx(): int {}
+    public function threadIdx(): \stdClass {}
     
-    public function blockIdx(): int {}
+    public function blockIdx(): \stdClass {}
     
-    public function blockDim(): int {}
+    public function blockDim(): \stdClass {}
     
-    public function gridDim(): int {}
+    public function gridDim(): \stdClass {}
     
 }
 

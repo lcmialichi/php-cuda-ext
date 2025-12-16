@@ -98,6 +98,7 @@ typedef struct _cuda_compiler_object
     int optimization_level;
     zend_bool debug_mode;
     zend_bool fast_math;
+    HashTable *headers;
     HashTable *kernels;
     HashTable *devices;
     cuda_compilation_context_t *compilation_context;

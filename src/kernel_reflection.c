@@ -6,160 +6,320 @@
 #include "kernel_reflection.h"
 #include "kernel_types.h"
 #include "data_types.h"
-#include "ext/standard/php_smart_string.h"
+#include "cuda_param.h"
 #include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 #define ZEND_TYPE_IS_ARRAY(type) \
     (ZEND_TYPE_IS_SET(type) && (ZEND_TYPE_PURE_MASK(type) & MAY_BE_ARRAY))
 
-zend_array *kernel_get_closure_use_vars(zend_object *closure_obj)
-{
-    const zend_function *func = zend_get_closure_method_def(closure_obj);
-    if (!func)
-    {
-        return NULL;
-    }
-
-    zval *use_vars_zv = zend_read_property(zend_ce_closure, closure_obj, "__use_vars", sizeof("__use_vars") - 1, 1, NULL);
-    if (use_vars_zv && Z_TYPE_P(use_vars_zv) == IS_ARRAY)
-    {
-        return Z_ARR_P(use_vars_zv);
-    }
-
-    return NULL;
-}
-
-int kernel_extract_closure_source(zend_object *closure_obj, zend_string **out_source)
-{
-    *out_source = NULL;
-
-    if (!closure_obj)
-    {
-        return 0;
-    }
-
-    const zend_function *func = zend_get_closure_method_def(closure_obj);
-    if (!func || func->type != ZEND_USER_FUNCTION)
-    {
-        return 0;
-    }
-
-    zend_op_array *op_array = (zend_op_array *)func;
-
-    if (!op_array->filename)
-    {
-        return 0;
-    }
-
-    FILE *file = fopen(ZSTR_VAL(op_array->filename), "r");
-    if (!file)
-    {
-        return 0;
-    }
-
-    smart_string source = {0};
-    smart_string_alloc(&source, 2048, 0);
-
-    smart_string_appends(&source, "<?php\n");
-
-    char line[4096];
-    uint32_t current_line = 1;
-    bool in_closure = false;
-    int brace_depth = 0;
-
-    uint32_t start_line = op_array->line_start;
-    uint32_t end_line = op_array->line_end;
-
-    if (start_line == 0 || end_line == 0)
-    {
-        fclose(file);
-        return 0;
-    }
-
-    while (fgets(line, sizeof(line), file))
-    {
-        if (current_line >= start_line && current_line <= end_line)
-        {
-            char *trimmed = line;
-            while (*trimmed == ' ' || *trimmed == '\t')
-                trimmed++;
-
-            if (!in_closure)
-            {
-                if (strstr(trimmed, "function") || strstr(trimmed, "fn") ||
-                    (strstr(trimmed, "static") && strstr(trimmed, "function")))
-                {
-                    in_closure = true;
-                }
-            }
-
-            if (in_closure)
-            {
-                smart_string_appends(&source, line);
-                for (char *p = line; *p; p++)
-                {
-                    if (*p == '{')
-                        brace_depth++;
-                    else if (*p == '}')
-                    {
-                        brace_depth--;
-                        if (brace_depth <= 0)
-                        {
-                            in_closure = false;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (current_line > end_line)
-            break;
-        current_line++;
-    }
-
-    fclose(file);
-
-    if (source.len == 0)
-    {
-        smart_string_free(&source);
-        return 0;
-    }
-
-    smart_string_0(&source);
-    *out_source = zend_string_init(source.c, source.len, 0);
-    smart_string_free(&source);
-
-    return 1;
-}
-
-dtype_t map_dtype_string_to_int(zend_string *dtype_str)
+static dtype_t map_dtype_string_to_int(zend_string *dtype_str)
 {
     if (!dtype_str)
         return DTYPE_UNKNOWN;
 
-    if (zend_string_equals_literal_ci(dtype_str, "float32"))
+    char *str = ZSTR_VAL(dtype_str);
+    size_t len = ZSTR_LEN(dtype_str);
+
+    char *lower = estrndup(str, len);
+    for (size_t i = 0; i < len; i++)
     {
-        return FLOAT32;
-    }
-    if (zend_string_equals_literal_ci(dtype_str, "int32"))
-    {
-        return INT32;
-    }
-    if (zend_string_equals_literal_ci(dtype_str, "double"))
-    {
-        return INT64;
-    }
-    if (zend_string_equals_literal_ci(dtype_str, "bool"))
-    {
-        return BOOL;
+        lower[i] = tolower((unsigned char)str[i]);
     }
 
-    return DTYPE_UNKNOWN;
+    dtype_t result = DTYPE_UNKNOWN;
+
+    if (strcasecmp(lower, "float32") == 0 || strcasecmp(lower, "float") == 0)
+    {
+        result = FLOAT32;
+    }
+    else if (strcasecmp(lower, "float64") == 0 || strcasecmp(lower, "double") == 0)
+    {
+        result = FLOAT64;
+    }
+    else if (strcasecmp(lower, "int32") == 0 || strcasecmp(lower, "int") == 0)
+    {
+        result = INT32;
+    }
+    else if (strcasecmp(lower, "int64") == 0 || strcasecmp(lower, "long") == 0)
+    {
+        result = INT64;
+    }
+    else if (strcasecmp(lower, "int8") == 0)
+    {
+        result = INT8;
+    }
+    else if (strcasecmp(lower, "int16") == 0)
+    {
+        result = INT16;
+    }
+    else if (strcasecmp(lower, "uint8") == 0)
+    {
+        result = UINT8;
+    }
+    else if (strcasecmp(lower, "uint16") == 0)
+    {
+        result = UINT16;
+    }
+    else if (strcasecmp(lower, "uint32") == 0)
+    {
+        result = UINT32;
+    }
+    else if (strcasecmp(lower, "uint64") == 0)
+    {
+        result = UINT64;
+    }
+    else if (strcasecmp(lower, "bool") == 0 || strcasecmp(lower, "boolean") == 0)
+    {
+        result = BOOL;
+    }
+
+    efree(lower);
+    return result;
 }
 
-void add_parameter_to_list(func_parameter_list_t *list, parameter_type_t type, const char *name, dtype_t dtype, int is_array)
+static int call_method_with_0_params(zend_object *obj, zend_class_entry *ce,
+                                     const char *method_name, zval *retval)
 {
+    if (!obj || !ce || !method_name || !retval)
+    {
+        return FAILURE;
+    }
+
+    zend_string *method_name_str = zend_string_init(method_name, strlen(method_name), 0);
+    zend_function *method = zend_hash_find_ptr(&ce->function_table, method_name_str);
+    zend_string_release(method_name_str);
+
+    if (!method)
+    {
+        return FAILURE;
+    }
+
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+
+    memset(&fci, 0, sizeof(zend_fcall_info));
+    memset(&fcc, 0, sizeof(zend_fcall_info_cache));
+
+    fci.size = sizeof(zend_fcall_info);
+    fci.object = obj;
+    fci.retval = retval;
+    fci.param_count = 0;
+
+    fcc.function_handler = method;
+    fcc.called_scope = ce;
+    fcc.object = obj;
+
+    return zend_call_function(&fci, &fcc);
+}
+
+static void set_properties_from_attr_args(zend_class_entry *ce, zval *obj,
+                                          zend_attribute *attr)
+{
+    for (uint32_t i = 0; i < attr->argc; i++)
+    {
+        zend_attribute_arg *arg = &attr->args[i];
+        if (arg->name)
+        {
+            zend_update_property(ce, Z_OBJ_P(obj),
+                                 ZSTR_VAL(arg->name), ZSTR_LEN(arg->name),
+                                 &arg->value);
+        }
+    }
+}
+
+static zend_function *find_method(zend_class_entry *ce, const char *method_name)
+{
+    size_t len = strlen(method_name);
+    return zend_hash_str_find_ptr(&ce->function_table, method_name, len);
+}
+
+static zval *call_attribute_method(zend_class_entry *ce, zval *obj,
+                                   const char *method_name)
+{
+    static zval result;
+    ZVAL_NULL(&result);
+
+    zend_function *method = find_method(ce, method_name);
+    if (!method)
+    {
+        return &result;
+    }
+
+    if (call_method_with_0_params(Z_OBJ_P(obj), ce, method_name, &result) == SUCCESS)
+    {
+        return &result;
+    }
+
+    return &result;
+}
+
+cuda_param_info *cuda_param_info_create(zend_string *name)
+{
+    cuda_param_info *info = emalloc(sizeof(cuda_param_info));
+    if (!info)
+    {
+        return NULL;
+    }
+    memset(info, 0, sizeof(cuda_param_info));
+    info->name = zend_string_copy(name);
+    return info;
+}
+
+void cuda_param_info_free(cuda_param_info *info)
+{
+    if (!info)
+        return;
+
+    if (info->name)
+    {
+        zend_string_release(info->name);
+    }
+    if (info->dtype)
+    {
+        zend_string_release(info->dtype);
+    }
+    efree(info);
+}
+
+zend_string *infer_dtype_from_php_type(zend_arg_info *arg_info)
+{
+    if (!arg_info || !ZEND_TYPE_IS_SET(arg_info->type))
+    {
+        return zend_string_init("float32", strlen("float32"), 0);
+    }
+
+    zend_type type = arg_info->type;
+    uint32_t type_mask = ZEND_TYPE_PURE_MASK(type);
+
+    if (type_mask & MAY_BE_LONG)
+    {
+        return zend_string_init("int32", strlen("int32"), 0);
+    }
+    else if (type_mask & MAY_BE_DOUBLE)
+    {
+        return zend_string_init("float64", strlen("float64"), 0);
+    }
+    else if (type_mask & MAY_BE_BOOL)
+    {
+        return zend_string_init("bool", strlen("bool"), 0);
+    }
+    else if (type_mask & MAY_BE_STRING)
+    {
+        return NULL;
+    }
+    else if (type_mask & MAY_BE_ARRAY)
+    {
+        return zend_string_init("float32", strlen("float32"), 0);
+    }
+    else if (ZEND_TYPE_NAME(type) != NULL)
+    {
+        return zend_string_init("float32", strlen("float32"), 0);
+    }
+
+    return zend_string_init("float32", strlen("float32"), 0);
+}
+
+cuda_param_info *extract_param_info(zend_attribute *attr,
+                                    zend_string *param_name,
+                                    zend_arg_info *arg_info)
+{
+    if (!attr || !param_name)
+    {
+        return NULL;
+    }
+
+    cuda_param_info *info = cuda_param_info_create(param_name);
+    if (!info)
+    {
+        return NULL;
+    }
+
+    zend_class_entry *attr_ce = zend_hash_find_ptr(CG(class_table), attr->name);
+    if (!attr_ce)
+    {
+        cuda_param_info_free(info);
+        return NULL;
+    }
+
+    zval attr_obj;
+    object_init_ex(&attr_obj, attr_ce);
+
+    set_properties_from_attr_args(attr_ce, &attr_obj, attr);
+
+    zval *result;
+
+    result = call_attribute_method(attr_ce, &attr_obj, "getDtype");
+    if (Z_TYPE_P(result) == IS_STRING)
+    {
+        info->dtype = zend_string_copy(Z_STR_P(result));
+    }
+
+    result = call_attribute_method(attr_ce, &attr_obj, "isList");
+    info->is_list = Z_TYPE_P(result) == IS_TRUE;
+
+    result = call_attribute_method(attr_ce, &attr_obj, "isNullable");
+    info->nullable = Z_TYPE_P(result) == IS_TRUE;
+
+    zval_ptr_dtor(&attr_obj);
+
+    if (!info->dtype)
+    {
+        zend_string *inferred = infer_dtype_from_php_type(arg_info);
+        info->dtype = inferred ? inferred : zend_string_init("float32", strlen("float32"), 0);
+    }
+
+    if (!info->is_list)
+    {
+        info->is_list = 1;
+    }
+
+    if (!info->nullable)
+    {
+        info->nullable = 1;
+    }
+
+    return info;
+}
+
+void convert_param_info_to_func_parameter(cuda_param_info *info, func_parameter *param)
+{
+    if (!info || !param)
+    {
+        return;
+    }
+
+    size_t name_len = ZSTR_LEN(info->name);
+    size_t copy_len = name_len < 31 ? name_len : 31;
+    memcpy(param->name, ZSTR_VAL(info->name), copy_len);
+    param->name[copy_len] = '\0';
+
+    param->dtype = info->dtype ? map_dtype_string_to_int(info->dtype) : DTYPE_UNKNOWN;
+
+    if (info->is_list)
+    {
+        param->second_dtype = param->dtype;
+        param->dtype = LIST;
+    }
+    else
+    {
+        param->second_dtype = DTYPE_UNKNOWN;
+    }
+
+    param->type = INPUT;
+    if (info->nullable)
+    {
+        param->type = OUTPUT;
+    }
+}
+
+void add_param_info_to_list(func_parameter_list_t *list, cuda_param_info *info)
+{
+    if (!list || !info)
+    {
+        return;
+    }
 
     list->total++;
     list->parameters = (func_parameter **)erealloc(
@@ -167,28 +327,22 @@ void add_parameter_to_list(func_parameter_list_t *list, parameter_type_t type, c
         list->total * sizeof(func_parameter *));
 
     func_parameter *param = (func_parameter *)emalloc(sizeof(func_parameter));
+    memset(param, 0, sizeof(func_parameter));
 
-    param->type = type;
-    strncpy(param->name, name, 31);
-    param->name[31] = '\0';
-    param->dtype = is_array ? LIST : dtype;
-    param->second_dtype = is_array ? dtype :DTYPE_UNKNOWN;
+    convert_param_info_to_func_parameter(info, param);
 
     list->parameters[list->total - 1] = param;
 }
 
-func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
-                                                   zend_class_entry *ce_input_attr,
-                                                   zend_class_entry *ce_output_attr)
+func_parameter_list_t *cuda_extract_parameters(zend_function *fptr)
 {
     if (!fptr || !fptr->common.arg_info)
     {
         return NULL;
     }
 
-    func_parameter_list_t *param_list = (func_parameter_list_t *)emalloc(sizeof(func_parameter_list_t));
-    param_list->total = 0;
-    param_list->parameters = NULL;
+    func_parameter_list_t *param_list = emalloc(sizeof(func_parameter_list_t));
+    memset(param_list, 0, sizeof(func_parameter_list_t));
 
     uint32_t num_args = fptr->common.num_args;
     if (num_args == 0)
@@ -199,96 +353,44 @@ func_parameter_list_t *cuda_extract_parameter_list(zend_function *fptr,
     HashTable *attributes = fptr->common.attributes;
     if (!attributes)
     {
-        efree(param_list);
-        return NULL;
+        return param_list;
     }
 
-    zend_string *input_lcname = zend_string_tolower(ce_input_attr->name);
-    zend_string *output_lcname = zend_string_tolower(ce_output_attr->name);
+    zend_attribute *attr;
 
-    for (uint32_t i = 0; i < num_args; i++)
+    ZEND_HASH_FOREACH_PTR(attributes, attr)
     {
-        zend_arg_info *arg = &fptr->common.arg_info[i];
-        zend_string *var_name = arg->name;
-
-        if (!var_name)
+        if (!attr || !attr->target || !(attr->target & ZEND_ATTRIBUTE_TARGET_PARAMETER))
         {
             continue;
         }
 
-        if (ZEND_TYPE_IS_UNION(arg->type))
+        uint32_t param_index = attr->offset;
+
+        if (param_index >= num_args)
         {
-            zend_error(E_ERROR, "CUDA: Union types are not supported for parameter '%s'", ZSTR_VAL(var_name));
             continue;
         }
 
-        if (ZEND_TYPE_IS_INTERSECTION(arg->type))
+        zend_arg_info *arg = &fptr->common.arg_info[param_index];
+        zend_string *param_name = arg->name;
+
+        if (!param_name)
         {
-            zend_error(E_ERROR, "CUDA: Intersection types are not supported for parameter '%s'", ZSTR_VAL(var_name));
             continue;
         }
 
-        uint32_t offset = i;
-        zend_attribute *matched_attr = NULL;
-        parameter_type_t current_type = DTYPE_UNKNOWN;
-        const char *type_name = NULL;
-
-        matched_attr = zend_get_parameter_attribute(attributes, input_lcname, offset);
-        if (matched_attr)
+        if (instanceof_function(attr->ce, cuda_param_attribute_ce))
         {
-            current_type = INPUT;
-            type_name = "INPUT";
-        }
-        else
-        {
-            matched_attr = zend_get_parameter_attribute(attributes, output_lcname, offset);
-            if (matched_attr)
+            cuda_param_info *info = extract_param_info(attr, param_name, arg);
+            if (info)
             {
-                current_type = OUTPUT;
-                type_name = "OUTPUT";
+                add_param_info_to_list(param_list, info);
+                cuda_param_info_free(info);
             }
         }
-
-        if (!matched_attr)
-        {
-            continue;
-        }
-
-        zend_string *dtype_str = NULL;
-        dtype_t dtype = DTYPE_UNKNOWN;
-        int is_array = 0;
-
-        for (uint32_t j = 0; j < matched_attr->argc; j++)
-        {
-            zend_attribute_arg *attr_arg = &matched_attr->args[j];
-            if (attr_arg->name &&
-                zend_string_equals_literal(attr_arg->name, "dtype") &&
-                Z_TYPE(attr_arg->value) == IS_STRING)
-            {
-                dtype_str = Z_STR(attr_arg->value);
-                dtype = map_dtype_string_to_int(dtype_str);
-                is_array = ZEND_TYPE_IS_ARRAY(arg->type);
-                if (dtype == DTYPE_UNKNOWN)
-                {
-                    zend_error(E_WARNING, "CUDA: Unknown dtype '%s' for parameter '%s'",
-                               ZSTR_VAL(dtype_str), ZSTR_VAL(var_name));
-                    continue;
-                }
-                break;
-            }
-        }
-
-        if (dtype == DTYPE_UNKNOWN)
-        {
-            zend_error(E_WARNING, "CUDA: Missing or invalid dtype for parameter '%s'", ZSTR_VAL(var_name));
-            continue;
-        }
-
-        add_parameter_to_list(param_list, current_type, ZSTR_VAL(var_name), dtype, is_array);
     }
-
-    zend_string_release(input_lcname);
-    zend_string_release(output_lcname);
+    ZEND_HASH_FOREACH_END();
 
     return param_list;
 }
@@ -303,14 +405,15 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
     }
 
     HashTable *attrs = fptr->common.attributes;
-    zend_attribute *attr;
     zend_attribute *matched = NULL;
+    zend_attribute *attr;
 
     ZEND_HASH_FOREACH_PTR(attrs, attr)
     {
         if (zend_string_equals(attr->name, ce_attribute->name))
         {
             matched = attr;
+            break;
         }
     }
     ZEND_HASH_FOREACH_END();
@@ -329,7 +432,6 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
     for (uint32_t i = 0; i < matched->argc; i++)
     {
         zend_attribute_arg *a = &matched->args[i];
-
         if (!a->name)
             continue;
 
@@ -339,9 +441,8 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
             zend_string_release(args->name);
             args->name = zend_string_copy(Z_STR(a->value));
         }
-
-        if (zend_string_equals_literal(a->name, "target") &&
-            Z_TYPE(a->value) == IS_STRING)
+        else if (zend_string_equals_literal(a->name, "target") &&
+                 Z_TYPE(a->value) == IS_STRING)
         {
             zend_string_release(args->target);
             args->target = zend_string_copy(Z_STR(a->value));

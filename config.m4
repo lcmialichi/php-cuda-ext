@@ -71,7 +71,8 @@ if test "$PHP_CUDA" != "no"; then
     src/compiler.c \
     src/device.c \
     src/module.c \
-    src/ast_cuda_compiler.c"
+    src/ast_cuda_compiler.c \
+    src/cuda_param.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
     PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)

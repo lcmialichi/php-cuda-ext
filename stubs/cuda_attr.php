@@ -25,20 +25,34 @@ class Device
 }
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class Input
+abstract class ParamAttribute
+{
+    abstract public function getDtype(): string;
+    abstract public function isList(): bool;
+    abstract public function isNullable(): bool;
+}
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class Tensor extends ParamAttribute
 {
     public function __construct(
         public string $dtype = 'float32',
     ) {
     }
-}
 
-#[Attribute(Attribute::TARGET_PARAMETER)]
-class Output
-{
-    public function __construct(
-        public string $dtype = 'float32',
-    ) {
+    public function getDtype(): string
+    {
+        return $this->dtype;
+    }
+
+    public function isList(): bool
+    {
+        return true;
+    }
+
+    public function isNullable(): bool
+    {
+        return false;
     }
 
 }

@@ -11,7 +11,8 @@
 #include "cuda_array.h"
 #include "cuda.h"
 #include "kernel.h"
-#include "cuda_attributes.h" 
+#include "cuda_attributes.h"
+#include "cuda_param.h"
 #include "device.h"
 #include "compiler.h"
 #include "module.h"
@@ -49,7 +50,6 @@ static PHP_GINIT_FUNCTION(cuda)
     cuda_globals->memory_size = "3G";
 }
 
-
 PHP_MINIT_FUNCTION(cuda)
 {
     REGISTER_INI_ENTRIES();
@@ -67,7 +67,9 @@ PHP_MINIT_FUNCTION(cuda)
     compiler_init();
     device_init();
     module_init();
-    
+    cuda_param_attribute_init();
+    cuda_register_attributes();
+
     if (!cuda_array_init(pool_size))
     {
         return FAILURE;

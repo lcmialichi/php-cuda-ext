@@ -13,14 +13,12 @@ typedef struct {
  	zend_string *target;
 } cuda_method_attribute_args;
 
-
 typedef struct {
  	zend_string *dtype;
 } cuda_param_attribute_args;
 
-
-PHP_METHOD(CudaAttr_Method, __construct);
-PHP_METHOD(CudaAttr_Param, __construct);
+ZEND_METHOD(CudaAttr_Method, __construct);
+ZEND_METHOD(CudaAttr_Param, __construct);
 
 void cuda_attr_init();
 

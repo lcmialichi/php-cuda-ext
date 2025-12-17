@@ -494,7 +494,7 @@ ZEND_METHOD(Compiler, kernel)
     }
 
     cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_kernel_ce);
-    func_parameter_list_t *params = cuda_extract_parameter_list(fptr, cuda_attr_input_ce, cuda_attr_output_ce);
+    func_parameter_list_t *params = cuda_extract_parameters(fptr);
 
     cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL, fargs->name, compiler->headers);
 
@@ -600,7 +600,7 @@ ZEND_METHOD(Compiler, kernel)
     kernel->source_code = source_code;
     kernel->cuda_code = ctx->cuda_code_buffer->c;
 
-    kernel->parameters = cuda_extract_parameter_list(fptr, cuda_attr_input_ce, cuda_attr_output_ce);
+    kernel->parameters = cuda_extract_parameter(fptr);
 
     kernel->used_devices = emalloc(sizeof(HashTable));
     zend_hash_init(kernel->used_devices, 4, NULL, NULL, 0);

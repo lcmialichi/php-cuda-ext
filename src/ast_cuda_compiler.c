@@ -542,6 +542,22 @@ static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
     }
 }
 
+static void cleanup_loop_variables(cuda_compilation_context_t *context, int loop_level)
+{
+    zend_string *key;
+    zval *val;
+    uint32_t num_key;
+
+    ZEND_HASH_FOREACH_KEY_VAL(&context->local_variables, num_key, key, val) {
+        local_variable_t *var = (local_variable_t *)Z_PTR_P(val);
+        if (var->level == loop_level) {
+            zend_hash_del(&context->local_variables, var->name);
+            zend_string_release(var->name);
+            efree(var);
+        }
+    } ZEND_HASH_FOREACH_END();
+}
+
 static cuda_function_match_t find_cuda_function_by_type(
     const char *php_name,
     dtype_t arg_types[],
@@ -1391,6 +1407,7 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
             new_var->name = zend_string_copy(var_name_zend);
             new_var->dtype = rvalue_type;
             new_var->second_dtype = rvalue_second_type;
+            new_var->level = context->loop_depth;
 
             zend_hash_add_ptr(&context->local_variables, var_name_zend, new_var);
 
@@ -1650,6 +1667,8 @@ static int handler_ast_for(cuda_compilation_context_t *context, zend_ast *ast)
             return 0;
         }
     }
+
+    cleanup_loop_variables(context, context->loop_depth);
     context->loop_depth--;
 
     smart_string_appends(context->cuda_code_buffer, "}\n");
@@ -1674,6 +1693,8 @@ static int handler_ast_while(cuda_compilation_context_t *context, zend_ast *ast)
         context->loop_depth--;
         return 0;
     }
+
+    cleanup_loop_variables(context, context->loop_depth);
     context->loop_depth--;
 
     smart_string_appends(context->cuda_code_buffer, "}\n");
@@ -1734,15 +1755,56 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
     dtype_t second_dtype = context->last_evaluated_second_dtype;
 
     smart_string_appendc(context->cuda_code_buffer, '[');
+
+    smart_string rvalue_buffer = {0};
+    smart_string_alloc(&rvalue_buffer, 256, 0);
+
+    smart_string *original_buffer = context->cuda_code_buffer;
+
+    context->cuda_code_buffer = &rvalue_buffer;
+
     if (!compile_ast_as_valid_cuda(context, index_expr))
     {
+        smart_string_free(&rvalue_buffer);
+        context->cuda_code_buffer = original_buffer;
         return 0;
     }
 
+    dtype_t rvalue_type = context->last_evaluated_first_dtype;
+    context->cuda_code_buffer = original_buffer;
+
+    printf("entrou aqui\n");
+    if (rvalue_type != INT32 && (rvalue_type == FLOAT32 || rvalue_type == FLOAT64))
+    {
+        printf("step 1\n");
+        smart_string_appendc(context->cuda_code_buffer, '(');
+        printf("step 2\n");
+
+        smart_string_appends(context->cuda_code_buffer, get_cuda_type_str(INT32, DTYPE_UNKNOWN));
+        printf("step 3\n");
+
+        smart_string_appendc(context->cuda_code_buffer, ')');
+    }
+    else if (rvalue_type == LIST)
+    {
+        smart_string_free(&rvalue_buffer);
+        php_error_docref(NULL, E_ERROR,
+                         "Array index must be of type int, got array.");
+        return 0;
+    }
+
+    printf("entrou aqui2\n");
+
+    smart_string_append(context->cuda_code_buffer, &rvalue_buffer);
+
     context->last_evaluated_first_dtype = second_dtype;
     context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    printf("entrou aqui3\n");
 
     smart_string_appendc(context->cuda_code_buffer, ']');
+    smart_string_free(&rvalue_buffer);
+    printf("entrou aqui4\n");
+
     return 1;
 }
 

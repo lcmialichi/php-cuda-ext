@@ -11,6 +11,7 @@ typedef struct
     dtype_t dtype;
     dtype_t second_dtype;
     int is_array;
+    int level;
 
 } local_variable_t;
 

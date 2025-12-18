@@ -10,7 +10,6 @@ extern zend_class_entry *cuda_attr_output_ce;
 
 typedef struct {
  	zend_string *name; 
- 	zend_string *target;
 } cuda_method_attribute_args;
 
 typedef struct {
@@ -18,7 +17,6 @@ typedef struct {
 } cuda_param_attribute_args;
 
 ZEND_METHOD(CudaAttr_Method, __construct);
-ZEND_METHOD(CudaAttr_Param, __construct);
 
 void cuda_attr_init();
 

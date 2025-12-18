@@ -1773,16 +1773,10 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
     dtype_t rvalue_type = context->last_evaluated_first_dtype;
     context->cuda_code_buffer = original_buffer;
 
-    printf("entrou aqui\n");
     if (rvalue_type != INT32 && (rvalue_type == FLOAT32 || rvalue_type == FLOAT64))
     {
-        printf("step 1\n");
         smart_string_appendc(context->cuda_code_buffer, '(');
-        printf("step 2\n");
-
         smart_string_appends(context->cuda_code_buffer, get_cuda_type_str(INT32, DTYPE_UNKNOWN));
-        printf("step 3\n");
-
         smart_string_appendc(context->cuda_code_buffer, ')');
     }
     else if (rvalue_type == LIST)
@@ -1793,17 +1787,13 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
         return 0;
     }
 
-    printf("entrou aqui2\n");
-
     smart_string_append(context->cuda_code_buffer, &rvalue_buffer);
 
     context->last_evaluated_first_dtype = second_dtype;
     context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
-    printf("entrou aqui3\n");
 
     smart_string_appendc(context->cuda_code_buffer, ']');
     smart_string_free(&rvalue_buffer);
-    printf("entrou aqui4\n");
 
     return 1;
 }

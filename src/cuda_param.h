@@ -19,21 +19,21 @@ ZEND_METHOD(CudaParamAttribute, getDtype);
 ZEND_METHOD(CudaParamAttribute, isList);
 ZEND_METHOD(CudaParamAttribute, isNullable);
 
-ZEND_METHOD(CudaAttr_Tensor, __construct);
-ZEND_METHOD(CudaAttr_Tensor, getDtype);
-ZEND_METHOD(CudaAttr_Tensor, isList);
+ZEND_METHOD(CudaAttr_TensorType, __construct);
+ZEND_METHOD(CudaAttr_TensorType, getDtype);
+ZEND_METHOD(CudaAttr_TensorType, isList);
 
-ZEND_METHOD(CudaAttr_Int, __construct);
-ZEND_METHOD(CudaAttr_Int, getDtype);
-ZEND_METHOD(CudaAttr_Int, isList);
+ZEND_METHOD(CudaAttr_IntType, __construct);
+ZEND_METHOD(CudaAttr_IntType, getDtype);
+ZEND_METHOD(CudaAttr_IntType, isList);
 
-ZEND_METHOD(CudaAttr_Float, __construct);
-ZEND_METHOD(CudaAttr_Float, getDtype);
-ZEND_METHOD(CudaAttr_Float, isList);
+ZEND_METHOD(CudaAttr_FloatType, __construct);
+ZEND_METHOD(CudaAttr_FloatType, getDtype);
+ZEND_METHOD(CudaAttr_FloatType, isList);
 
-ZEND_METHOD(CudaAttr_Bool, __construct);
-ZEND_METHOD(CudaAttr_Bool, getDtype);
-ZEND_METHOD(CudaAttr_Bool, isList);
+ZEND_METHOD(CudaAttr_BoolType, __construct);
+ZEND_METHOD(CudaAttr_BoolType, getDtype);
+ZEND_METHOD(CudaAttr_BoolType, isList);
 
 void cuda_param_attribute_init(void);
 void cuda_register_attributes(void);

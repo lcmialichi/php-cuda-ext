@@ -507,9 +507,7 @@ ZEND_METHOD(Compiler, kernel)
     if (!op_array->filename || op_array->line_start == 0 || op_array->line_end == 0)
     {
         zend_string_release(name);
-        zend_string_release(target);
         zend_string_release(fargs->name);
-        zend_string_release(fargs->target);
         efree(fargs);
         return;
     }
@@ -519,9 +517,7 @@ ZEND_METHOD(Compiler, kernel)
     if (!file_content)
     {
         zend_string_release(name);
-        zend_string_release(target);
         zend_string_release(fargs->name);
-        zend_string_release(fargs->target);
         efree(fargs);
         return;
     }
@@ -558,49 +554,14 @@ ZEND_METHOD(Compiler, kernel)
 
     cuda_kernel_data *kernel = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
     kernel->name = zend_string_copy(fargs->name);
-    kernel->target = zend_string_copy(fargs->target);
     kernel->fci = fci;
     kernel->fcc = fcc;
-
-    kernel->grid[0] = 4;
-    kernel->grid[1] = 4;
-    kernel->grid[2] = 4;
-    kernel->block[0] = 16;
-    kernel->block[1] = 16;
-    kernel->block[2] = 16;
-
-    if (grid_zv && Z_TYPE_P(grid_zv) == IS_ARRAY)
-    {
-        zval *x = zend_hash_index_find(Z_ARR_P(grid_zv), 0);
-        zval *y = zend_hash_index_find(Z_ARR_P(grid_zv), 1);
-        zval *z = zend_hash_index_find(Z_ARR_P(grid_zv), 2);
-        if (x)
-            kernel->grid[0] = zval_get_long(x);
-        if (y)
-            kernel->grid[1] = zval_get_long(y);
-        if (z)
-            kernel->grid[2] = zval_get_long(z);
-    }
-
-    if (block_zv && Z_TYPE_P(block_zv) == IS_ARRAY)
-    {
-        zval *x = zend_hash_index_find(Z_ARR_P(block_zv), 0);
-        zval *y = zend_hash_index_find(Z_ARR_P(block_zv), 1);
-        zval *z = zend_hash_index_find(Z_ARR_P(block_zv), 2);
-        if (x)
-            kernel->block[0] = zval_get_long(x);
-        if (y)
-            kernel->block[1] = zval_get_long(y);
-        if (z)
-            kernel->block[2] = zval_get_long(z);
-    }
-
     kernel->ast = ast;
     kernel->ast_arena = ast_arena;
     kernel->source_code = source_code;
     kernel->cuda_code = ctx->cuda_code_buffer->c;
 
-    kernel->parameters = cuda_extract_parameter(fptr);
+    kernel->parameters = cuda_extract_parameters(fptr);
 
     kernel->used_devices = emalloc(sizeof(HashTable));
     zend_hash_init(kernel->used_devices, 4, NULL, NULL, 0);
@@ -611,7 +572,6 @@ ZEND_METHOD(Compiler, kernel)
                           kernel);
 
     zend_string_release(fargs->name);
-    zend_string_release(fargs->target);
     efree(fargs);
 
     RETURN_ZVAL(getThis(), 1, 0);
@@ -661,13 +621,11 @@ ZEND_METHOD(Compiler, device)
     device->fci = fci;
     device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
-    device->target = zend_string_copy(fargs->target);
     device->ast = NULL;
     device->ast_arena = NULL;
 
     zend_hash_add_ptr(compiler->devices, zend_string_copy(fargs->name), device);
     zend_string_release(fargs->name);
-    zend_string_release(fargs->target);
     efree(fargs);
 
     RETURN_ZVAL(getThis(), 1, 0);
@@ -802,12 +760,6 @@ ZEND_METHOD(Compiler, compile)
     {
         char *compile_log = (char *)emalloc(log_size);
         nvrtcGetProgramLog(prog, compile_log);
-
-        if (debug || strstr(compile_log, "error") || strstr(compile_log, "Error"))
-        {
-            php_printf("NVRTC Compilation Log:\n%s\n", compile_log);
-        }
-
         efree(compile_log);
     }
 
@@ -896,9 +848,6 @@ ZEND_METHOD(Compiler, compile)
 
         kernel_copy->fcc = kernel->fcc;
         kernel_copy->fcc = kernel->fcc;
-
-        memcpy(kernel_copy->grid, kernel->grid, sizeof(kernel->grid));
-        memcpy(kernel_copy->block, kernel->block, sizeof(kernel->block));
         kernel_copy->source_code = kernel->source_code ? zend_string_copy(kernel->source_code) : NULL;
 
         if (kernel->cuda_code)
@@ -972,20 +921,6 @@ ZEND_METHOD(Compiler, getKernels)
         add_assoc_str(&kernel_info, "name", zend_string_copy(kernel->name));
         add_assoc_str(&kernel_info, "target", zend_string_copy(kernel->target));
         add_assoc_stringl(&kernel_info, "cuda_code", kernel->cuda_code, strlen(kernel->cuda_code));
-
-        zval grid_zv;
-        array_init(&grid_zv);
-        add_next_index_long(&grid_zv, kernel->grid[0]);
-        add_next_index_long(&grid_zv, kernel->grid[1]);
-        add_next_index_long(&grid_zv, kernel->grid[2]);
-        add_assoc_zval(&kernel_info, "grid", &grid_zv);
-
-        zval block_zv;
-        array_init(&block_zv);
-        add_next_index_long(&block_zv, kernel->block[0]);
-        add_next_index_long(&block_zv, kernel->block[1]);
-        add_next_index_long(&block_zv, kernel->block[2]);
-        add_assoc_zval(&kernel_info, "block", &block_zv);
 
         add_assoc_zval(return_value, ZSTR_VAL(kernel->name), &kernel_info);
     }

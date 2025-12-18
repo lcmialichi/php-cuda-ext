@@ -44,7 +44,7 @@ static const zend_function_entry cuda_param_attribute_methods[] = {
 };
 
 // ==================== TENSOR ====================
-ZEND_METHOD(CudaAttr_Tensor, __construct)
+ZEND_METHOD(CudaAttr_TensorType, __construct)
 {
     zend_string *dtype = NULL;
     zend_bool is_list = 1;
@@ -69,7 +69,7 @@ ZEND_METHOD(CudaAttr_Tensor, __construct)
                              "nullable", strlen("nullable"), nullable);
 }
 
-ZEND_METHOD(CudaAttr_Tensor, getDtype)
+ZEND_METHOD(CudaAttr_TensorType, getDtype)
 {
     zval *dtype = zend_read_property(cuda_param_attribute_ce, Z_OBJ_P(getThis()),
                                     "dtype", strlen("dtype"), 1, NULL);
@@ -81,14 +81,14 @@ ZEND_METHOD(CudaAttr_Tensor, getDtype)
     RETURN_STRING("float32");
 }
 
-ZEND_METHOD(CudaAttr_Tensor, isList)
+ZEND_METHOD(CudaAttr_TensorType, isList)
 {
     RETURN_TRUE;
 }
 
 // ==================== INT ====================
 
-ZEND_METHOD(CudaAttr_Int, __construct)
+ZEND_METHOD(CudaAttr_IntType, __construct)
 {
     zend_long bits = 32;
     zend_bool nullable = 0;
@@ -111,7 +111,7 @@ ZEND_METHOD(CudaAttr_Int, __construct)
                              "nullable", strlen("nullable"), nullable);
 }
 
-ZEND_METHOD(CudaAttr_Int, getDtype)
+ZEND_METHOD(CudaAttr_IntType, getDtype)
 {
     zval *dtype = zend_read_property(cuda_param_attribute_ce, Z_OBJ_P(getThis()),
                                     "dtype", strlen("dtype"), 1, NULL);
@@ -123,14 +123,14 @@ ZEND_METHOD(CudaAttr_Int, getDtype)
     RETURN_STRING("int32");
 }
 
-ZEND_METHOD(CudaAttr_Int, isList)
+ZEND_METHOD(CudaAttr_IntType, isList)
 {
     RETURN_FALSE;
 }
 
 // ==================== FLOAT ====================
 
-ZEND_METHOD(CudaAttr_Float, __construct)
+ZEND_METHOD(CudaAttr_FloatType, __construct)
 {
     zend_long bits = 32;
     zend_bool nullable = 0;
@@ -153,7 +153,7 @@ ZEND_METHOD(CudaAttr_Float, __construct)
                              "nullable", strlen("nullable"), nullable);
 }
 
-ZEND_METHOD(CudaAttr_Float, getDtype)
+ZEND_METHOD(CudaAttr_FloatType, getDtype)
 {
     zval *dtype = zend_read_property(cuda_param_attribute_ce, Z_OBJ_P(getThis()),
                                     "dtype", strlen("dtype"), 1, NULL);
@@ -165,14 +165,14 @@ ZEND_METHOD(CudaAttr_Float, getDtype)
     RETURN_STRING("float32");
 }
 
-ZEND_METHOD(CudaAttr_Float, isList)
+ZEND_METHOD(CudaAttr_FloatType, isList)
 {
     RETURN_FALSE;
 }
 
 // ==================== BOOL ====================
 
-ZEND_METHOD(CudaAttr_Bool, __construct)
+ZEND_METHOD(CudaAttr_BoolType, __construct)
 {
     zend_bool nullable = 0;
     
@@ -190,43 +190,41 @@ ZEND_METHOD(CudaAttr_Bool, __construct)
                              "nullable", strlen("nullable"), nullable);
 }
 
-ZEND_METHOD(CudaAttr_Bool, getDtype)
+ZEND_METHOD(CudaAttr_BoolType, getDtype)
 {
     RETURN_STRING("bool");
 }
 
-ZEND_METHOD(CudaAttr_Bool, isList)
+ZEND_METHOD(CudaAttr_BoolType, isList)
 {
     RETURN_FALSE;
 }
 
-// ==================== TABELAS DE MÉTODOS ====================
-
 static const zend_function_entry cuda_tensor_methods[] = {
-    ZEND_ME(CudaAttr_Tensor, __construct, arginfo_cuda_attr_tensor___construct, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Tensor, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Tensor, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_TensorType, __construct, arginfo_cuda_attr_tensor___construct, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_TensorType, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_TensorType, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
 static const zend_function_entry cuda_int_methods[] = {
-    ZEND_ME(CudaAttr_Int, __construct, arginfo_cuda_attr_int___construct, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Int, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Int, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_IntType, __construct, arginfo_cuda_attr_int___construct, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_IntType, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_IntType, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
 static const zend_function_entry cuda_float_methods[] = {
-    ZEND_ME(CudaAttr_Float, __construct, arginfo_cuda_attr_float___construct, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Float, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Float, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_FloatType, __construct, arginfo_cuda_attr_float___construct, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_FloatType, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_FloatType, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
 static const zend_function_entry cuda_bool_methods[] = {
-    ZEND_ME(CudaAttr_Bool, __construct, arginfo_cuda_attr_bool___construct, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Bool, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
-    ZEND_ME(CudaAttr_Bool, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_BoolType, __construct, arginfo_cuda_attr_bool___construct, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_BoolType, getDtype, arginfo_cuda_param_attribute_getDtype, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaAttr_BoolType, isList, arginfo_cuda_param_attribute_isList, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -251,7 +249,7 @@ void cuda_register_attributes(void)
     zend_attribute *attr;
     
     // Tensor
-    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\Tensor", cuda_tensor_methods);
+    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\TensorType", cuda_tensor_methods);
     zend_class_entry *tensor_ce = zend_register_internal_class_ex(&ce, cuda_param_attribute_ce);
     
     attr_name = zend_string_init("Attribute", strlen("Attribute"), 1);
@@ -259,7 +257,7 @@ void cuda_register_attributes(void)
     zend_string_release(attr_name);
     
     // Int
-    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\Int", cuda_int_methods);
+    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\IntType", cuda_int_methods);
     zend_class_entry *int_ce = zend_register_internal_class_ex(&ce, cuda_param_attribute_ce);
     
     attr_name = zend_string_init("Attribute", strlen("Attribute"), 1);
@@ -267,7 +265,7 @@ void cuda_register_attributes(void)
     zend_string_release(attr_name);
     
     // Float
-    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\Float", cuda_float_methods);
+    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\FloatType", cuda_float_methods);
     zend_class_entry *float_ce = zend_register_internal_class_ex(&ce, cuda_param_attribute_ce);
     
     attr_name = zend_string_init("Attribute", strlen("Attribute"), 1);
@@ -275,7 +273,7 @@ void cuda_register_attributes(void)
     zend_string_release(attr_name);
     
     // Bool
-    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\Bool", cuda_bool_methods);
+    INIT_CLASS_ENTRY(ce, "Cuda\\Attr\\BoolType", cuda_bool_methods);
     zend_class_entry *bool_ce = zend_register_internal_class_ex(&ce, cuda_param_attribute_ce);
     
     attr_name = zend_string_init("Attribute", strlen("Attribute"), 1);

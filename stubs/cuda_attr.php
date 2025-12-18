@@ -9,7 +9,6 @@ class Kernel
 {
     public function __construct(
         public string $name,
-        public string $target = 'sm_60'
     ) {
     }
 }
@@ -19,7 +18,6 @@ class Device
 {
     public function __construct(
         public string $name,
-        public string $target = 'sm_60'
     ) {
     }
 }
@@ -33,7 +31,7 @@ abstract class ParamAttribute
 }
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class Tensor extends ParamAttribute
+class TensorType extends ParamAttribute
 {
     public function __construct(
         public string $dtype = 'float32',
@@ -56,3 +54,76 @@ class Tensor extends ParamAttribute
     }
 
 }
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class BoolType extends ParamAttribute
+{
+
+    public function getDtype(): string
+    {
+        return 'bool';
+    }
+
+    public function isList(): bool
+    {
+        return false;
+    }
+
+    public function isNullable(): bool
+    {
+        return false;
+    }
+
+}
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class IntType extends ParamAttribute
+{
+    public function __construct(private int $bits)
+    {
+    }
+
+    public function getDtype(): string
+    {
+        return "int{$this->bits}";
+    }
+
+    public function isList(): bool
+    {
+        return false;
+    }
+
+    public function isNullable(): bool
+    {
+        return false;
+    }
+
+}
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class FloatType extends ParamAttribute
+{
+
+    public function __construct(private int $bits = 32)
+    {
+
+    }
+
+    public function getDtype(): string
+    {
+        return "float{$this->bits}";
+    }
+
+    public function isList(): bool
+    {
+        return false;
+    }
+
+    public function isNullable(): bool
+    {
+        return false;
+    }
+
+}
+
+

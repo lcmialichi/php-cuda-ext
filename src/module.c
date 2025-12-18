@@ -116,13 +116,6 @@ static void extract_launch_config(zval *grid_zv, zval *block_zv,
                                   cuda_kernel_data *kernel,
                                   int *grid, int *block)
 {
-    grid[0] = kernel->grid[0];
-    grid[1] = kernel->grid[1];
-    grid[2] = kernel->grid[2];
-    block[0] = kernel->block[0];
-    block[1] = kernel->block[1];
-    block[2] = kernel->block[2];
-
     if (grid_zv && Z_TYPE_P(grid_zv) == IS_ARRAY)
     {
         zval *x = zend_hash_index_find(Z_ARR_P(grid_zv), 0);
@@ -412,12 +405,6 @@ static zend_bool execute_cuda_kernel(cuda_module_object *module,
         return 0;
     }
 
-    php_printf("DEBUG: Launching kernel '%s'\n", ZSTR_VAL(kernel->name));
-    php_printf("DEBUG: Grid: [%d, %d, %d]\n", grid[0], grid[1], grid[2]);
-    php_printf("DEBUG: Block: [%d, %d, %d]\n", block[0], block[1], block[2]);
-    php_printf("DEBUG: Total threads: %d\n",
-               grid[0] * grid[1] * grid[2] * block[0] * block[1] * block[2]);
-
     cu_result = cuLaunchKernel(cu_function,
                                grid[0], grid[1], grid[2],
                                block[0], block[1], block[2],
@@ -425,9 +412,6 @@ static zend_bool execute_cuda_kernel(cuda_module_object *module,
                                cu_stream,
                                cuda_args,
                                NULL);
-
-    php_printf("DEBUG: cuLaunchKernel result: %s\n",
-               get_cuda_error_string(cu_result));
 
     if (cu_result != CUDA_SUCCESS)
     {
@@ -441,9 +425,6 @@ static zend_bool execute_cuda_kernel(cuda_module_object *module,
     }
 
     cu_result = cuStreamSynchronize(cu_stream);
-    php_printf("DEBUG: cuStreamSynchronize result: %s\n",
-               get_cuda_error_string(cu_result));
-
     if (cu_result != CUDA_SUCCESS)
     {
         zend_throw_exception_ex(NULL, 0,
@@ -471,10 +452,6 @@ ZEND_METHOD(CompiledModule, run)
     Z_PARAM_ARRAY_OR_NULL(config_zv)
     Z_PARAM_ARRAY_OR_NULL(args_zv)
     ZEND_PARSE_PARAMETERS_END();
-
-    php_printf("DEBUG: Kernel: %s\n", ZSTR_VAL(kernel_name));
-    php_printf("DEBUG: Config provided: %s\n", config_zv ? "yes" : "no");
-    php_printf("DEBUG: Args provided: %s\n", args_zv ? "yes" : "no");
 
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
     cuda_kernel_data *kernel = zend_hash_find_ptr(module->kernel_functions, kernel_name);
@@ -534,9 +511,6 @@ ZEND_METHOD(CompiledModule, run)
 
     int grid[3], block[3];
     extract_launch_config(grid_zv, block_zv, kernel, grid, block);
-
-    php_printf("DEBUG: Using grid=[%d,%d,%d], block=[%d,%d,%d]\n",
-               grid[0], grid[1], grid[2], block[0], block[1], block[2]);
 
     void **cuda_args = NULL;
     tensor_t **tensors_to_sync = NULL;

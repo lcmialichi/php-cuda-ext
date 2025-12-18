@@ -106,12 +106,22 @@ typedef struct _cuda_compiler_object
     cuda_compilation_context_t *compilation_context;
 } cuda_compiler_object;
 
+typedef struct _cuda_kernel_object
+{
+    zend_object std;
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+    zend_string *name;
+    zend_ast *ast;
+    zend_arena *ast_arena;
+    HashTable *used_devices;
+    func_parameter_list_t *parameters;
+} cuda_kernel_object;
+
 typedef struct _cuda_kernel_data
 {
     zend_string *name;
     zend_string *target;
-    int grid[3];
-    int block[3];
     zend_fcall_info fci;
     zend_fcall_info_cache fcc;
     zend_ast *ast;
@@ -121,21 +131,6 @@ typedef struct _cuda_kernel_data
     HashTable *used_devices;
     func_parameter_list_t *parameters;
 } cuda_kernel_data;
-
-typedef struct _cuda_kernel_object
-{
-    zend_object std;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
-    zend_string *name;
-    zend_string *target;
-    int grid[3];
-    int block[3];
-    zend_ast *ast;
-    zend_arena *ast_arena;
-    HashTable *used_devices;
-    func_parameter_list_t *parameters;
-} cuda_kernel_object;
 
 typedef struct _cuda_device_object
 {
@@ -157,8 +152,6 @@ typedef struct _cuda_module_object
     HashTable *kernel_functions;
 } cuda_module_object;
 
-#define Z_CUDA_KERNEL_P(zv) ((cuda_kernel_object *)((char *)Z_OBJ_P(zv) - XtOffsetOf(cuda_kernel_object, std)))
-#define Z_CUDA_KERNEL_FROM_OBJ(obj) ((cuda_kernel_object *)((char *)(obj) - XtOffsetOf(cuda_kernel_object, std)))
 #define Z_CUDA_DEVICE_P(zv) ((cuda_device_object *)((char *)Z_OBJ_P(zv) - XtOffsetOf(cuda_device_object, std)))
 #define Z_CUDA_DEVICE_FROM_OBJ(obj) ((cuda_device_object *)((char *)(obj) - XtOffsetOf(cuda_device_object, std)))
 #define Z_CUDA_MODULE_P(zv) ((cuda_module_object *)((char *)Z_OBJ_P(zv) - XtOffsetOf(cuda_module_object, std)))

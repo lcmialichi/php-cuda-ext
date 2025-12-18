@@ -9,16 +9,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_device_construct, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, closure, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_device_compile, 0, 0, 0)
-    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, target, IS_STRING, 1, "null")
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_device_get_name, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_device_invoke, 0, 0, 0)
-    ZEND_ARG_VARIADIC_INFO(0, args)
-ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_device_fn, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, closure, IS_CALLABLE, 0)
@@ -26,9 +19,7 @@ ZEND_END_ARG_INFO()
 
 static zend_function_entry device_methods[] = {
     ZEND_ME(Device, __construct, arginfo_device_construct, ZEND_ACC_PUBLIC)
-    ZEND_ME(Device, compile, arginfo_device_compile, ZEND_ACC_PUBLIC)
     ZEND_ME(Device, getName, arginfo_device_get_name, ZEND_ACC_PUBLIC)
-    ZEND_MALIAS(Device, __invoke, invoke, arginfo_device_invoke, ZEND_ACC_PUBLIC)
     ZEND_ME(Device, fn, arginfo_device_fn, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };

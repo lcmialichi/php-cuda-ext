@@ -38,12 +38,10 @@ ZEND_METHOD(Device, __construct)
     device->fci = fci;
     device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
-    device->target = zend_string_copy(fargs->target);
     device->ast = NULL;
     device->ast_arena = NULL;
 
     zend_string_release(fargs->name);
-    zend_string_release(fargs->target);
     efree(fargs);
 }
 
@@ -78,29 +76,13 @@ ZEND_METHOD(Device, fn)
     device->fci = fci;
     device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
-    device->target = zend_string_copy(fargs->target);
     device->ast = NULL;
     device->ast_arena = NULL;
 
     zend_string_release(fargs->name);
-    zend_string_release(fargs->target);
     efree(fargs);
 
     RETURN_ZVAL(&device_zv, 1, 0);
-}
-
-ZEND_METHOD(Device, compile)
-{
-    cuda_device_object *device = Z_CUDA_DEVICE_P(ZEND_THIS);
-    char *target = NULL;
-    size_t target_len;
-
-    ZEND_PARSE_PARAMETERS_START(0, 1)
-    Z_PARAM_OPTIONAL
-    Z_PARAM_STRING(target, target_len)
-    ZEND_PARSE_PARAMETERS_END();
-
-    RETURN_ZVAL(getThis(), 1, 0);
 }
 
 ZEND_METHOD(Device, getName)
@@ -109,30 +91,6 @@ ZEND_METHOD(Device, getName)
     RETURN_STR(device->name);
 }
 
-ZEND_METHOD(Device, invoke)
-{
-    cuda_device_object *device = Z_CUDA_DEVICE_P(ZEND_THIS);
-
-    zend_fcall_info fci = device->fci;
-    zend_fcall_info_cache fcc = device->fcc;
-
-    zval *args = NULL;
-    int argc = 0;
-
-    ZEND_PARSE_PARAMETERS_START(0, -1)
-    Z_PARAM_VARIADIC('*', args, argc)
-    ZEND_PARSE_PARAMETERS_END();
-
-    fci.param_count = argc;
-    fci.params = args;
-    fci.retval = return_value;
-
-    if (zend_call_function(&fci, &fcc) != SUCCESS)
-    {
-        php_error_docref(NULL, E_WARNING, "Failed to execute device function");
-        RETURN_NULL();
-    }
-}
 
 static void device_free_object(zend_object *object)
 {

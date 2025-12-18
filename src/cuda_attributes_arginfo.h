@@ -8,8 +8,4 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_attr_method___construct, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_attr_param___construct, 0, 0, 1)
-    ZEND_ARG_TYPE_INFO(0, dtype, IS_STRING, 0)
-ZEND_END_ARG_INFO()
-
 #endif

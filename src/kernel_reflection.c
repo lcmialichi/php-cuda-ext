@@ -2,6 +2,7 @@
 #include "zend.h"
 #include "zend_hash.h"
 #include "zend_attributes.h"
+#include "zend_interfaces.h"
 #include "cuda_attributes.h"
 #include "kernel_reflection.h"
 #include "kernel_types.h"
@@ -114,21 +115,6 @@ static int call_method_with_0_params(zend_object *obj, zend_class_entry *ce,
     return zend_call_function(&fci, &fcc);
 }
 
-static void set_properties_from_attr_args(zend_class_entry *ce, zval *obj,
-                                          zend_attribute *attr)
-{
-    for (uint32_t i = 0; i < attr->argc; i++)
-    {
-        zend_attribute_arg *arg = &attr->args[i];
-        if (arg->name)
-        {
-            zend_update_property(ce, Z_OBJ_P(obj),
-                                 ZSTR_VAL(arg->name), ZSTR_LEN(arg->name),
-                                 &arg->value);
-        }
-    }
-}
-
 static zend_function *find_method(zend_class_entry *ce, const char *method_name)
 {
     size_t len = strlen(method_name);
@@ -155,6 +141,19 @@ static zval *call_attribute_method(zend_class_entry *ce, zval *obj,
     return &result;
 }
 
+static void debug_class_methods(zend_class_entry *ce)
+{
+    zend_string *key;
+    zend_function *func;
+    
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&ce->function_table, key, func) {
+        if (key) {
+            printf("  Método: %s, flags=0x%08X, type=%d\n", 
+                   ZSTR_VAL(key), func->common.fn_flags, func->common.type);
+        }
+    } ZEND_HASH_FOREACH_END();
+}
+
 cuda_param_info *cuda_param_info_create(zend_string *name)
 {
     cuda_param_info *info = emalloc(sizeof(cuda_param_info));
@@ -165,22 +164,6 @@ cuda_param_info *cuda_param_info_create(zend_string *name)
     memset(info, 0, sizeof(cuda_param_info));
     info->name = zend_string_copy(name);
     return info;
-}
-
-void cuda_param_info_free(cuda_param_info *info)
-{
-    if (!info)
-        return;
-
-    if (info->name)
-    {
-        zend_string_release(info->name);
-    }
-    if (info->dtype)
-    {
-        zend_string_release(info->dtype);
-    }
-    efree(info);
 }
 
 zend_string *infer_dtype_from_php_type(zend_arg_info *arg_info)
@@ -221,6 +204,92 @@ zend_string *infer_dtype_from_php_type(zend_arg_info *arg_info)
     return zend_string_init("float32", strlen("float32"), 0);
 }
 
+static int initialize_attribute_object(zval *obj, zend_class_entry *ce, zend_attribute *attr)
+{
+    if (!obj || Z_TYPE_P(obj) != IS_OBJECT || !ce || !attr)
+    {
+        return 0;
+    }
+
+    zend_function *constructor = zend_hash_str_find_ptr(&ce->function_table,
+                                                        "__construct",
+                                                        strlen("__construct"));
+    if (!constructor)
+    {
+        return 1;
+    }
+
+    if (attr->argc == 0)
+    {
+        zval retval;
+        ZVAL_UNDEF(&retval);
+
+        zend_fcall_info fci;
+        zend_fcall_info_cache fcc;
+
+        memset(&fci, 0, sizeof(fci));
+        fci.size = sizeof(fci);
+        fci.object = Z_OBJ_P(obj);
+        fci.retval = &retval;
+        fci.param_count = 0;
+        fci.named_params = NULL;
+
+        memset(&fcc, 0, sizeof(fcc));
+        fcc.function_handler = constructor;
+        fcc.called_scope = ce;
+        fcc.object = Z_OBJ_P(obj);
+
+        zend_call_function(&fci, &fcc);
+
+        if (Z_TYPE(retval) != IS_UNDEF)
+        {
+            zval_ptr_dtor(&retval);
+        }
+
+        return 1;
+    }
+
+    zval *args = emalloc(sizeof(zval) * attr->argc);
+
+    for (uint32_t i = 0; i < attr->argc; i++)
+    {
+        ZVAL_COPY(&args[i], &attr->args[i].value);
+    }
+
+    zval retval;
+    ZVAL_UNDEF(&retval);
+
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+
+    memset(&fci, 0, sizeof(fci));
+    fci.size = sizeof(fci);
+    fci.object = Z_OBJ_P(obj);
+    fci.retval = &retval;
+    fci.params = args;
+    fci.param_count = attr->argc;
+    fci.named_params = NULL;
+
+    memset(&fcc, 0, sizeof(fcc));
+    fcc.function_handler = constructor;
+    fcc.called_scope = ce;
+    fcc.object = Z_OBJ_P(obj);
+
+    zend_call_function(&fci, &fcc);
+
+    if (Z_TYPE(retval) != IS_UNDEF)
+    {
+        zval_ptr_dtor(&retval);
+    }
+
+    for (uint32_t i = 0; i < attr->argc; i++)
+    {
+        zval_ptr_dtor(&args[i]);
+    }
+    efree(args);
+    return 1;
+}
+
 cuda_param_info *extract_param_info(zend_attribute *attr,
                                     zend_string *param_name,
                                     zend_arg_info *arg_info)
@@ -236,7 +305,7 @@ cuda_param_info *extract_param_info(zend_attribute *attr,
         return NULL;
     }
 
-    zend_class_entry *attr_ce = zend_hash_find_ptr(CG(class_table), attr->name);
+    zend_class_entry *attr_ce = zend_hash_find_ptr(CG(class_table), attr->lcname);
     if (!attr_ce)
     {
         cuda_param_info_free(info);
@@ -245,22 +314,25 @@ cuda_param_info *extract_param_info(zend_attribute *attr,
 
     zval attr_obj;
     object_init_ex(&attr_obj, attr_ce);
+    initialize_attribute_object(&attr_obj, attr_ce, attr);
 
-    set_properties_from_attr_args(attr_ce, &attr_obj, attr);
-
-    zval *result;
-
-    result = call_attribute_method(attr_ce, &attr_obj, "getDtype");
-    if (Z_TYPE_P(result) == IS_STRING)
+    zval *result = call_attribute_method(attr_ce, &attr_obj, "getdtype");
+    if (result && Z_TYPE_P(result) == IS_STRING)
     {
         info->dtype = zend_string_copy(Z_STR_P(result));
     }
 
-    result = call_attribute_method(attr_ce, &attr_obj, "isList");
-    info->is_list = Z_TYPE_P(result) == IS_TRUE;
+    result = call_attribute_method(attr_ce, &attr_obj, "islist");
+    if (result)
+    {
+        info->is_list = Z_TYPE_P(result) == IS_TRUE;
+    }
 
-    result = call_attribute_method(attr_ce, &attr_obj, "isNullable");
-    info->nullable = Z_TYPE_P(result) == IS_TRUE;
+    result = call_attribute_method(attr_ce, &attr_obj, "isnullable");
+    if (result)
+    {
+        info->nullable = Z_TYPE_P(result) == IS_TRUE;
+    }
 
     zval_ptr_dtor(&attr_obj);
 
@@ -268,16 +340,6 @@ cuda_param_info *extract_param_info(zend_attribute *attr,
     {
         zend_string *inferred = infer_dtype_from_php_type(arg_info);
         info->dtype = inferred ? inferred : zend_string_init("float32", strlen("float32"), 0);
-    }
-
-    if (!info->is_list)
-    {
-        info->is_list = 1;
-    }
-
-    if (!info->nullable)
-    {
-        info->nullable = 1;
     }
 
     return info;
@@ -360,12 +422,17 @@ func_parameter_list_t *cuda_extract_parameters(zend_function *fptr)
 
     ZEND_HASH_FOREACH_PTR(attributes, attr)
     {
-        if (!attr || !attr->target || !(attr->target & ZEND_ATTRIBUTE_TARGET_PARAMETER))
+        if (!attr)
         {
             continue;
         }
 
-        uint32_t param_index = attr->offset;
+        if (attr->offset == 0)
+        {
+            continue;
+        }
+
+        uint32_t param_index = attr->offset - 1;
 
         if (param_index >= num_args)
         {
@@ -380,7 +447,14 @@ func_parameter_list_t *cuda_extract_parameters(zend_function *fptr)
             continue;
         }
 
-        if (instanceof_function(attr->ce, cuda_param_attribute_ce))
+        zend_class_entry *attr_ce = zend_hash_find_ptr(CG(class_table), attr->lcname);
+
+        if (!attr_ce)
+        {
+            continue;
+        }
+
+        if (instanceof_function(attr_ce, cuda_param_attribute_ce))
         {
             cuda_param_info *info = extract_param_info(attr, param_name, arg);
             if (info)
@@ -427,7 +501,6 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
         (cuda_method_attribute_args *)emalloc(sizeof(cuda_method_attribute_args));
 
     args->name = zend_string_copy(fptr->common.function_name);
-    args->target = zend_string_init("sm_60", strlen("sm_60"), 0);
 
     for (uint32_t i = 0; i < matched->argc; i++)
     {
@@ -440,12 +513,6 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
         {
             zend_string_release(args->name);
             args->name = zend_string_copy(Z_STR(a->value));
-        }
-        else if (zend_string_equals_literal(a->name, "target") &&
-                 Z_TYPE(a->value) == IS_STRING)
-        {
-            zend_string_release(args->target);
-            args->target = zend_string_copy(Z_STR(a->value));
         }
     }
 

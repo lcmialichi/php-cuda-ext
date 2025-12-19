@@ -2538,12 +2538,7 @@ void free_cuda_context(cuda_compilation_context_t *context)
         efree(context->cuda_code_buffer);
     }
 
-    if (context->headers)
-    {
-        zend_hash_destroy(context->headers);
-        efree(context->headers);
-    }
-
+    context->headers = NULL;
     if (context->parameters)
     {
         // @todo free context parameters

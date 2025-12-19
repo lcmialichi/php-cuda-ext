@@ -103,20 +103,7 @@ typedef struct _cuda_compiler_object
     HashTable *headers;
     HashTable *kernels;
     HashTable *devices;
-    cuda_compilation_context_t *compilation_context;
 } cuda_compiler_object;
-
-typedef struct _cuda_kernel_object
-{
-    zend_object std;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
-    zend_string *name;
-    zend_ast *ast;
-    zend_arena *ast_arena;
-    HashTable *used_devices;
-    func_parameter_list_t *parameters;
-} cuda_kernel_object;
 
 typedef struct _cuda_kernel_data
 {

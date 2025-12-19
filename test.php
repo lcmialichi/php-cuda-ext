@@ -26,7 +26,6 @@ function idx_val(
     $output[$idx] = $idx;
 }
 
-
 #[Attr\Kernel(name: 'el_wise')]
 function el_wise_kernel(
     #[Attr\TensorType] array $input,
@@ -44,7 +43,6 @@ function el_wise_kernel(
     for ($i = 0; $i <= $nextIdx; $i++) {
         $output[$idx] = $input[$nextIdx];
     }
-
 }
 
 $input = CudaArray::ones([16, 16, 16]);
@@ -80,6 +78,5 @@ $module
             'grid' => [grid($ototal), 1, 1]
         ]
     );
-
-
+    
 var_dump($output[0]->toArray());

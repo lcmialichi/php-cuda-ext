@@ -34,14 +34,12 @@ function main(): void
             ]
         );
 
-
     while (!$module->isFinished()) {
         $module->sync();
         echo "Running...\n";
     }
 
     echo "Finished...\n";
-
 }
 
 function grid(int $n): array
@@ -89,6 +87,5 @@ function createCudaModule(): CompiledModule
     $compiler->kernel('element_wise');
     return $compiler->compile();
 }
-
 
 main();

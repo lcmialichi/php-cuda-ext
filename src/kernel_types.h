@@ -5,13 +5,21 @@
 #include "php.h"
 #include "zend_compile.h"
 #include "data_types.h"
+#include <nvrtc.h>
+#include <cuda.h>
+
 typedef struct
 {
     zend_string *name;
     dtype_t dtype;
     dtype_t second_dtype;
-    int is_array;
+    int array_dimensions;
     int level;
+    enum
+    {
+        VAR_LOCAL,
+        VAR_LOCAL_SHARED
+    } var_type;
 
 } local_variable_t;
 
@@ -20,7 +28,6 @@ typedef struct
     const char *cuda_name;
     dtype_t return_type;
 } cuda_function_match_t;
-
 
 typedef struct _kernel_obj
 {
@@ -73,8 +80,8 @@ typedef struct
         CUDA_OBJ_CUDA,
         CUDA_OBJ_MATH,
         CUDA_OBJ_ATOMIC,
-        CUDA_OBJ_MEMORY,
         CUDA_OBJ_SYNC,
+        CUDA_OBJ_WARP,
         CUDA_OBJ_THREADIDX,
         CUDA_OBJ_BLOCKIDX,
         CUDA_OBJ_BLOCKDIM,
@@ -85,13 +92,24 @@ typedef struct
     zend_string *name;
     func_parameter_list_t *parameters;
     HashTable local_variables;
+    HashTable shared_memory_vars;
     smart_string *cuda_code_buffer;
     int dim_access;
     dtype_t last_evaluated_first_dtype;
     dtype_t last_evaluated_second_dtype;
     dtype_t return_dtype;
     int loop_depth;
+    int uses_shared_memory;
+    int uses_static_shared_memory;
+    int shared_memory_declared;
 } cuda_compilation_context_t;
+
+typedef struct _cached_ptx
+{
+    char *ptx;
+    size_t ptx_size;
+    time_t timestamp;
+} cached_ptx_t;
 
 typedef struct _cuda_compiler_object
 {
@@ -103,6 +121,7 @@ typedef struct _cuda_compiler_object
     HashTable *headers;
     HashTable *kernels;
     HashTable *devices;
+    HashTable *ptx_cache;
 } cuda_compiler_object;
 
 typedef struct _cuda_kernel_data
@@ -137,6 +156,16 @@ typedef struct _cuda_module_object
     size_t ptx_size;
     HashTable *functions;
     HashTable *kernel_functions;
+
+    CUdevice cu_device;
+    CUcontext cu_context;
+    CUstream cu_stream;
+
+    HashTable *loaded_modules;
+    int from_serialize;
+
+    zend_bool has_pending_operations;
+
 } cuda_module_object;
 
 #define Z_CUDA_DEVICE_P(zv) ((cuda_device_object *)((char *)Z_OBJ_P(zv) - XtOffsetOf(cuda_device_object, std)))

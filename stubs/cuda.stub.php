@@ -45,6 +45,22 @@ class CompiledModule
         return true;
     }
 
+    public function runAsync(string $name, array $config = [], array $args): bool
+    {
+        return true;
+    }
+
+    public function isFinished(): bool
+    {
+        return true;
+    }
+
+    public function sync(): bool
+    {
+        return true;
+    }
+
+
     public function hasKernel(string $kernel): bool
     {
         return false;

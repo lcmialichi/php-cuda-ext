@@ -8,20 +8,47 @@
 #include "zend_ast.h"
 #include "data_types.h"
 
+typedef enum {
+    FUNC_CATEGORY_MATH,
+    FUNC_CATEGORY_SYSTEM,
+    FUNC_CATEGORY_ATOMIC,
+    FUNC_CATEGORY_MEMORY,
+    FUNC_CATEGORY_SYNC,
+    FUNC_CATEGORY_WARP,
+    FUNC_CATEGORY_OTHER
+} cuda_func_category_t;
+
 typedef struct {
-    const char *php_name;    
-    const char *cuda_name_f32; 
+    const char *php_name;
+    const char *cuda_name_f32;
     const char *cuda_name_f64;
     const char *cuda_name_i32;
     dtype_t return_type_f32;
-    dtype_t return_type_f64; 
+    dtype_t return_type_f64;
     dtype_t return_type_i32;
-    uint32_t num_params;  
+    uint32_t num_params;
     dtype_t param_types_f32[4];
-    dtype_t param_types_f64[4]; 
-    dtype_t param_types_i32[4]; 
-    const char *header; 
+    dtype_t param_types_f64[4];
+    dtype_t param_types_i32[4];
+    const char *header;
+    cuda_func_category_t category;
+    zend_bool requires_this;
 } cuda_function_info_t;
+
+typedef struct {
+    uint32_t dimensions;
+    uint32_t sizes[4];
+    dtype_t element_type;
+} array_info_t;
+
+typedef struct {
+    char *name;
+    dtype_t dtype;
+    dtype_t element_dtype;
+    int array_size;
+    int is_dynamic;
+    int declared_in_code;
+} shared_memory_var_t;
 
 typedef int (*handler)(cuda_compilation_context_t *context, zend_ast *ast);
 

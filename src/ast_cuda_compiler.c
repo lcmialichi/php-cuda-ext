@@ -13,31 +13,91 @@
 #include "ast_cuda_compiler.h"
 
 static const cuda_function_info_t cuda_functions[] = {
-    {"max", "fmaxf", "fmax", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},
-    {"min", "fminf", "fmin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},
-    {"exp", "expf", "exp", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"log", "logf", "log", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"sin", "sinf", "sin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"cos", "cosf", "cos", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"sqrt", "sqrtf", "sqrt", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"pow", "powf", "pow", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h"},
-    {"abs", NULL, NULL, "abs", DTYPE_UNKNOWN, DTYPE_UNKNOWN, INT32, 1, {0}, {0}, {INT32}, "stdlib.h"},
-    {"fabs", "fabsf", "fabs", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"ceil", "ceilf", "ceil", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"floor", "floorf", "floor", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"round", "roundf", "round", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h"},
-    {"threadIdx", "threadIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
-    {"blockIdx", "blockIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
-    {"blockDim", "blockDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
-    {"gridDim", "gridDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL},
-    {NULL, NULL, NULL, NULL, DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL}};
+    {"max", "fmaxf", "fmax", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"min", "fminf", "fmin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"exp", "expf", "exp", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"log", "logf", "log", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"sin", "sinf", "sin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"cos", "cosf", "cos", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"tan", "tanf", "tan", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"asin", "asinf", "asin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"acos", "acosf", "acos", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"atan", "atanf", "atan", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"atan2", "atan2f", "atan2", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"sinh", "sinhf", "sinh", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"cosh", "coshf", "cosh", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"tanh", "tanhf", "tanh", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"sqrt", "sqrtf", "sqrt", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"pow", "powf", "pow", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"abs", NULL, NULL, "abs", DTYPE_UNKNOWN, DTYPE_UNKNOWN, INT32, 1, {0}, {0}, {INT32}, "stdlib.h", FUNC_CATEGORY_MATH, 0},
+    {"fabs", "fabsf", "fabs", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"ceil", "ceilf", "ceil", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"floor", "floorf", "floor", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"round", "roundf", "round", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"trunc", "truncf", "trunc", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"exp2", "exp2f", "exp2", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"exp10", "exp10f", "exp10", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"log2", "log2f", "log2", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"log10", "log10f", "log10", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
 
-typedef struct
+    {"threadIdx", "threadIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"blockIdx", "blockIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"blockDim", "blockDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"gridDim", "gridDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+
+    {"atomicAdd", NULL, NULL, "atomicAdd", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicSub", NULL, NULL, "atomicSub", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicExch", NULL, NULL, "atomicExch", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicMin", NULL, NULL, "atomicMin", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicMax", NULL, NULL, "atomicMax", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicInc", NULL, NULL, "atomicInc", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicDec", NULL, NULL, "atomicDec", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicCAS", NULL, NULL, "atomicCAS", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 3, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicAnd", NULL, NULL, "atomicAnd", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicOr", NULL, NULL, "atomicOr", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+    {"atomicXor", NULL, NULL, "atomicXor", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
+
+    {"threads", NULL, NULL, "__syncthreads", VOID, VOID, VOID, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"warp", NULL, NULL, "__syncwarp", VOID, VOID, VOID, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threadsCount", NULL, NULL, "__syncthreads_count", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threadsAnd", NULL, NULL, "__syncthreads_and", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threadsOr", NULL, NULL, "__syncthreads_or", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+
+    {"ballot", NULL, NULL, "__ballot_sync", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
+    {"shfl", NULL, NULL, "__shfl_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
+    {"shflUp", NULL, NULL, "__shfl_up_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
+    {"shflDown", NULL, NULL, "__shfl_down_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
+    {"shflXor", NULL, NULL, "__shfl_xor_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
+
+    {"shuffle", NULL, NULL, "__shfl", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 3, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"laneId", NULL, NULL, "__laneid", INT32, INT32, INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"warpid", NULL, NULL, "__warpid", INT32, INT32, INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"clock", NULL, NULL, "__clock", INT32, INT32, INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"clock64", NULL, NULL, "__clock64", INT64, INT64, INT64, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+
+    {NULL, NULL, NULL, NULL, DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_OTHER, 0}};
+
+static void destroy_shared_var(shared_memory_var_t *var)
 {
-    uint32_t dimensions;
-    uint32_t sizes[4];
-    dtype_t element_type;
-} array_info_t;
+    if (var)
+    {
+        efree(var->name);
+        efree(var);
+    }
+}
+
+static shared_memory_var_t *create_shared_var(const char *name, dtype_t dtype,
+                                              dtype_t element_dtype, int array_size, int is_dynamic)
+{
+    shared_memory_var_t *var = (shared_memory_var_t *)emalloc(sizeof(shared_memory_var_t));
+    var->name = estrdup(name);
+    var->dtype = dtype;
+    var->element_dtype = element_dtype;
+    var->array_size = array_size;
+    var->is_dynamic = is_dynamic;
+    var->declared_in_code = 0;
+    return var;
+}
 
 static int generate_function_signature(cuda_compilation_context_t *context);
 static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast);
@@ -66,6 +126,19 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
 static int handler_ast_assign_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_foreach(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_try(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_match(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_nullsafe_prop(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_array(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_yield(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_static_var(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_global(cuda_compilation_context_t *context, zend_ast *ast);
+static int handle_declare_shared(cuda_compilation_context_t *context, zend_ast *args_ast);
+static int handle_declare_shared_extern(cuda_compilation_context_t *context, zend_ast *args_ast);
+static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_ast *args_ast);
+static int handle_declare_shared_array(cuda_compilation_context_t *context, zend_ast *args_ast);
+static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_ast *args_ast);
 
 static const char *get_ast_kind_name(zend_ast_kind kind)
 {
@@ -252,7 +325,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_CLASS, handle_not_allowed},
     {ZEND_AST_ARROW_FUNC, handle_not_allowed},
     {ZEND_AST_ARG_LIST, handler_ast_list_container},
-    {ZEND_AST_ARRAY, handle_not_allowed},
+    {ZEND_AST_ARRAY, handler_ast_array},
     {ZEND_AST_ENCAPS_LIST, handle_not_allowed},
     {ZEND_AST_EXPR_LIST, handler_ast_list_container},
     {ZEND_AST_STMT_LIST, handle_ast_stmt_list},
@@ -294,9 +367,10 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_PRE_DEC, handler_ast_inc_dec},
     {ZEND_AST_POST_INC, handler_ast_inc_dec},
     {ZEND_AST_POST_DEC, handler_ast_inc_dec},
+    {ZEND_AST_YIELD, handler_ast_yield},
     {ZEND_AST_YIELD_FROM, handle_not_allowed},
     {ZEND_AST_CLASS_NAME, handle_not_allowed},
-    {ZEND_AST_GLOBAL, handle_not_allowed},
+    {ZEND_AST_GLOBAL, handler_ast_global},
     {ZEND_AST_UNSET, handle_not_allowed},
     {ZEND_AST_RETURN, handler_ast_return},
     {ZEND_AST_LABEL, handle_not_allowed},
@@ -309,7 +383,7 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_CONTINUE, handler_ast_break_continue},
     {ZEND_AST_DIM, handler_ast_dim},
     {ZEND_AST_PROP, handler_ast_prop},
-    {ZEND_AST_NULLSAFE_PROP, handle_not_allowed},
+    {ZEND_AST_NULLSAFE_PROP, handler_ast_nullsafe_prop},
     {ZEND_AST_STATIC_PROP, handle_not_allowed},
     {ZEND_AST_CALL, handle_not_allowed},
     {ZEND_AST_CLASS_CONST, handler_ast_allowed_simple},
@@ -324,10 +398,10 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_ARRAY_ELEM, handle_not_allowed},
     {ZEND_AST_NEW, handle_not_allowed},
     {ZEND_AST_INSTANCEOF, handle_not_allowed},
-    {ZEND_AST_YIELD, handle_not_allowed},
+    {ZEND_AST_YIELD, handler_ast_yield},
     {ZEND_AST_COALESCE, handle_not_allowed},
     {ZEND_AST_ASSIGN_COALESCE, handle_not_allowed},
-    {ZEND_AST_STATIC, handle_not_allowed},
+    {ZEND_AST_STATIC, handler_ast_static_var},
     {ZEND_AST_WHILE, handler_ast_while},
     {ZEND_AST_DO_WHILE, handler_ast_do_while},
     {ZEND_AST_IF_ELEM, handler_ast_if_elem},
@@ -342,21 +416,21 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_TRAIT_ALIAS, handle_not_allowed},
     {ZEND_AST_GROUP_USE, handle_not_allowed},
     {ZEND_AST_ATTRIBUTE, handle_not_allowed},
-    {ZEND_AST_MATCH, handle_not_allowed},
+    {ZEND_AST_MATCH, handler_ast_match},
     {ZEND_AST_MATCH_ARM, handle_not_allowed},
     {ZEND_AST_NAMED_ARG, handle_not_allowed},
     {ZEND_AST_METHOD_CALL, handler_ast_method_call},
     {ZEND_AST_NULLSAFE_METHOD_CALL, handle_not_allowed},
     {ZEND_AST_STATIC_CALL, handle_not_allowed},
     {ZEND_AST_CONDITIONAL, handler_ast_conditional},
-    {ZEND_AST_TRY, handle_not_allowed},
+    {ZEND_AST_TRY, handler_ast_try},
     {ZEND_AST_CATCH, handle_not_allowed},
     {ZEND_AST_PROP_GROUP, handle_not_allowed},
     {ZEND_AST_CONST_ELEM, handle_not_allowed},
     {ZEND_AST_CLASS_CONST_GROUP, handle_not_allowed},
     {ZEND_AST_CONST_ENUM_INIT, handle_not_allowed},
     {ZEND_AST_FOR, handler_ast_for},
-    {ZEND_AST_FOREACH, handle_not_allowed},
+    {ZEND_AST_FOREACH, handler_ast_foreach},
     {ZEND_AST_ENUM_CASE, handle_not_allowed},
     {ZEND_AST_PROP_ELEM, handle_not_allowed},
     {ZEND_AST_PARAM, handle_not_allowed},
@@ -457,10 +531,10 @@ static const char *get_cuda_object_name(int obj_type)
         return "math";
     case CUDA_OBJ_ATOMIC:
         return "atomic";
-    case CUDA_OBJ_MEMORY:
-        return "memory";
     case CUDA_OBJ_SYNC:
         return "sync";
+    case CUDA_OBJ_WARP:
+        return "warp";
     case CUDA_OBJ_THREADIDX:
         return "threadIdx";
     case CUDA_OBJ_BLOCKIDX:
@@ -476,7 +550,15 @@ static const char *get_cuda_object_name(int obj_type)
 
 static const char *get_unary_op_symbol(uint32_t op_type)
 {
-    return NULL;
+    switch (op_type)
+    {
+    case ZEND_BOOL_NOT:
+        return "!";
+    case ZEND_BW_NOT:
+        return "~";
+    default:
+        return NULL;
+    }
 }
 
 static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
@@ -521,6 +603,8 @@ static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
 
     switch (type)
     {
+    case VOID:
+        return "void";
     case FLOAT32:
         return "float";
     case FLOAT64:
@@ -548,14 +632,171 @@ static void cleanup_loop_variables(cuda_compilation_context_t *context, int loop
     zval *val;
     uint32_t num_key;
 
-    ZEND_HASH_FOREACH_KEY_VAL(&context->local_variables, num_key, key, val) {
+    ZEND_HASH_FOREACH_KEY_VAL(&context->local_variables, num_key, key, val)
+    {
         local_variable_t *var = (local_variable_t *)Z_PTR_P(val);
-        if (var->level == loop_level) {
+        if (var->level == loop_level)
+        {
             zend_hash_del(&context->local_variables, var->name);
             zend_string_release(var->name);
             efree(var);
         }
-    } ZEND_HASH_FOREACH_END();
+    }
+    ZEND_HASH_FOREACH_END();
+}
+
+static dtype_t determine_dominant_type(dtype_t arg_types[], uint32_t num_args)
+{
+    dtype_t dominant_type = DTYPE_UNKNOWN;
+
+    for (uint32_t i = 0; i < num_args; i++)
+    {
+        if (arg_types[i] == FLOAT64)
+        {
+            dominant_type = FLOAT64;
+            break;
+        }
+        else if (arg_types[i] == FLOAT32)
+        {
+            if (dominant_type != FLOAT64)
+            {
+                dominant_type = FLOAT32;
+            }
+        }
+        else if (arg_types[i] == INT64)
+        {
+            if (dominant_type == DTYPE_UNKNOWN || dominant_type == INT32)
+            {
+                dominant_type = INT64;
+            }
+        }
+        else if (arg_types[i] == INT32)
+        {
+            if (dominant_type == DTYPE_UNKNOWN)
+            {
+                dominant_type = INT32;
+            }
+        }
+        else if (arg_types[i] == UINT64)
+        {
+            if (dominant_type == DTYPE_UNKNOWN || dominant_type == UINT32)
+            {
+                dominant_type = UINT64;
+            }
+        }
+        else if (arg_types[i] == UINT32)
+        {
+            if (dominant_type == DTYPE_UNKNOWN)
+            {
+                dominant_type = UINT32;
+            }
+        }
+    }
+
+    return dominant_type;
+}
+
+static int compile_argument_list(cuda_compilation_context_t *context,
+                                 zend_ast *args_ast,
+                                 char **arg_strings,
+                                 dtype_t *arg_types,
+                                 uint32_t max_args)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        return 0;
+    }
+
+    zend_ast_list *list = (zend_ast_list *)args_ast;
+    if (list->children > max_args)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Too many arguments (max %d)", max_args);
+        return 0;
+    }
+
+    for (uint32_t i = 0; i < list->children; i++)
+    {
+        smart_string temp_buffer = {0};
+        smart_string_alloc(&temp_buffer, 128, 0);
+
+        smart_string *original_buffer = context->cuda_code_buffer;
+        context->cuda_code_buffer = &temp_buffer;
+
+        if (!compile_ast_as_valid_cuda(context, list->child[i]))
+        {
+            smart_string_free(&temp_buffer);
+            context->cuda_code_buffer = original_buffer;
+            return 0;
+        }
+
+        arg_types[i] = context->last_evaluated_first_dtype;
+        smart_string_0(&temp_buffer);
+        arg_strings[i] = estrdup(temp_buffer.c);
+
+        smart_string_free(&temp_buffer);
+        context->cuda_code_buffer = original_buffer;
+    }
+
+    return list->children;
+}
+
+static const cuda_function_info_t *find_cuda_function_by_category(
+    const char *php_name, cuda_func_category_t category)
+{
+    for (int i = 0; cuda_functions[i].php_name != NULL; i++)
+    {
+        if (strcmp(cuda_functions[i].php_name, php_name) == 0 &&
+            cuda_functions[i].category == category)
+        {
+            return &cuda_functions[i];
+        }
+    }
+    return NULL;
+}
+
+static dtype_t string_to_dtype(const char *type_str)
+{
+    if (strcmp(type_str, "float") == 0 || strcmp(type_str, "float32") == 0)
+    {
+        return FLOAT32;
+    }
+    else if (strcmp(type_str, "double") == 0 || strcmp(type_str, "float64") == 0)
+    {
+        return FLOAT64;
+    }
+    else if (strcmp(type_str, "int") == 0 || strcmp(type_str, "int32") == 0)
+    {
+        return INT32;
+    }
+    else if (strcmp(type_str, "long") == 0 || strcmp(type_str, "int64") == 0)
+    {
+        return INT64;
+    }
+    else if (strcmp(type_str, "uint") == 0 || strcmp(type_str, "uint32") == 0)
+    {
+        return UINT32;
+    }
+    else if (strcmp(type_str, "ulong") == 0 || strcmp(type_str, "uint64") == 0)
+    {
+        return UINT64;
+    }
+    else if (strcmp(type_str, "bool") == 0)
+    {
+        return BOOL;
+    }
+    else if (strcmp(type_str, "char") == 0)
+    {
+        return INT8;
+    }
+    else if (strcmp(type_str, "short") == 0)
+    {
+        return INT16;
+    }
+    else
+    {
+        return DTYPE_UNKNOWN;
+    }
 }
 
 static cuda_function_match_t find_cuda_function_by_type(
@@ -579,29 +820,7 @@ static cuda_function_match_t find_cuda_function_by_type(
             continue;
         }
 
-        dtype_t dominant_type = DTYPE_UNKNOWN;
-        for (uint32_t j = 0; j < num_args; j++)
-        {
-            if (arg_types[j] == FLOAT64)
-            {
-                dominant_type = FLOAT64;
-                break;
-            }
-            else if (arg_types[j] == FLOAT32)
-            {
-                if (dominant_type != FLOAT64)
-                {
-                    dominant_type = FLOAT32;
-                }
-            }
-            else if (arg_types[j] == INT32 || arg_types[j] == INT64)
-            {
-                if (dominant_type == DTYPE_UNKNOWN)
-                {
-                    dominant_type = INT32;
-                }
-            }
-        }
+        dtype_t dominant_type = determine_dominant_type(arg_types, num_args);
 
         if (dominant_type == FLOAT64 && func->cuda_name_f64 != NULL)
         {
@@ -625,6 +844,321 @@ static cuda_function_match_t find_cuda_function_by_type(
     }
 
     return result;
+}
+
+static int handle_declare_shared(cuda_compilation_context_t *context, zend_ast *args_ast)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::shared() requires arguments");
+        return 0;
+    }
+
+    int num_args = zend_ast_get_num_children(args_ast);
+
+    if (num_args == 2)
+    {
+        return handle_declare_shared_var(context, args_ast);
+    }
+    else if (num_args == 3)
+    {
+        return handle_declare_shared_array(context, args_ast);
+    }
+    else if (num_args == 4)
+    {
+        return handle_declare_shared_array(context, args_ast);
+    }
+    else
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::shared() requires 2, 3, or 4 arguments");
+        return 0;
+    }
+}
+
+static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_ast *args_ast)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::sharedVar() requires arguments");
+        return 0;
+    }
+
+    int num_args = zend_ast_get_num_children(args_ast);
+
+    if (num_args < 2)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::sharedVar() requires at least 2 arguments");
+        return 0;
+    }
+
+    zend_ast *ref_ast = args_ast->child[0];
+    if (!ref_ast || ref_ast->kind != ZEND_AST_REF)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "First argument must be a reference: &$var");
+        return 0;
+    }
+
+    zend_ast *var_ast = ref_ast->child[0];
+    if (!var_ast || var_ast->kind != ZEND_AST_VAR)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid variable reference");
+        return 0;
+    }
+
+    zend_ast *var_name_ast = var_ast->child[0];
+    if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        return 0;
+    }
+
+    zval *var_zv = zend_ast_get_zval(var_name_ast);
+    if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        return 0;
+    }
+
+    const char *var_name = Z_STRVAL_P(var_zv);
+
+    zend_ast *type_ast = args_ast->child[1];
+    if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    zval *type_zv = zend_ast_get_zval(type_ast);
+    if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    const char *type_str = Z_STRVAL_P(type_zv);
+    dtype_t element_type = string_to_dtype(type_str);
+
+    if (element_type == DTYPE_UNKNOWN)
+    {
+        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        return 0;
+    }
+
+    shared_memory_var_t *shared_var = create_shared_var(
+        var_name, element_type, element_type, 0, 0);
+
+    zend_string *var_key = zend_string_init(var_name, strlen(var_name), 0);
+    zend_hash_add_ptr(&context->shared_memory_vars, var_key, shared_var);
+    zend_string_release(var_key);
+
+    const char *c_type = get_cuda_type_str(element_type, DTYPE_UNKNOWN);
+
+    smart_string_appends(context->cuda_code_buffer, "__shared__ ");
+    smart_string_appends(context->cuda_code_buffer, c_type);
+    smart_string_appendc(context->cuda_code_buffer, ' ');
+    smart_string_appends(context->cuda_code_buffer, var_name);
+    smart_string_appends(context->cuda_code_buffer, ";\n");
+
+    context->last_evaluated_first_dtype = element_type;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
+    return 1;
+}
+static int handle_declare_shared_array(cuda_compilation_context_t *context, zend_ast *args_ast)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::sharedArray() requires arguments");
+        return 0;
+    }
+
+    zend_ast_list *list = (zend_ast_list *)args_ast;
+
+    if (list->children < 3)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::sharedArray() requires at least 3 arguments");
+        return 0;
+    }
+
+    zend_ast *var_ast = list->child[0];
+    if (!var_ast || var_ast->kind != ZEND_AST_VAR)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "First argument must be a variable: $var");
+        return 0;
+    }
+
+    zend_ast *var_name_ast = var_ast->child[0];
+    if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        return 0;
+    }
+
+    zval *var_zv = zend_ast_get_zval(var_name_ast);
+    if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        return 0;
+    }
+
+    const char *var_name = Z_STRVAL_P(var_zv);
+
+    zend_ast *type_ast = list->child[1];
+    if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    zval *type_zv = zend_ast_get_zval(type_ast);
+    if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    const char *type_str = Z_STRVAL_P(type_zv);
+    dtype_t element_type = string_to_dtype(type_str);
+
+    if (element_type == DTYPE_UNKNOWN)
+    {
+        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        return 0;
+    }
+
+    zend_ast *size_ast = list->child[2];
+
+    shared_memory_var_t *shared_var = create_shared_var(
+        var_name, LIST, element_type, 1, 0);
+
+    zend_string *var_key = zend_string_init(var_name, strlen(var_name), 0);
+    zend_hash_add_ptr(&context->shared_memory_vars, var_key, shared_var);
+    zend_string_release(var_key);
+
+    const char *c_type = get_cuda_type_str(element_type, DTYPE_UNKNOWN);
+
+    smart_string_appends(context->cuda_code_buffer, "__shared__ ");
+    smart_string_appends(context->cuda_code_buffer, c_type);
+    smart_string_appendc(context->cuda_code_buffer, ' ');
+    smart_string_appends(context->cuda_code_buffer, var_name);
+    smart_string_appendc(context->cuda_code_buffer, '[');
+
+    if (!compile_ast_as_valid_cuda(context, size_ast))
+    {
+        return 0;
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, ']');
+    smart_string_appends(context->cuda_code_buffer, ";\n");
+
+    context->last_evaluated_first_dtype = LIST;
+    context->last_evaluated_second_dtype = element_type;
+
+    return 1;
+}
+
+static int handle_declare_shared_extern(cuda_compilation_context_t *context, zend_ast *args_ast)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::sharedExtern() requires arguments");
+        return 0;
+    }
+
+    int num_args = zend_ast_get_num_children(args_ast);
+
+    if (num_args < 2)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Declare::sharedExtern() requires at least 2 arguments");
+        return 0;
+    }
+
+    zend_ast *ref_ast = args_ast->child[0];
+    if (!ref_ast || ref_ast->kind != ZEND_AST_REF)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "First argument must be a reference: &$var");
+        return 0;
+    }
+
+    zend_ast *var_ast = ref_ast->child[0];
+    if (!var_ast || var_ast->kind != ZEND_AST_VAR)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid variable reference");
+        return 0;
+    }
+
+    zend_ast *var_name_ast = var_ast->child[0];
+    if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        return 0;
+    }
+
+    zval *var_zv = zend_ast_get_zval(var_name_ast);
+    if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        return 0;
+    }
+
+    const char *var_name = Z_STRVAL_P(var_zv);
+
+    zend_ast *type_ast = args_ast->child[1];
+    if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    zval *type_zv = zend_ast_get_zval(type_ast);
+    if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    const char *type_str = Z_STRVAL_P(type_zv);
+    dtype_t element_type = string_to_dtype(type_str);
+
+    if (element_type == DTYPE_UNKNOWN)
+    {
+        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        return 0;
+    }
+
+    context->uses_shared_memory = 1;
+    context->shared_memory_declared = 1;
+
+    shared_memory_var_t *shared_var = create_shared_var(
+        var_name, LIST, element_type, -1, 1);
+
+    zend_string *var_key = zend_string_init(var_name, strlen(var_name), 0);
+    zend_hash_add_ptr(&context->shared_memory_vars, var_key, shared_var);
+    zend_string_release(var_key);
+
+    const char *c_type = get_cuda_type_str(element_type, DTYPE_UNKNOWN);
+
+    smart_string_appends(context->cuda_code_buffer, "extern __shared__ ");
+    smart_string_appends(context->cuda_code_buffer, c_type);
+    smart_string_appendc(context->cuda_code_buffer, ' ');
+    smart_string_appends(context->cuda_code_buffer, var_name);
+    smart_string_appends(context->cuda_code_buffer, "[];\n");
+
+    context->last_evaluated_first_dtype = LIST;
+    context->last_evaluated_second_dtype = element_type;
+
+    return 1;
 }
 
 static const cuda_function_info_t *find_cuda_function(const char *php_name)
@@ -683,22 +1217,6 @@ static zend_bool needs_semicolon(zend_ast *ast)
     }
 }
 
-int compile_ast_to_cuda_fn(cuda_compilation_context_t *context, zend_ast *ast)
-{
-    if (generate_function_signature(context) != 1)
-    {
-        return 0;
-    }
-
-    if (!compile_ast_as_valid_cuda(context, ast))
-    {
-        return 0;
-    }
-
-    smart_string_appends(context->cuda_code_buffer, "\n}\n");
-    return 1;
-}
-
 static int validate_function_parameters(cuda_compilation_context_t *context)
 {
     if (!context || !context->parameters)
@@ -721,24 +1239,544 @@ static int validate_function_parameters(cuda_compilation_context_t *context)
                 return 0;
             }
         }
-
-        // switch (context->fn_type) {
-        //     case FN_KERNEL:
-        //         if (param_i->is_reference) {
-        //             php_error_docref(NULL, E_WARNING,
-        //                 "Kernel parameter '%s' passed by reference may not work in CUDA",
-        //                 param_i->name);
-        //         }
-        //         break;
-
-        //     case FN_DEVICE:
-        //         break;
-
-        //     default:
-        //         break;
-        // }
     }
 
+    return 1;
+}
+
+static zend_bool types_are_compatible(dtype_t t1, dtype_t t1_second,
+                                      dtype_t t2, dtype_t t2_second)
+{
+    if (t1 == t2 && t1_second == t2_second)
+    {
+        return 1;
+    }
+
+    if (t1 == FLOAT64 && (t2 == FLOAT32 || t2 == INT32 || t2 == INT64))
+    {
+        return 1;
+    }
+
+    if (t1 == FLOAT32 && (t2 == INT32 || t2 == INT64))
+    {
+        return 1;
+    }
+
+    if (t1 == INT64 && t2 == INT32)
+    {
+        return 1;
+    }
+
+    if (t1 == UINT64 && t2 == UINT32)
+    {
+        return 1;
+    }
+
+    if (t1 == LIST && t2 == LIST)
+    {
+        return (t1_second == t2_second);
+    }
+
+    return 0;
+}
+
+static int handle_warp_functions(cuda_compilation_context_t *context,
+                                 const char *method_name,
+                                 zend_ast *args_ast)
+{
+    const cuda_function_info_t *func = find_cuda_function_by_category(method_name, FUNC_CATEGORY_WARP);
+    if (!func)
+    {
+        return 0;
+    }
+
+    char *arg_strings[4] = {NULL};
+    dtype_t arg_types[4] = {DTYPE_UNKNOWN};
+    uint32_t num_args = compile_argument_list(context, args_ast, arg_strings, arg_types, 4);
+
+    if (num_args != func->num_params)
+    {
+        for (uint32_t i = 0; i < num_args; i++)
+        {
+            if (arg_strings[i])
+                efree(arg_strings[i]);
+        }
+        php_error_docref(NULL, E_ERROR,
+                         "Function %s expects %d arguments, got %d",
+                         method_name, func->num_params, num_args);
+        return 0;
+    }
+
+    smart_string_appends(context->cuda_code_buffer, func->cuda_name_i32);
+    smart_string_appendc(context->cuda_code_buffer, '(');
+
+    if (num_args > 0)
+    {
+        smart_string_appends(context->cuda_code_buffer, "0xFFFFFFFF");
+        if (num_args > 1)
+        {
+            smart_string_appends(context->cuda_code_buffer, ", ");
+        }
+    }
+
+    for (uint32_t i = 0; i < num_args; i++)
+    {
+        if (arg_strings[i])
+        {
+            if (i > 0)
+            {
+                if (i > 1)
+                    smart_string_appends(context->cuda_code_buffer, ", ");
+                smart_string_appends(context->cuda_code_buffer, arg_strings[i]);
+            }
+            efree(arg_strings[i]);
+        }
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, ')');
+    context->last_evaluated_first_dtype = func->return_type_i32;
+    return 1;
+}
+
+static int handle_cuda_direct_method(cuda_compilation_context_t *context,
+                                     const char *method_name,
+                                     zend_ast *args_ast)
+{
+
+    if (strcmp(method_name, "threadIdx") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->threadIdx() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "threadIdx");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_THREADIDX;
+        return 1;
+    }
+    else if (strcmp(method_name, "blockIdx") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->blockIdx() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "blockIdx");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_BLOCKIDX;
+        return 1;
+    }
+    else if (strcmp(method_name, "blockDim") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->blockDim() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "blockDim");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_BLOCKDIM;
+        return 1;
+    }
+    else if (strcmp(method_name, "gridDim") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->gridDim() doesn't take arguments");
+        }
+
+        smart_string_appends(context->cuda_code_buffer, "gridDim");
+        context->last_evaluated_first_dtype = LIST;
+        context->last_evaluated_second_dtype = INT32;
+
+        context->current_cuda_object = CUDA_OBJ_GRIDDIM;
+        return 1;
+    }
+    else if (strcmp(method_name, "__declare_shared") == 0)
+    {
+        return handle_cuda_declare_shared(context, args_ast);
+    }
+
+    php_error_docref(NULL, E_ERROR,
+                     "Method $cuda->%s() is not supported.", method_name);
+    return 0;
+}
+
+static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_ast *args_ast)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "$cuda->__declare_shared() requires arguments");
+        return 0;
+    }
+
+    zend_ast_list *list = (zend_ast_list *)args_ast;
+
+    if (list->children < 3)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "$cuda->__declare_shared() requires at least 3 arguments");
+        return 0;
+    }
+
+    zend_ast *var_ast = list->child[0];
+    if (!var_ast || var_ast->kind != ZEND_AST_VAR)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "First argument must be a variable: $var");
+        return 0;
+    }
+
+    zend_ast *var_name_ast = var_ast->child[0];
+    if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        return 0;
+    }
+
+    zval *var_zv = zend_ast_get_zval(var_name_ast);
+    if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        return 0;
+    }
+
+    const char *var_name = Z_STRVAL_P(var_zv);
+
+    zend_ast *type_ast = list->child[1];
+    if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    zval *type_zv = zend_ast_get_zval(type_ast);
+    if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
+    {
+        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        return 0;
+    }
+
+    const char *type_str = Z_STRVAL_P(type_zv);
+    dtype_t element_type = string_to_dtype(type_str);
+
+    if (element_type == DTYPE_UNKNOWN)
+    {
+        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        return 0;
+    }
+
+    zend_ast *size_ast = list->child[2];
+
+    int is_array = 0;
+    int num_dimensions = 0;
+    long static_dimensions[3] = {0};
+
+    if (size_ast->kind == ZEND_AST_ARRAY)
+    {
+        zend_ast_list *dim_list = (zend_ast_list *)size_ast;
+
+        if (dim_list->children == 0)
+        {
+            php_error_docref(NULL, E_ERROR,
+                             "Dimension array cannot be empty");
+            return 0;
+        }
+
+        if (dim_list->children > 3)
+        {
+            php_error_docref(NULL, E_ERROR,
+                             "Shared memory arrays support up to 3 dimensions, got %d",
+                             dim_list->children);
+            return 0;
+        }
+
+        is_array = 1;
+        num_dimensions = dim_list->children;
+
+        for (uint32_t i = 0; i < dim_list->children; i++)
+        {
+            zend_ast *elem_ast = dim_list->child[i];
+
+            if (elem_ast->kind != ZEND_AST_ARRAY_ELEM)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Invalid array element at position %d", i + 1);
+                return 0;
+            }
+
+            zend_ast *value_ast = elem_ast->child[0];
+            if (!value_ast)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Missing value for dimension %d", i + 1);
+                return 0;
+            }
+
+            if (value_ast->kind != ZEND_AST_ZVAL)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Dimension %d must be a literal value, not an expression", i + 1);
+                return 0;
+            }
+
+            zval *dim_zv = zend_ast_get_zval(value_ast);
+            if (!dim_zv)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Invalid dimension value at position %d", i + 1);
+                return 0;
+            }
+
+            if (Z_TYPE_P(dim_zv) != IS_LONG)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Dimension %d must be an integer, got type %d",
+                                 i + 1, Z_TYPE_P(dim_zv));
+                return 0;
+            }
+
+            long dim_value = Z_LVAL_P(dim_zv);
+            if (dim_value <= 0)
+            {
+                php_error_docref(NULL, E_ERROR,
+                                 "Dimension %d must be positive, got %ld",
+                                 i + 1, dim_value);
+                return 0;
+            }
+
+            static_dimensions[i] = dim_value;
+        }
+    }
+    else
+    {
+        is_array = 1;
+        num_dimensions = 1;
+
+        if (size_ast->kind == ZEND_AST_ZVAL)
+        {
+            zval *size_zv = zend_ast_get_zval(size_ast);
+            if (size_zv && Z_TYPE_P(size_zv) == IS_LONG)
+            {
+                long size = Z_LVAL_P(size_zv);
+                if (size <= 1)
+                {
+                    is_array = 0;
+                    num_dimensions = 0;
+                }
+                else
+                {
+                    static_dimensions[0] = size;
+                }
+            }
+        }
+    }
+
+    zend_string *var_name_zend = zend_string_init(var_name, strlen(var_name), 0);
+    local_variable_t *new_var = (local_variable_t *)ecalloc(1, sizeof(local_variable_t));
+    new_var->name = zend_string_copy(var_name_zend);
+    new_var->dtype = is_array ? LIST : element_type;
+    new_var->second_dtype = is_array ? element_type : DTYPE_UNKNOWN;
+    new_var->level = context->loop_depth;
+    new_var->var_type = VAR_LOCAL_SHARED;
+    new_var->array_dimensions = num_dimensions;
+
+    zend_hash_add_ptr(&context->local_variables, var_name_zend, new_var);
+    zend_string_release(var_name_zend);
+
+    const char *c_type = get_cuda_type_str(element_type, DTYPE_UNKNOWN);
+
+    smart_string_appends(context->cuda_code_buffer, "__shared__ ");
+    smart_string_appends(context->cuda_code_buffer, c_type);
+    smart_string_appendc(context->cuda_code_buffer, ' ');
+    smart_string_appends(context->cuda_code_buffer, var_name);
+
+    if (is_array)
+    {
+        if (size_ast->kind == ZEND_AST_ARRAY)
+        {
+            for (uint32_t i = 0; i < num_dimensions; i++)
+            {
+                smart_string_appendc(context->cuda_code_buffer, '[');
+                smart_string_append_long(context->cuda_code_buffer, static_dimensions[i]);
+                smart_string_appendc(context->cuda_code_buffer, ']');
+            }
+        }
+        else
+        {
+            smart_string_appendc(context->cuda_code_buffer, '[');
+
+            if (size_ast->kind == ZEND_AST_ZVAL)
+            {
+                zval *size_zv = zend_ast_get_zval(size_ast);
+                if (size_zv && Z_TYPE_P(size_zv) == IS_LONG)
+                {
+                    smart_string_append_long(context->cuda_code_buffer, Z_LVAL_P(size_zv));
+                }
+                else
+                {
+                    php_error_docref(NULL, E_ERROR, "Invalid size value");
+                    return 0;
+                }
+            }
+            else
+            {
+                if (!compile_ast_as_valid_cuda(context, size_ast))
+                {
+                    return 0;
+                }
+            }
+
+            smart_string_appendc(context->cuda_code_buffer, ']');
+        }
+    }
+
+    context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
+    return 1;
+}
+
+static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
+                                          cuda_func_category_t category,
+                                          const char *method_name,
+                                          zend_ast *args_ast)
+{
+    const cuda_function_info_t *func_info = find_cuda_function_by_category(method_name, category);
+    if (!func_info)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Method $cuda->%s() is not supported.", method_name);
+        return 0;
+    }
+
+    if (func_info->header)
+    {
+        add_cuda_header(context, func_info->header);
+    }
+
+    char *arg_strings[4] = {NULL};
+    dtype_t arg_types[4] = {DTYPE_UNKNOWN};
+    uint32_t num_args = compile_argument_list(context, args_ast, arg_strings, arg_types, 4);
+
+    // if (num_args == 0 && args_ast != NULL)
+    // {
+    //     return 0;
+    // }
+
+    const char *cuda_func_name = NULL;
+    dtype_t return_type = DTYPE_UNKNOWN;
+
+    if (category == FUNC_CATEGORY_MATH)
+    {
+        dtype_t dominant_type = determine_dominant_type(arg_types, num_args);
+
+        if (dominant_type == FLOAT64 && func_info->cuda_name_f64)
+        {
+            cuda_func_name = func_info->cuda_name_f64;
+            return_type = func_info->return_type_f64;
+        }
+        else if (dominant_type == FLOAT32 && func_info->cuda_name_f32)
+        {
+            cuda_func_name = func_info->cuda_name_f32;
+            return_type = func_info->return_type_f32;
+        }
+        else if ((dominant_type == INT32 || dominant_type == INT64) &&
+                 func_info->cuda_name_i32)
+        {
+            cuda_func_name = func_info->cuda_name_i32;
+            return_type = func_info->return_type_i32;
+        }
+        else
+        {
+            cuda_func_name = func_info->cuda_name_f32 ? func_info->cuda_name_f32 : func_info->cuda_name_f64 ? func_info->cuda_name_f64
+                                                                                                            : func_info->cuda_name_i32;
+            return_type = func_info->return_type_f32;
+        }
+    }
+    else if (category == FUNC_CATEGORY_ATOMIC)
+    {
+        cuda_func_name = func_info->cuda_name_i32;
+        return_type = func_info->return_type_i32;
+    }
+    else if (category == FUNC_CATEGORY_SYNC)
+    {
+        cuda_func_name = func_info->cuda_name_i32;
+        return_type = func_info->return_type_i32;
+    }
+    else if (category == FUNC_CATEGORY_WARP)
+    {
+        return handle_warp_functions(context, method_name, args_ast);
+    }
+    else
+    {
+        cuda_func_name = func_info->cuda_name_f32 ? func_info->cuda_name_f32 : func_info->cuda_name_f64 ? func_info->cuda_name_f64
+                                                                                                        : func_info->cuda_name_i32;
+        return_type = func_info->return_type_f32;
+    }
+
+    if (!cuda_func_name)
+    {
+        for (uint32_t i = 0; i < num_args; i++)
+        {
+            if (arg_strings[i])
+                efree(arg_strings[i]);
+        }
+        php_error_docref(NULL, E_ERROR,
+                         "No CUDA implementation for %s()", method_name);
+        return 0;
+    }
+
+    smart_string_appends(context->cuda_code_buffer, cuda_func_name);
+    smart_string_appendc(context->cuda_code_buffer, '(');
+
+    for (uint32_t i = 0; i < num_args; i++)
+    {
+        if (arg_strings[i])
+        {
+            smart_string_appends(context->cuda_code_buffer, arg_strings[i]);
+            efree(arg_strings[i]);
+        }
+        if (i < num_args - 1)
+        {
+            smart_string_appends(context->cuda_code_buffer, ", ");
+        }
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, ')');
+
+    context->last_evaluated_first_dtype = return_type;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    context->current_cuda_object = CUDA_OBJ_NONE;
+
+    return 1;
+}
+
+int compile_ast_to_cuda_fn(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    if (generate_function_signature(context) != 1)
+    {
+        return 0;
+    }
+
+    if (!compile_ast_as_valid_cuda(context, ast))
+    {
+        return 0;
+    }
+
+    smart_string_appends(context->cuda_code_buffer, "\n}\n");
     return 1;
 }
 
@@ -874,255 +1912,6 @@ static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast
     return 0;
 }
 
-static int handle_cuda_direct_method(cuda_compilation_context_t *context,
-                                     const char *method_name,
-                                     zend_ast *args_ast)
-{
-    if (strcmp(method_name, "threadIdx") == 0)
-    {
-        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
-        {
-            php_error_docref(NULL, E_WARNING,
-                             "$cuda->threadIdx() doesn't take arguments");
-        }
-
-        smart_string_appends(context->cuda_code_buffer, "threadIdx");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-
-        context->current_cuda_object = CUDA_OBJ_THREADIDX;
-        return 1;
-    }
-    else if (strcmp(method_name, "blockIdx") == 0)
-    {
-        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
-        {
-            php_error_docref(NULL, E_WARNING,
-                             "$cuda->blockIdx() doesn't take arguments");
-        }
-
-        smart_string_appends(context->cuda_code_buffer, "blockIdx");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-
-        context->current_cuda_object = CUDA_OBJ_BLOCKIDX;
-        return 1;
-    }
-    else if (strcmp(method_name, "blockDim") == 0)
-    {
-        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
-        {
-            php_error_docref(NULL, E_WARNING,
-                             "$cuda->blockDim() doesn't take arguments");
-        }
-
-        smart_string_appends(context->cuda_code_buffer, "blockDim");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-
-        context->current_cuda_object = CUDA_OBJ_BLOCKDIM;
-        return 1;
-    }
-    else if (strcmp(method_name, "gridDim") == 0)
-    {
-        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
-        {
-            php_error_docref(NULL, E_WARNING,
-                             "$cuda->gridDim() doesn't take arguments");
-        }
-
-        smart_string_appends(context->cuda_code_buffer, "gridDim");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-
-        context->current_cuda_object = CUDA_OBJ_GRIDDIM;
-        return 1;
-    }
-
-    php_error_docref(NULL, E_ERROR,
-                     "Method $cuda->%s() is not supported.", method_name);
-    return 0;
-}
-
-static int handle_math_method(cuda_compilation_context_t *context,
-                              const char *method_name,
-                              zend_ast *args_ast)
-{
-    const cuda_function_info_t *func_info = find_cuda_function(method_name);
-    if (!func_info)
-    {
-        php_error_docref(NULL, E_ERROR,
-                         "Method $cuda->math->%s() is not supported.", method_name);
-        return 0;
-    }
-
-    if (func_info->header)
-    {
-        add_cuda_header(context, func_info->header);
-    }
-
-    const char *cuda_func_name = NULL;
-    dtype_t return_type = DTYPE_UNKNOWN;
-
-    if (func_info->cuda_name_f32)
-    {
-        cuda_func_name = func_info->cuda_name_f32;
-        return_type = func_info->return_type_f32;
-    }
-    else if (func_info->cuda_name_f64)
-    {
-        cuda_func_name = func_info->cuda_name_f64;
-        return_type = func_info->return_type_f64;
-    }
-    else if (func_info->cuda_name_i32)
-    {
-        cuda_func_name = func_info->cuda_name_i32;
-        return_type = func_info->return_type_i32;
-    }
-
-    if (!cuda_func_name)
-    {
-        php_error_docref(NULL, E_ERROR,
-                         "No CUDA implementation for math->%s()", method_name);
-        return 0;
-    }
-
-    smart_string_appends(context->cuda_code_buffer, cuda_func_name);
-
-    smart_string_appendc(context->cuda_code_buffer, '(');
-    if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
-    {
-        return 0;
-    }
-    smart_string_appendc(context->cuda_code_buffer, ')');
-
-    context->last_evaluated_first_dtype = return_type;
-    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
-    context->current_cuda_object = CUDA_OBJ_NONE;
-
-    return 1;
-}
-
-static int handle_sync_method(cuda_compilation_context_t *context,
-                              const char *method_name,
-                              zend_ast *args_ast)
-{
-    if (strcmp(method_name, "threads") == 0)
-    {
-        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
-        {
-            php_error_docref(NULL, E_WARNING,
-                             "$cuda->sync->threads() doesn't take arguments");
-        }
-
-        smart_string_appends(context->cuda_code_buffer, "__syncthreads()");
-        context->last_evaluated_first_dtype = VOID;
-        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
-        context->current_cuda_object = CUDA_OBJ_NONE;
-        return 1;
-    }
-    else if (strcmp(method_name, "warp") == 0)
-    {
-        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
-        {
-            php_error_docref(NULL, E_WARNING,
-                             "$cuda->sync->warp() doesn't take arguments");
-        }
-
-        smart_string_appends(context->cuda_code_buffer, "__syncwarp()");
-        context->last_evaluated_first_dtype = VOID;
-        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
-        context->current_cuda_object = CUDA_OBJ_NONE;
-        return 1;
-    }
-
-    php_error_docref(NULL, E_ERROR,
-                     "Method $cuda->sync->%s() is not supported.", method_name);
-    return 0;
-}
-
-static int handle_atomic_method(cuda_compilation_context_t *context,
-                                const char *method_name,
-                                zend_ast *args_ast)
-{
-    const char *cuda_func_name = NULL;
-    dtype_t return_type = DTYPE_UNKNOWN;
-
-    if (strcmp(method_name, "add") == 0)
-    {
-        cuda_func_name = "atomicAdd";
-        return_type = FLOAT32;
-    }
-    else if (strcmp(method_name, "sub") == 0)
-    {
-        cuda_func_name = "atomicSub";
-        return_type = FLOAT32;
-    }
-    else if (strcmp(method_name, "max") == 0)
-    {
-        cuda_func_name = "atomicMax";
-        return_type = INT32;
-    }
-    else if (strcmp(method_name, "min") == 0)
-    {
-        cuda_func_name = "atomicMin";
-        return_type = INT32;
-    }
-    else
-    {
-        php_error_docref(NULL, E_ERROR,
-                         "Method $cuda->atomic->%s() is not supported.", method_name);
-        return 0;
-    }
-
-    smart_string_appends(context->cuda_code_buffer, cuda_func_name);
-
-    smart_string_appendc(context->cuda_code_buffer, '(');
-    if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
-    {
-        return 0;
-    }
-    smart_string_appendc(context->cuda_code_buffer, ')');
-
-    context->last_evaluated_first_dtype = return_type;
-    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
-    context->current_cuda_object = CUDA_OBJ_NONE;
-
-    return 1;
-}
-
-static int handle_memory_method(cuda_compilation_context_t *context,
-                                const char *method_name,
-                                zend_ast *args_ast)
-{
-    if (strcmp(method_name, "shared") == 0)
-    {
-        smart_string_appends(context->cuda_code_buffer, "shared_memory");
-
-        smart_string_appendc(context->cuda_code_buffer, '(');
-        if (args_ast && !compile_ast_as_valid_cuda(context, args_ast))
-        {
-            return 0;
-        }
-        smart_string_appendc(context->cuda_code_buffer, ')');
-
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = FLOAT32;
-        context->current_cuda_object = CUDA_OBJ_NONE;
-        return 1;
-    }
-    else if (strcmp(method_name, "global") == 0)
-    {
-        php_error_docref(NULL, E_ERROR,
-                         "$cuda->memory->global() not implemented yet.");
-        return 0;
-    }
-
-    php_error_docref(NULL, E_ERROR,
-                     "Method $cuda->memory->%s() is not supported.", method_name);
-    return 0;
-}
-
 static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast *ast)
 {
     uint32_t num_children = zend_ast_get_num_children(ast);
@@ -1202,16 +1991,16 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
         return handle_cuda_direct_method(context, method_name_c, args_ast);
 
     case CUDA_OBJ_MATH:
-        return handle_math_method(context, method_name_c, args_ast);
+        return handle_cuda_method_by_category(context, FUNC_CATEGORY_MATH, method_name_c, args_ast);
 
     case CUDA_OBJ_ATOMIC:
-        return handle_atomic_method(context, method_name_c, args_ast);
-
-    case CUDA_OBJ_MEMORY:
-        return handle_memory_method(context, method_name_c, args_ast);
+        return handle_cuda_method_by_category(context, FUNC_CATEGORY_ATOMIC, method_name_c, args_ast);
 
     case CUDA_OBJ_SYNC:
-        return handle_sync_method(context, method_name_c, args_ast);
+        return handle_cuda_method_by_category(context, FUNC_CATEGORY_SYNC, method_name_c, args_ast);
+
+    case CUDA_OBJ_WARP:
+        return handle_cuda_method_by_category(context, FUNC_CATEGORY_WARP, method_name_c, args_ast);
 
     case CUDA_OBJ_THREADIDX:
     case CUDA_OBJ_BLOCKIDX:
@@ -1275,6 +2064,7 @@ static int handle_ast_stmt_list(cuda_compilation_context_t *context, zend_ast *a
     }
     return 1;
 }
+
 static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
 {
     zend_ast *name_node = ast->child[0];
@@ -1294,6 +2084,7 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
 
     zend_string *var_name_zend = Z_STR(var_name_node->val);
     const char *name_c = ZSTR_VAL(var_name_zend);
+
     if (strcmp(name_c, "cuda") == 0)
     {
         context->current_cuda_object = CUDA_OBJ_CUDA;
@@ -1408,6 +2199,8 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
             new_var->dtype = rvalue_type;
             new_var->second_dtype = rvalue_second_type;
             new_var->level = context->loop_depth;
+            new_var->var_type = VAR_LOCAL;
+            new_var->array_dimensions = 0;
 
             zend_hash_add_ptr(&context->local_variables, var_name_zend, new_var);
 
@@ -1420,36 +2213,17 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
             dtype_t lvalue_type = param ? param->dtype : local->dtype;
             dtype_t lvalue_second_type = param ? param->second_dtype : local->second_dtype;
 
-            if (lvalue_type != rvalue_type && rvalue_type != DTYPE_UNKNOWN)
+            if (!types_are_compatible(lvalue_type, lvalue_second_type,
+                                      rvalue_type, rvalue_second_type))
             {
-                if (lvalue_type != rvalue_type)
-                {
-                    smart_string_free(&rvalue_buffer);
-                    php_error_docref(NULL, E_ERROR,
-                                     "Type mismatch for '$%s'. Expected %s, got %s.",
-                                     name_c, get_cuda_type_str(lvalue_type, DTYPE_UNKNOWN), get_cuda_type_str(rvalue_type, DTYPE_UNKNOWN));
-                    return 0;
-                }
 
-                if (lvalue_second_type != rvalue_second_type && rvalue_type != DTYPE_UNKNOWN)
-                {
-                    smart_string_free(&rvalue_buffer);
-
-                    if (lvalue_second_type == LIST && rvalue_second_type != LIST)
-                    {
-                        php_error_docref(NULL, E_ERROR,
-                                         "Type mismatch for '$%s'. Expected Array[%s], got %s.",
-                                         name_c, get_cuda_type_str(lvalue_type, DTYPE_UNKNOWN), get_cuda_type_str(rvalue_type, DTYPE_UNKNOWN));
-                        return 0;
-                    }
-                    else if (lvalue_second_type != LIST && rvalue_second_type == LIST)
-                    {
-                        php_error_docref(NULL, E_ERROR,
-                                         "Type mismatch for '$%s'. Expected %s, got Array[%s].",
-                                         name_c, get_cuda_type_str(lvalue_type, DTYPE_UNKNOWN), get_cuda_type_str(rvalue_type, DTYPE_UNKNOWN));
-                        return 0;
-                    }
-                }
+                smart_string_free(&rvalue_buffer);
+                php_error_docref(NULL, E_ERROR,
+                                 "Type mismatch for '$%s'. Expected %s, got %s.",
+                                 name_c,
+                                 get_cuda_type_str(lvalue_type, lvalue_second_type),
+                                 get_cuda_type_str(rvalue_type, rvalue_second_type));
+                return 0;
             }
 
             smart_string_appendl(context->cuda_code_buffer, name_c, ZSTR_LEN(var_name_zend));
@@ -1741,59 +2515,173 @@ static int handler_ast_return(cuda_compilation_context_t *context, zend_ast *ast
     return 1;
 }
 
+static zend_string *extract_base_var_name_from_ast(zend_ast *ast)
+{
+    while (ast)
+    {
+        if (ast->kind == ZEND_AST_VAR)
+        {
+            zend_ast *name_ast = ast->child[0];
+            if (name_ast && name_ast->kind == ZEND_AST_ZVAL)
+            {
+                zval *zv = zend_ast_get_zval(name_ast);
+                if (zv && Z_TYPE_P(zv) == IS_STRING)
+                {
+                    zend_string *result = Z_STR_P(zv);
+                    return result;
+                }
+            }
+
+            return NULL;
+        }
+        else if (ast->kind == ZEND_AST_DIM)
+        {
+            ast = ast->child[0];
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+
+    return NULL;
+}
+
+static int count_dim_access_levels(zend_ast *ast)
+{
+    int levels = 0;
+
+    while (ast && ast->kind == ZEND_AST_DIM)
+    {
+        levels++;
+        ast = ast->child[0];
+    }
+
+    return levels;
+}
+
+static int compile_array_access_recursive(cuda_compilation_context_t *context,
+                                          zend_ast *ast,
+                                          int *total_levels)
+{
+    if (ast->kind == ZEND_AST_VAR)
+    {
+        zend_ast *name_ast = ast->child[0];
+        if (name_ast && name_ast->kind == ZEND_AST_ZVAL)
+        {
+            zval *zv = zend_ast_get_zval(name_ast);
+            if (zv && Z_TYPE_P(zv) == IS_STRING)
+            {
+                smart_string_appends(context->cuda_code_buffer, Z_STRVAL_P(zv));
+                return 1;
+            }
+        }
+        return 0;
+    }
+    else if (ast->kind == ZEND_AST_DIM)
+    {
+        (*total_levels)++;
+
+        if (!compile_array_access_recursive(context, ast->child[0], total_levels))
+        {
+            return 0;
+        }
+
+        smart_string_appendc(context->cuda_code_buffer, '[');
+
+        if (!compile_ast_as_valid_cuda(context, ast->child[1]))
+        {
+            return 0;
+        }
+
+        smart_string_appendc(context->cuda_code_buffer, ']');
+        return 1;
+    }
+
+    return 0;
+}
+
 static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    zend_ast *array_expr = ast->child[0];
-    zend_ast *index_expr = ast->child[1];
-
-    if (!compile_ast_as_valid_cuda(context, array_expr))
+    zend_string *base_var_name = extract_base_var_name_from_ast(ast);
+    if (base_var_name == NULL)
     {
-        return 0;
-    }
-
-    dtype_t first_dtype = context->last_evaluated_first_dtype;
-    dtype_t second_dtype = context->last_evaluated_second_dtype;
-
-    smart_string_appendc(context->cuda_code_buffer, '[');
-
-    smart_string rvalue_buffer = {0};
-    smart_string_alloc(&rvalue_buffer, 256, 0);
-
-    smart_string *original_buffer = context->cuda_code_buffer;
-
-    context->cuda_code_buffer = &rvalue_buffer;
-
-    if (!compile_ast_as_valid_cuda(context, index_expr))
-    {
-        smart_string_free(&rvalue_buffer);
-        context->cuda_code_buffer = original_buffer;
-        return 0;
-    }
-
-    dtype_t rvalue_type = context->last_evaluated_first_dtype;
-    context->cuda_code_buffer = original_buffer;
-
-    if (rvalue_type != INT32 && (rvalue_type == FLOAT32 || rvalue_type == FLOAT64))
-    {
-        smart_string_appendc(context->cuda_code_buffer, '(');
-        smart_string_appends(context->cuda_code_buffer, get_cuda_type_str(INT32, DTYPE_UNKNOWN));
-        smart_string_appendc(context->cuda_code_buffer, ')');
-    }
-    else if (rvalue_type == LIST)
-    {
-        smart_string_free(&rvalue_buffer);
         php_error_docref(NULL, E_ERROR,
-                         "Array index must be of type int, got array.");
+                         "Cannot determine base variable name for array access");
         return 0;
     }
 
-    smart_string_append(context->cuda_code_buffer, &rvalue_buffer);
+    const char *var_name_cstr = ZSTR_VAL(base_var_name);
+    size_t var_name_len = ZSTR_LEN(base_var_name);
 
-    context->last_evaluated_first_dtype = second_dtype;
-    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    int access_levels = count_dim_access_levels(ast);
+    zval *zv = zend_hash_str_find(&context->local_variables,
+                                  var_name_cstr, var_name_len);
 
-    smart_string_appendc(context->cuda_code_buffer, ']');
-    smart_string_free(&rvalue_buffer);
+    local_variable_t *var = NULL;
+    func_parameter *param = NULL;
+
+    if (zv != NULL && Z_TYPE_P(zv) == IS_PTR)
+    {
+        var = (local_variable_t *)Z_PTR_P(zv);
+    }
+    else
+    {
+        param = find_kernel_parameter(context->parameters, var_name_cstr);
+    }
+
+    if (var == NULL && param == NULL)
+    {
+        php_error_docref(NULL, E_ERROR,
+                         "Undefined variable '%.*s'",
+                         (int)var_name_len, var_name_cstr);
+        return 0;
+    }
+
+    if (var != NULL && var->var_type == VAR_LOCAL_SHARED)
+    {
+        if (access_levels > var->array_dimensions)
+        {
+            php_error_docref(NULL, E_ERROR,
+                             "Shared array '%.*s' has %d dimension(s) but accessed with %d index(es)",
+                             (int)var_name_len, var_name_cstr,
+                             var->array_dimensions, access_levels);
+            return 0;
+        }
+    }
+
+    int levels_counted = 0;
+    if (!compile_array_access_recursive(context, ast, &levels_counted))
+    {
+        return 0;
+    }
+
+    if (var != NULL)
+    {
+        if (var->var_type == VAR_LOCAL_SHARED)
+        {
+            if (access_levels < var->array_dimensions)
+            {
+                context->last_evaluated_first_dtype = LIST;
+                context->last_evaluated_second_dtype = var->second_dtype;
+            }
+            else
+            {
+                context->last_evaluated_first_dtype = var->second_dtype;
+                context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+            }
+        }
+        else
+        {
+            context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+            context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+        }
+    }
+    else if (param != NULL)
+    {
+        context->last_evaluated_first_dtype = param->second_dtype;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    }
 
     return 1;
 }
@@ -1826,7 +2714,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
         {
             snprintf(buffer, sizeof(buffer), "%.17g", value);
             context->last_evaluated_first_dtype = FLOAT64;
-            context->last_evaluated_second_dtype = 0;
+            context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         }
         else
         {
@@ -1850,7 +2738,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
 
             strcat(buffer, "f");
             context->last_evaluated_first_dtype = FLOAT32;
-            context->last_evaluated_second_dtype = 0;
+            context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         }
 
         smart_string_appends(context->cuda_code_buffer, buffer);
@@ -1859,13 +2747,13 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     case IS_TRUE:
         smart_string_appends(context->cuda_code_buffer, "true");
         context->last_evaluated_first_dtype = BOOL;
-        context->last_evaluated_second_dtype = 0;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
         break;
     case IS_FALSE:
         smart_string_appends(context->cuda_code_buffer, "false");
         context->last_evaluated_first_dtype = BOOL;
-        context->last_evaluated_second_dtype = 0;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
         break;
     case IS_STRING:
@@ -1919,6 +2807,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
             smart_string_appendl(context->cuda_code_buffer, str_val, ZSTR_LEN(str));
             smart_string_appendc(context->cuda_code_buffer, '"');
             context->last_evaluated_first_dtype = DTYPE_UNKNOWN;
+            context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         }
         else
         {
@@ -1979,14 +2868,14 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
             context->current_cuda_object = CUDA_OBJ_ATOMIC;
             return 1;
         }
-        else if (strcmp(prop_name_c, "memory") == 0)
-        {
-            context->current_cuda_object = CUDA_OBJ_MEMORY;
-            return 1;
-        }
         else if (strcmp(prop_name_c, "sync") == 0)
         {
             context->current_cuda_object = CUDA_OBJ_SYNC;
+            return 1;
+        }
+        else if (strcmp(prop_name_c, "warp") == 0)
+        {
+            context->current_cuda_object = CUDA_OBJ_WARP;
             return 1;
         }
         else
@@ -2031,8 +2920,8 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
     }
     else if (context->current_cuda_object == CUDA_OBJ_MATH ||
              context->current_cuda_object == CUDA_OBJ_ATOMIC ||
-             context->current_cuda_object == CUDA_OBJ_MEMORY ||
-             context->current_cuda_object == CUDA_OBJ_SYNC)
+             context->current_cuda_object == CUDA_OBJ_SYNC ||
+             context->current_cuda_object == CUDA_OBJ_WARP)
     {
 
         php_error_docref(NULL, E_ERROR,
@@ -2096,10 +2985,6 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
                          get_cuda_type_str(right_type, DTYPE_UNKNOWN), get_cuda_type_str(left_type, left_second_type));
         return 0;
     }
-
-    /**
-     * @todo maybe we can see if right and left type can be casted
-     */
 
     smart_string_appendc(context->cuda_code_buffer, ')');
 
@@ -2456,6 +3341,62 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
     return 1;
 }
 
+static int handler_ast_foreach(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "foreach loops are not supported in CUDA kernels. Use for loops instead.");
+    return 0;
+}
+
+static int handler_ast_try(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "Exception handling (try/catch) is not supported in CUDA kernels.");
+    return 0;
+}
+
+static int handler_ast_match(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "match expressions are not supported in CUDA kernels.");
+    return 0;
+}
+
+static int handler_ast_nullsafe_prop(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "Nullsafe operator (?->) is not supported in CUDA kernels.");
+    return 0;
+}
+
+static int handler_ast_array(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "Array creation is not supported in CUDA kernels. Use parameters or local variables.");
+    return 0;
+}
+
+static int handler_ast_yield(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "Generators (yield) are not supported in CUDA kernels.");
+    return 0;
+}
+
+static int handler_ast_static_var(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "Static variables are not supported in CUDA kernels.");
+    return 0;
+}
+
+static int handler_ast_global(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    php_error_docref(NULL, E_ERROR,
+                     "Global variables are not supported in CUDA kernels.");
+    return 0;
+}
+
 char *generate_cuda_headers(HashTable *cuda_headers)
 {
     if (!cuda_headers || zend_hash_num_elements(cuda_headers) == 0)
@@ -2517,7 +3458,13 @@ cuda_compilation_context_t *create_cuda_context(
     context->name = name;
     context->fn_type = fn_type;
     context->dim_access = 0;
+    context->uses_shared_memory = 0;
+    context->uses_static_shared_memory = 0;
+    context->shared_memory_declared = 0;
+
     zend_hash_init(&context->local_variables, 8, NULL, destroy_local_variable, 0);
+    zend_hash_init(&context->shared_memory_vars, 8, NULL,
+                   (dtor_func_t)destroy_shared_var, 0);
 
     context->cuda_code_buffer = (smart_string *)ecalloc(1, sizeof(smart_string));
     smart_string_alloc(context->cuda_code_buffer, 512, 0);
@@ -2531,6 +3478,7 @@ void free_cuda_context(cuda_compilation_context_t *context)
         return;
 
     zend_hash_destroy(&context->local_variables);
+    zend_hash_destroy(&context->shared_memory_vars);
 
     if (context->cuda_code_buffer)
     {

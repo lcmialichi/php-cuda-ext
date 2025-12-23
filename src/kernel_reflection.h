@@ -1,4 +1,3 @@
-// kernel_reflection.h - atualizado
 #ifndef KERNEL_REFLECTION_H
 #define KERNEL_REFLECTION_H
 

@@ -5,6 +5,9 @@
 
 #define MODULE_CLASS_NAME "Cuda\\CompiledModule"
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_module_initialize, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_module_run, 0, 0, 1)
 ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
 ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, config, IS_ARRAY, 1, "[]")
@@ -69,22 +72,23 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_module_cleanup, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry module_methods[] = {
-    ZEND_ME(CompiledModule, run, arginfo_module_run, ZEND_ACC_PUBLIC)
-        ZEND_ME(CompiledModule, runAsync, arginfo_module_runAsync, ZEND_ACC_PUBLIC)
-            ZEND_ME(CompiledModule, sync, arginfo_module_sync, ZEND_ACC_PUBLIC)
-                ZEND_ME(CompiledModule, isFinished, arginfo_module_isFinished, ZEND_ACC_PUBLIC)
-                    ZEND_ME(CompiledModule, wait, arginfo_module_wait, ZEND_ACC_PUBLIC)
-                        ZEND_ME(CompiledModule, hasKernel, arginfo_module_hasKernel, ZEND_ACC_PUBLIC)
-                            ZEND_ME(CompiledModule, getKernels, arginfo_module_getKernels, ZEND_ACC_PUBLIC)
-                                ZEND_ME(CompiledModule, getPtx, arginfo_module_getPtx, ZEND_ACC_PUBLIC)
-                                    ZEND_ME(CompiledModule, save, arginfo_module_save, ZEND_ACC_PUBLIC)
-                                        ZEND_ME(CompiledModule, __serialize, arginfo_module_serialize, ZEND_ACC_PUBLIC)
-                                            ZEND_ME(CompiledModule, __unserialize, arginfo_module_unserialize, ZEND_ACC_PUBLIC)
-                                                ZEND_ME(CompiledModule, getAsyncStatus, arginfo_module_getAsyncStatus, ZEND_ACC_PUBLIC)
-                                                    ZEND_ME(CompiledModule, getStats, arginfo_module_getStats, ZEND_ACC_PUBLIC)
-                                                        ZEND_ME(CompiledModule, getPendingOperations, arginfo_module_getPendingOperations, ZEND_ACC_PUBLIC)
-                                                            ZEND_ME(CompiledModule, cancelOperation, arginfo_module_cancelOperation, ZEND_ACC_PUBLIC)
-                                                                ZEND_ME(CompiledModule, cleanup, arginfo_module_cleanup, ZEND_ACC_PUBLIC)
-                                                                    ZEND_FE_END};
+    ZEND_ME(CompiledModule, initialize, arginfo_module_initialize, ZEND_ACC_PUBLIC)
+        ZEND_ME(CompiledModule, run, arginfo_module_run, ZEND_ACC_PUBLIC)
+            ZEND_ME(CompiledModule, runAsync, arginfo_module_runAsync, ZEND_ACC_PUBLIC)
+                ZEND_ME(CompiledModule, sync, arginfo_module_sync, ZEND_ACC_PUBLIC)
+                    ZEND_ME(CompiledModule, isFinished, arginfo_module_isFinished, ZEND_ACC_PUBLIC)
+                        ZEND_ME(CompiledModule, wait, arginfo_module_wait, ZEND_ACC_PUBLIC)
+                            ZEND_ME(CompiledModule, hasKernel, arginfo_module_hasKernel, ZEND_ACC_PUBLIC)
+                                ZEND_ME(CompiledModule, getKernels, arginfo_module_getKernels, ZEND_ACC_PUBLIC)
+                                    ZEND_ME(CompiledModule, getPtx, arginfo_module_getPtx, ZEND_ACC_PUBLIC)
+                                        ZEND_ME(CompiledModule, save, arginfo_module_save, ZEND_ACC_PUBLIC)
+                                            ZEND_ME(CompiledModule, __serialize, arginfo_module_serialize, ZEND_ACC_PUBLIC)
+                                                ZEND_ME(CompiledModule, __unserialize, arginfo_module_unserialize, ZEND_ACC_PUBLIC)
+                                                    ZEND_ME(CompiledModule, getAsyncStatus, arginfo_module_getAsyncStatus, ZEND_ACC_PUBLIC)
+                                                        ZEND_ME(CompiledModule, getStats, arginfo_module_getStats, ZEND_ACC_PUBLIC)
+                                                            ZEND_ME(CompiledModule, getPendingOperations, arginfo_module_getPendingOperations, ZEND_ACC_PUBLIC)
+                                                                ZEND_ME(CompiledModule, cancelOperation, arginfo_module_cancelOperation, ZEND_ACC_PUBLIC)
+                                                                    ZEND_ME(CompiledModule, cleanup, arginfo_module_cleanup, ZEND_ACC_PUBLIC)
+                                                                        ZEND_FE_END};
 
 #endif

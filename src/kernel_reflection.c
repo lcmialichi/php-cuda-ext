@@ -145,13 +145,16 @@ static void debug_class_methods(zend_class_entry *ce)
 {
     zend_string *key;
     zend_function *func;
-    
-    ZEND_HASH_FOREACH_STR_KEY_PTR(&ce->function_table, key, func) {
-        if (key) {
-            printf("  Método: %s, flags=0x%08X, type=%d\n", 
+
+    ZEND_HASH_FOREACH_STR_KEY_PTR(&ce->function_table, key, func)
+    {
+        if (key)
+        {
+            printf("  Método: %s, flags=0x%08X, type=%d\n",
                    ZSTR_VAL(key), func->common.fn_flags, func->common.type);
         }
-    } ZEND_HASH_FOREACH_END();
+    }
+    ZEND_HASH_FOREACH_END();
 }
 
 cuda_param_info *cuda_param_info_create(zend_string *name)
@@ -501,7 +504,6 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
         (cuda_method_attribute_args *)emalloc(sizeof(cuda_method_attribute_args));
 
     args->name = zend_string_copy(fptr->common.function_name);
-
     for (uint32_t i = 0; i < matched->argc; i++)
     {
         zend_attribute_arg *a = &matched->args[i];
@@ -511,9 +513,11 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
         if (zend_string_equals_literal(a->name, "name") &&
             Z_TYPE(a->value) == IS_STRING)
         {
+
             zend_string_release(args->name);
             args->name = zend_string_copy(Z_STR(a->value));
         }
+
     }
 
     return args;

@@ -38,8 +38,6 @@ ZEND_METHOD(Device, __construct)
     device->fci = fci;
     device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
-    device->ast = NULL;
-    device->ast_arena = NULL;
 
     zend_string_release(fargs->name);
     efree(fargs);
@@ -76,8 +74,6 @@ ZEND_METHOD(Device, fn)
     device->fci = fci;
     device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
-    device->ast = NULL;
-    device->ast_arena = NULL;
 
     zend_string_release(fargs->name);
     efree(fargs);
@@ -106,11 +102,6 @@ static void device_free_object(zend_object *object)
         zend_string_release(device->target);
     }
 
-    if (device->ast_arena)
-    {
-        zend_arena_destroy(device->ast_arena);
-    }
-
     zend_object_std_dtor(&device->std);
 }
 
@@ -124,8 +115,6 @@ static zend_object *device_create_object(zend_class_entry *class_type)
 
     device->name = NULL;
     device->target = NULL;
-    device->ast = NULL;
-    device->ast_arena = NULL;
 
     return &device->std;
 }

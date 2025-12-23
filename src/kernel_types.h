@@ -149,6 +149,35 @@ typedef struct _cuda_device_object
     zend_arena *ast_arena;
 } cuda_device_object;
 
+typedef struct _cuda_async_operation
+{
+    int id;
+    zend_string *kernel_name;
+    void **cuda_args;
+    void **temp_buffers;
+    int temp_buffers_count;
+    zend_bool is_active;
+    double start_time;
+
+    CUstream stream;
+    CUevent start_event;
+    CUevent end_event;
+
+    int grid[3];
+    int block[3];
+    int argc;
+
+    CUmodule *cu_module_cache;
+
+    zend_bool owns_module;
+
+    CUresult last_error;
+    char error_message[256];
+
+    struct _cuda_async_operation *next;
+    struct _cuda_async_operation *prev;
+} cuda_async_operation;
+
 typedef struct _cuda_module_object
 {
     zend_object std;
@@ -165,6 +194,19 @@ typedef struct _cuda_module_object
     int from_serialize;
 
     zend_bool has_pending_operations;
+    int next_async_op_id;
+    HashTable *async_operations;
+    size_t total_memory_allocated;
+    size_t peak_memory_usage;
+    int kernel_execution_count;
+    double total_execution_time_ms;
+
+    CUstream *stream_pool;
+    int stream_pool_size;
+    int stream_pool_capacity;
+    pthread_mutex_t stream_pool_mutex;
+
+    HashTable *module_cache;
 
 } cuda_module_object;
 

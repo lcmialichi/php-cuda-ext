@@ -60,6 +60,35 @@ class CompiledModule
         return true;
     }
 
+    public function getAsyncStatus(): array
+    {
+        return [];
+    }
+
+    public function getStats(): array
+    {
+        return [];
+    }
+
+    public function wait(?int $id = null, int $timeout = -1)
+    {
+    }
+
+    public function getPendingOperations(): array
+    {
+        return [];
+    }
+
+    public function cancelOperation(int $id): bool
+    {
+        return false;
+    }
+
+    public function cleanup(): int
+    {
+        return 0;
+    }
+
 
     public function hasKernel(string $kernel): bool
     {

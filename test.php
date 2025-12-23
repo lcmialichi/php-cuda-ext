@@ -13,33 +13,112 @@ function main(): void
         file_put_contents(MODULE_FILE, serialize(createCudaModule()));
     }
 
+    /**
+     * @var CompiledModule
+     */
     $module = unserialize(file_get_contents(MODULE_FILE));
 
-    $input = CudaArray::rand([512, 512, 16], -1, 1);
-    $output = CudaArray::zeros([512, 512, 16]);
-    $scale = 1;
-    $threshold = 0;
+    $input1 = CudaArray::rand([512, 512, 16], -1, 1);
+    $input2 = CudaArray::rand([512, 512, 16], -1, 1);
+    $input3 = CudaArray::rand([512, 512, 16], -1, 1);
+    $input4 = CudaArray::rand([512, 512, 16], -1, 1);
+    $input5 = CudaArray::rand([512, 512, 16], -1, 1);
+    $input6 = CudaArray::rand([512, 512, 16], -1, 1);
+    $input7 = CudaArray::rand([512, 512, 16], -1, 1);
+    $output1 = CudaArray::zeros([512, 512, 16]);
+    $output2 = CudaArray::zeros([512, 512, 16]);
+    $output3 = CudaArray::zeros([512, 512, 16]);
+    $output4 = CudaArray::zeros([512, 512, 16]);
+    $output5 = CudaArray::zeros([512, 512, 16]);
+    $output6 = CudaArray::zeros([512, 512, 16]);
+    $output7 = CudaArray::zeros([512, 512, 16]);
+    $scale = 100;
 
-    [$xo, $yo, $zo] = $output->getShape();
-
-    $ototal = ($xo * $yo * $zo);
+    [$x, $y, $z] = $output1->getShape();
+    $total = $x * $y * $z;
 
     $module
         ->runAsync(
             name: 'element_wise',
-            args: [$input, $output, $threshold, $scale, $ototal],
+            args: [$input1, $output1, $scale, $total],
             config: [
                 'block' => [THREADS, 1, 1],
-                'grid' => grid($ototal)
+                'grid' => grid($total)
             ]
         );
 
-    while (!$module->isFinished()) {
-        $module->sync();
-        echo "Running...\n";
-    }
+    $module
+        ->runAsync(
+            name: 'element_wise',
+            args: [$input2, $output2, $scale, $total],
+            config: [
+                'block' => [THREADS, 1, 1],
+                'grid' => grid($total)
+            ]
+        );
 
-    echo "Finished...\n";
+    $module
+        ->runAsync(
+            name: 'element_wise',
+            args: [$input3, $output3, $scale, $total],
+            config: [
+                'block' => [THREADS, 1, 1],
+                'grid' => grid($total)
+            ]
+        );
+
+      $module
+        ->runAsync(
+            name: 'element_wise',
+            args: [$input4, $output4, $scale, $total],
+            config: [
+                'block' => [THREADS, 1, 1],
+                'grid' => grid($total)
+            ]
+        );
+
+         $module
+        ->runAsync(
+            name: 'element_wise',
+            args: [$input5, $output5, $scale, $total],
+            config: [
+                'block' => [THREADS, 1, 1],
+                'grid' => grid($total)
+            ]
+        );
+
+         $module
+        ->runAsync(
+            name: 'element_wise',
+            args: [$input6, $output6, $scale, $total],
+            config: [
+                'block' => [THREADS, 1, 1],
+                'grid' => grid($total)
+            ]
+        );
+
+         $module
+        ->runAsync(
+            name: 'element_wise',
+            args: [$input7, $output7, $scale, $total],
+            config: [
+                'block' => [THREADS, 1, 1],
+                'grid' => grid($total)
+            ]
+        );
+
+    $count = 0;
+    $time = microtime(true);
+    while (!$module->isFinished()) {
+
+        $currentTime = round(microtime(true) - $time, 3) * 1000;
+        $ops = count($module->getPendingOperations());
+        if ($ops != $count) {
+            $count = $ops;
+            echo "OPs: {$count} at time {$currentTime} ms\n";
+
+        }
+    }
 }
 
 function grid(int $n): array
@@ -62,29 +141,25 @@ function createCudaModule(): CompiledModule
 {
     $compiler = new Cuda\Compiler();
 
-    #[Attr\Kernel(name: 'element_wise')]
-    function element_wise(
+    #[Attr\Kernel(name: 'elementWise')]
+    function elementWise(
         #[Attr\TensorType] array $input,
         #[Attr\TensorType] array &$output,
-        #[Attr\FloatType] float $threshold,
-        #[Attr\FloatType] float $scale_factor,
+        #[Attr\FloatType] float $scalar,
         #[Attr\IntType] int $total_elements
     ): void {
         /** @var \Cuda\Runtime $cuda */
-        $tid = $cuda->threadIdx()->x;
-        $bid = $cuda->blockIdx()->x;
-        $bdim = $cuda->blockDim()->x;
-        $gid = $bid * $bdim + $tid;
+        $idx = $cuda->threadIdx()->x * $cuda->blockIdx()->x + $cuda->blockDim()->x;
 
-        if ($gid >= $total_elements) {
+        if ($idx >= $total_elements) {
             return;
         }
 
-        $output[$gid] = $scale_factor * $input[$gid];
+        $output[$idx] = $input[$idx] * $scalar;
     }
 
 
-    $compiler->kernel('element_wise');
+    $compiler->kernel('elementWise');
     return $compiler->compile();
 }
 

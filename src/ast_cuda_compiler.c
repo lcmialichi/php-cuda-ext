@@ -712,8 +712,8 @@ static int compile_argument_list(cuda_compilation_context_t *context,
     zend_ast_list *list = (zend_ast_list *)args_ast;
     if (list->children > max_args)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Too many arguments (max %d)", max_args);
+        cuda_compiler_error_ex(context,
+                               "Too many arguments (max %d)", max_args);
         return 0;
     }
 
@@ -852,8 +852,8 @@ static int handle_declare_shared(cuda_compilation_context_t *context, zend_ast *
 {
     if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::shared() requires arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::shared() requires arguments");
         return 0;
     }
 
@@ -873,8 +873,8 @@ static int handle_declare_shared(cuda_compilation_context_t *context, zend_ast *
     }
     else
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::shared() requires 2, 3, or 4 arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::shared() requires 2, 3, or 4 arguments");
         return 0;
     }
 }
@@ -883,8 +883,8 @@ static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_a
 {
     if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::sharedVar() requires arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::sharedVar() requires arguments");
         return 0;
     }
 
@@ -892,37 +892,37 @@ static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_a
 
     if (num_args < 2)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::sharedVar() requires at least 2 arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::sharedVar() requires at least 2 arguments");
         return 0;
     }
 
     zend_ast *ref_ast = args_ast->child[0];
     if (!ref_ast || ref_ast->kind != ZEND_AST_REF)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "First argument must be a reference: &$var");
+        cuda_compiler_error_ex(context,
+                               "First argument must be a reference: &$var");
         return 0;
     }
 
     zend_ast *var_ast = ref_ast->child[0];
     if (!var_ast || var_ast->kind != ZEND_AST_VAR)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid variable reference");
+        cuda_compiler_error_ex(context, "Invalid variable reference");
         return 0;
     }
 
     zend_ast *var_name_ast = var_ast->child[0];
     if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        cuda_compiler_error_ex(context, "Invalid variable name");
         return 0;
     }
 
     zval *var_zv = zend_ast_get_zval(var_name_ast);
     if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        cuda_compiler_error_ex(context, "Variable name must be a string");
         return 0;
     }
 
@@ -931,14 +931,14 @@ static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_a
     zend_ast *type_ast = args_ast->child[1];
     if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
     zval *type_zv = zend_ast_get_zval(type_ast);
     if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
@@ -947,7 +947,7 @@ static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_a
 
     if (element_type == DTYPE_UNKNOWN)
     {
-        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        cuda_compiler_error_ex(context, "Unsupported type '%s'", type_str);
         return 0;
     }
 
@@ -975,8 +975,8 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
 {
     if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::sharedArray() requires arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::sharedArray() requires arguments");
         return 0;
     }
 
@@ -984,30 +984,30 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
 
     if (list->children < 3)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::sharedArray() requires at least 3 arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::sharedArray() requires at least 3 arguments");
         return 0;
     }
 
     zend_ast *var_ast = list->child[0];
     if (!var_ast || var_ast->kind != ZEND_AST_VAR)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "First argument must be a variable: $var");
+        cuda_compiler_error_ex(context,
+                               "First argument must be a variable: $var");
         return 0;
     }
 
     zend_ast *var_name_ast = var_ast->child[0];
     if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        cuda_compiler_error_ex(context, "Invalid variable name");
         return 0;
     }
 
     zval *var_zv = zend_ast_get_zval(var_name_ast);
     if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        cuda_compiler_error_ex(context, "Variable name must be a string");
         return 0;
     }
 
@@ -1016,14 +1016,14 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
     zend_ast *type_ast = list->child[1];
     if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
     zval *type_zv = zend_ast_get_zval(type_ast);
     if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
@@ -1032,7 +1032,7 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
 
     if (element_type == DTYPE_UNKNOWN)
     {
-        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        cuda_compiler_error_ex(context, "Unsupported type '%s'", type_str);
         return 0;
     }
 
@@ -1071,8 +1071,8 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
 {
     if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::sharedExtern() requires arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::sharedExtern() requires arguments");
         return 0;
     }
 
@@ -1080,37 +1080,37 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
 
     if (num_args < 2)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Declare::sharedExtern() requires at least 2 arguments");
+        cuda_compiler_error_ex(context,
+                               "Declare::sharedExtern() requires at least 2 arguments");
         return 0;
     }
 
     zend_ast *ref_ast = args_ast->child[0];
     if (!ref_ast || ref_ast->kind != ZEND_AST_REF)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "First argument must be a reference: &$var");
+        cuda_compiler_error_ex(context,
+                               "First argument must be a reference: &$var");
         return 0;
     }
 
     zend_ast *var_ast = ref_ast->child[0];
     if (!var_ast || var_ast->kind != ZEND_AST_VAR)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid variable reference");
+        cuda_compiler_error_ex(context, "Invalid variable reference");
         return 0;
     }
 
     zend_ast *var_name_ast = var_ast->child[0];
     if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        cuda_compiler_error_ex(context, "Invalid variable name");
         return 0;
     }
 
     zval *var_zv = zend_ast_get_zval(var_name_ast);
     if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        cuda_compiler_error_ex(context, "Variable name must be a string");
         return 0;
     }
 
@@ -1119,14 +1119,14 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
     zend_ast *type_ast = args_ast->child[1];
     if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
     zval *type_zv = zend_ast_get_zval(type_ast);
     if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
@@ -1135,7 +1135,7 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
 
     if (element_type == DTYPE_UNKNOWN)
     {
-        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        cuda_compiler_error_ex(context, "Unsupported type '%s'", type_str);
         return 0;
     }
 
@@ -1236,8 +1236,8 @@ static int validate_function_parameters(cuda_compilation_context_t *context)
 
             if (strcmp(param_i->name, param_j->name) == 0)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Duplicate parameter name: '%s'", param_i->name);
+                cuda_compiler_error_ex(context,
+                                       "Duplicate parameter name: '%s'", param_i->name);
                 return 0;
             }
         }
@@ -1303,9 +1303,9 @@ static int handle_warp_functions(cuda_compilation_context_t *context,
             if (arg_strings[i])
                 efree(arg_strings[i]);
         }
-        php_error_docref(NULL, E_ERROR,
-                         "Function %s expects %d arguments, got %d",
-                         method_name, func->num_params, num_args);
+        cuda_compiler_error_ex(context,
+                               "Function %s expects %d arguments, got %d",
+                               method_name, func->num_params, num_args);
         return 0;
     }
 
@@ -1410,8 +1410,8 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
         return handle_cuda_declare_shared(context, args_ast);
     }
 
-    php_error_docref(NULL, E_ERROR,
-                     "Method $cuda->%s() is not supported.", method_name);
+    cuda_compiler_error_ex(context,
+                           "Method $cuda->%s() is not supported.", method_name);
     return 0;
 }
 
@@ -1419,8 +1419,8 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
 {
     if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "$cuda->__declare_shared() requires arguments");
+        cuda_compiler_error_ex(context,
+                               "$cuda->__declare_shared() requires arguments");
         return 0;
     }
 
@@ -1428,30 +1428,30 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
 
     if (list->children < 3)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "$cuda->__declare_shared() requires at least 3 arguments");
+        cuda_compiler_error_ex(context,
+                               "$cuda->__declare_shared() requires at least 3 arguments");
         return 0;
     }
 
     zend_ast *var_ast = list->child[0];
     if (!var_ast || var_ast->kind != ZEND_AST_VAR)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "First argument must be a variable: $var");
+        cuda_compiler_error_ex(context,
+                               "First argument must be a variable: $var");
         return 0;
     }
 
     zend_ast *var_name_ast = var_ast->child[0];
     if (!var_name_ast || var_name_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid variable name");
+        cuda_compiler_error_ex(context, "Invalid variable name");
         return 0;
     }
 
     zval *var_zv = zend_ast_get_zval(var_name_ast);
     if (!var_zv || Z_TYPE_P(var_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Variable name must be a string");
+        cuda_compiler_error_ex(context, "Variable name must be a string");
         return 0;
     }
 
@@ -1460,14 +1460,14 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
     zend_ast *type_ast = list->child[1];
     if (!type_ast || type_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
     zval *type_zv = zend_ast_get_zval(type_ast);
     if (!type_zv || Z_TYPE_P(type_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Type argument must be a string");
+        cuda_compiler_error_ex(context, "Type argument must be a string");
         return 0;
     }
 
@@ -1476,7 +1476,7 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
 
     if (element_type == DTYPE_UNKNOWN)
     {
-        php_error_docref(NULL, E_ERROR, "Unsupported type '%s'", type_str);
+        cuda_compiler_error_ex(context, "Unsupported type '%s'", type_str);
         return 0;
     }
 
@@ -1492,16 +1492,16 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
 
         if (dim_list->children == 0)
         {
-            php_error_docref(NULL, E_ERROR,
-                             "Dimension array cannot be empty");
+            cuda_compiler_error_ex(context,
+                                   "Dimension array cannot be empty");
             return 0;
         }
 
         if (dim_list->children > 3)
         {
-            php_error_docref(NULL, E_ERROR,
-                             "Shared memory arrays support up to 3 dimensions, got %d",
-                             dim_list->children);
+            cuda_compiler_error_ex(context,
+                                   "Shared memory arrays support up to 3 dimensions, got %d",
+                                   dim_list->children);
             return 0;
         }
 
@@ -1514,48 +1514,48 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
 
             if (elem_ast->kind != ZEND_AST_ARRAY_ELEM)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Invalid array element at position %d", i + 1);
+                cuda_compiler_error_ex(context,
+                                       "Invalid array element at position %d", i + 1);
                 return 0;
             }
 
             zend_ast *value_ast = elem_ast->child[0];
             if (!value_ast)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Missing value for dimension %d", i + 1);
+                cuda_compiler_error_ex(context,
+                                       "Missing value for dimension %d", i + 1);
                 return 0;
             }
 
             if (value_ast->kind != ZEND_AST_ZVAL)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Dimension %d must be a literal value, not an expression", i + 1);
+                cuda_compiler_error_ex(context,
+                                       "Dimension %d must be a literal value, not an expression", i + 1);
                 return 0;
             }
 
             zval *dim_zv = zend_ast_get_zval(value_ast);
             if (!dim_zv)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Invalid dimension value at position %d", i + 1);
+                cuda_compiler_error_ex(context,
+                                       "Invalid dimension value at position %d", i + 1);
                 return 0;
             }
 
             if (Z_TYPE_P(dim_zv) != IS_LONG)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Dimension %d must be an integer, got type %d",
-                                 i + 1, Z_TYPE_P(dim_zv));
+                cuda_compiler_error_ex(context,
+                                       "Dimension %d must be an integer, got type %d",
+                                       i + 1, Z_TYPE_P(dim_zv));
                 return 0;
             }
 
             long dim_value = Z_LVAL_P(dim_zv);
             if (dim_value <= 0)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Dimension %d must be positive, got %ld",
-                                 i + 1, dim_value);
+                cuda_compiler_error_ex(context,
+                                       "Dimension %d must be positive, got %ld",
+                                       i + 1, dim_value);
                 return 0;
             }
 
@@ -1629,7 +1629,7 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
                 }
                 else
                 {
-                    php_error_docref(NULL, E_ERROR, "Invalid size value");
+                    cuda_compiler_error_ex(context, "Invalid size value");
                     return 0;
                 }
             }
@@ -1659,8 +1659,8 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
     const cuda_function_info_t *func_info = find_cuda_function_by_category(method_name, category);
     if (!func_info)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Method $cuda->%s() is not supported.", method_name);
+        cuda_compiler_error_ex(context,
+                               "Method $cuda->%s() is not supported.", method_name);
         return 0;
     }
 
@@ -1736,8 +1736,8 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
             if (arg_strings[i])
                 efree(arg_strings[i]);
         }
-        php_error_docref(NULL, E_ERROR,
-                         "No CUDA implementation for %s()", method_name);
+        cuda_compiler_error_ex(context,
+                               "No CUDA implementation for %s()", method_name);
         return 0;
     }
 
@@ -1827,7 +1827,7 @@ static int generate_function_signature(cuda_compilation_context_t *context)
         break;
 
     default:
-        php_error_docref(NULL, E_ERROR, "Invalid CUDA function type");
+        cuda_compiler_error_ex(context, "Invalid CUDA function type");
         return 0;
     }
 
@@ -1854,16 +1854,16 @@ static int generate_function_signature(cuda_compilation_context_t *context)
 
             if (strcmp(param->name, "cuda") == 0)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Parameter '$cuda' is reserved and will be automatically injected");
+                cuda_compiler_error_ex(context,
+                                       "Parameter '$cuda' is reserved and will be automatically injected");
                 return 0;
             }
 
             const char *type_str = get_cuda_type_str(first_type, second_type);
             if (!type_str)
             {
-                php_error_docref(NULL, E_ERROR,
-                                 "Invalid type for parameter '%s'", param->name);
+                cuda_compiler_error_ex(context,
+                                       "Invalid type for parameter '%s'", param->name);
                 return 0;
             }
 
@@ -1908,9 +1908,9 @@ static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast
 {
     const char *ast_name = get_ast_kind_name(ast->kind);
 
-    php_error_docref(NULL, E_ERROR,
-                     "Kernel compilation failed: PHP construct '%s' is not allowed in CUDA kernels.",
-                     ast_name);
+    cuda_compiler_error_ex(context,
+                           "Kernel compilation failed: PHP construct '%s' is not allowed in CUDA kernels.",
+                           ast_name);
 
     return 0;
 }
@@ -1920,7 +1920,7 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
     uint32_t num_children = zend_ast_get_num_children(ast);
     if (num_children < 3)
     {
-        php_error_docref(NULL, E_ERROR, "Method call missing parts.");
+        cuda_compiler_error_ex(context, "Method call missing parts.");
         return 0;
     }
 
@@ -1943,9 +1943,9 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
                 }
                 else
                 {
-                    php_error_docref(NULL, E_ERROR,
-                                     "Only $cuda object calls are allowed, got $%s",
-                                     ZSTR_VAL(obj_name));
+                    cuda_compiler_error_ex(context,
+                                           "Only $cuda object calls are allowed, got $%s",
+                                           ZSTR_VAL(obj_name));
                     return 0;
                 }
             }
@@ -1967,21 +1967,21 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
     }
     else
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Invalid object for method call.");
+        cuda_compiler_error_ex(context,
+                               "Invalid object for method call.");
         return 0;
     }
 
     if (method_name_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Method name must be a literal.");
+        cuda_compiler_error_ex(context, "Method name must be a literal.");
         return 0;
     }
 
     zval *method_zv = zend_ast_get_zval(method_name_ast);
     if (!method_zv || Z_TYPE_P(method_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Method name must be a string.");
+        cuda_compiler_error_ex(context, "Method name must be a string.");
         return 0;
     }
 
@@ -2009,12 +2009,12 @@ static int handler_ast_method_call(cuda_compilation_context_t *context, zend_ast
     case CUDA_OBJ_BLOCKIDX:
     case CUDA_OBJ_BLOCKDIM:
     case CUDA_OBJ_GRIDDIM:
-        php_error_docref(NULL, E_ERROR,
-                         "Use property access (->x) not method call for CUDA object members.");
+        cuda_compiler_error_ex(context,
+                               "Use property access (->x) not method call for CUDA object members.");
         return 0;
 
     default:
-        php_error_docref(NULL, E_ERROR, "Invalid CUDA object access.");
+        cuda_compiler_error_ex(context, "Invalid CUDA object access.");
         return 0;
     }
 }
@@ -2074,14 +2074,14 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
 
     if (!name_node || name_node->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Complex variable names are not allowed.");
+        cuda_compiler_error_ex(context, "Complex variable names are not allowed.");
         return 0;
     }
 
     zend_ast_zval *var_name_node = (zend_ast_zval *)name_node;
     if (Z_TYPE(var_name_node->val) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Variable name must be a string.");
+        cuda_compiler_error_ex(context, "Variable name must be a string.");
         return 0;
     }
 
@@ -2149,9 +2149,9 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
         return 1;
     }
 
-    php_error_docref(NULL, E_ERROR,
-                     "Undefined variable '$%s'. Variable must be a parameter or previously defined.",
-                     name_c);
+    cuda_compiler_error_ex(context,
+                           "Undefined variable '$%s'. Variable must be a parameter or previously defined.",
+                           name_c);
     return 0;
 }
 
@@ -2192,8 +2192,8 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
             if (rvalue_type == DTYPE_UNKNOWN)
             {
                 smart_string_free(&rvalue_buffer);
-                php_error_docref(NULL, E_ERROR,
-                                 "Cannot infer type for new variable '$%s'.", name_c);
+                cuda_compiler_error_ex(context,
+                                       "Cannot infer type for new variable '$%s'.", name_c);
                 return 0;
             }
 
@@ -2221,11 +2221,11 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
             {
 
                 smart_string_free(&rvalue_buffer);
-                php_error_docref(NULL, E_ERROR,
-                                 "Type mismatch for '$%s'. Expected %s, got %s.",
-                                 name_c,
-                                 get_cuda_type_str(lvalue_type, lvalue_second_type),
-                                 get_cuda_type_str(rvalue_type, rvalue_second_type));
+                cuda_compiler_error_ex(context,
+                                       "Type mismatch for '$%s'. Expected %s, got %s.",
+                                       name_c,
+                                       get_cuda_type_str(lvalue_type, lvalue_second_type),
+                                       get_cuda_type_str(rvalue_type, rvalue_second_type));
                 return 0;
             }
 
@@ -2243,7 +2243,7 @@ static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast
     else
     {
         smart_string_free(&rvalue_buffer);
-        php_error_docref(NULL, E_ERROR, "Invalid assignment target.");
+        cuda_compiler_error_ex(context, "Invalid assignment target.");
         return 0;
     }
 
@@ -2259,7 +2259,7 @@ static int handler_ast_assign_op(cuda_compilation_context_t *context, zend_ast *
     const char *op_symbol = get_assign_op_symbol(ast->attr);
     if (!op_symbol)
     {
-        php_error_docref(NULL, E_ERROR, "Assignment operator %d not supported.", ast->attr);
+        cuda_compiler_error_ex(context, "Assignment operator %d not supported.", ast->attr);
         return 0;
     }
 
@@ -2609,8 +2609,8 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
     zend_string *base_var_name = extract_base_var_name_from_ast(ast);
     if (base_var_name == NULL)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Cannot determine base variable name for array access");
+        cuda_compiler_error_ex(context,
+                               "Cannot determine base variable name for array access");
         return 0;
     }
 
@@ -2635,9 +2635,9 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
 
     if (var == NULL && param == NULL)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Undefined variable '%.*s'",
-                         (int)var_name_len, var_name_cstr);
+        cuda_compiler_error_ex(context,
+                               "Undefined variable '%.*s'",
+                               (int)var_name_len, var_name_cstr);
         return 0;
     }
 
@@ -2645,10 +2645,10 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
     {
         if (access_levels > var->array_dimensions)
         {
-            php_error_docref(NULL, E_ERROR,
-                             "Shared array '%.*s' has %d dimension(s) but accessed with %d index(es)",
-                             (int)var_name_len, var_name_cstr,
-                             var->array_dimensions, access_levels);
+            cuda_compiler_error_ex(context,
+                                   "Shared array '%.*s' has %d dimension(s) but accessed with %d index(es)",
+                                   (int)var_name_len, var_name_cstr,
+                                   var->array_dimensions, access_levels);
             return 0;
         }
     }
@@ -2695,7 +2695,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
 
     if (!zv)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid ZVAL AST node.");
+        cuda_compiler_error_ex(context, "Invalid ZVAL AST node.");
         return 0;
     }
 
@@ -2814,7 +2814,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
         }
         else
         {
-            php_error_docref(NULL, E_ERROR, "String literals too long for CUDA kernel.");
+            cuda_compiler_error_ex(context, "String literals too long for CUDA kernel.");
             return 0;
         }
         break;
@@ -2826,7 +2826,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
 
         break;
     default:
-        php_error_docref(NULL, E_ERROR, "Literal type %d is not allowed in CUDA kernel.", Z_TYPE_P(zv));
+        cuda_compiler_error_ex(context, "Literal type %d is not allowed in CUDA kernel.", Z_TYPE_P(zv));
         return 0;
     }
 
@@ -2845,14 +2845,14 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
 
     if (prop_ast->kind != ZEND_AST_ZVAL)
     {
-        php_error_docref(NULL, E_ERROR, "Property name must be literal.");
+        cuda_compiler_error_ex(context, "Property name must be literal.");
         return 0;
     }
 
     zval *prop_zv = zend_ast_get_zval(prop_ast);
     if (!prop_zv || Z_TYPE_P(prop_zv) != IS_STRING)
     {
-        php_error_docref(NULL, E_ERROR, "Invalid property name.");
+        cuda_compiler_error_ex(context, "Invalid property name.");
         return 0;
     }
 
@@ -2883,8 +2883,8 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
         }
         else
         {
-            php_error_docref(NULL, E_ERROR,
-                             "Invalid property '%s' on $cuda object.", prop_name_c);
+            cuda_compiler_error_ex(context,
+                                   "Invalid property '%s' on $cuda object.", prop_name_c);
             return 0;
         }
     }
@@ -2906,8 +2906,8 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
 
         if (!valid)
         {
-            php_error_docref(NULL, E_ERROR,
-                             "Invalid member '%s' for CUDA object.", prop_name_c);
+            cuda_compiler_error_ex(context,
+                                   "Invalid member '%s' for CUDA object.", prop_name_c);
             return 0;
         }
 
@@ -2927,15 +2927,15 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
              context->current_cuda_object == CUDA_OBJ_WARP)
     {
 
-        php_error_docref(NULL, E_ERROR,
-                         "Method call expected after %s object.",
-                         get_cuda_object_name(context->current_cuda_object));
+        cuda_compiler_error_ex(context,
+                               "Method call expected after %s object.",
+                               get_cuda_object_name(context->current_cuda_object));
         return 0;
     }
     else
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Property access not allowed in this context.");
+        cuda_compiler_error_ex(context,
+                               "Property access not allowed in this context.");
         return 0;
     }
 }
@@ -2950,7 +2950,7 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
     const char *op_symbol = get_binary_op_symbol(ast->attr);
     if (!op_symbol)
     {
-        php_error_docref(NULL, E_ERROR, "Binary operator %d not supported in CUDA.", ast->attr);
+        cuda_compiler_error_ex(context, "Binary operator %d not supported in CUDA.", ast->attr);
         return 0;
     }
 
@@ -2975,17 +2975,17 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
 
     if (right_type == LIST && left_type != LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Type mismatch Expected %s, got Array[%s].",
-                         get_cuda_type_str(left_type, DTYPE_UNKNOWN), get_cuda_type_str(right_type, right_second_type));
+        cuda_compiler_error_ex(context,
+                               "Type mismatch Expected %s, got Array[%s].",
+                               get_cuda_type_str(left_type, DTYPE_UNKNOWN), get_cuda_type_str(right_type, right_second_type));
         return 0;
     }
 
     if (left_type == LIST && right_type != LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Type mismatch Expected Array[%s], got %s.",
-                         get_cuda_type_str(right_type, DTYPE_UNKNOWN), get_cuda_type_str(left_type, left_second_type));
+        cuda_compiler_error_ex(context,
+                               "Type mismatch Expected Array[%s], got %s.",
+                               get_cuda_type_str(right_type, DTYPE_UNKNOWN), get_cuda_type_str(left_type, left_second_type));
         return 0;
     }
 
@@ -3038,7 +3038,7 @@ static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *a
     const char *op_symbol = get_unary_op_symbol(ast->attr);
     if (!op_symbol)
     {
-        php_error_docref(NULL, E_ERROR, "Unary operator %d not supported in CUDA.", ast->attr);
+        cuda_compiler_error_ex(context, "Unary operator %d not supported in CUDA.", ast->attr);
         return 0;
     }
 
@@ -3080,7 +3080,7 @@ static int handler_ast_comp_op(cuda_compilation_context_t *context, zend_ast *as
         op_symbol = " || ";
         break;
     default:
-        php_error_docref(NULL, E_ERROR, "Comparison operator not supported.");
+        cuda_compiler_error_ex(context, "Comparison operator not supported.");
         return 0;
     }
 
@@ -3122,7 +3122,7 @@ static int handler_ast_cast(cuda_compilation_context_t *context, zend_ast *ast)
         target_type = FLOAT32;
         break;
     default:
-        php_error_docref(NULL, E_ERROR, "Cast type %d not supported in CUDA.", cast_type);
+        cuda_compiler_error_ex(context, "Cast type %d not supported in CUDA.", cast_type);
         return 0;
     }
 
@@ -3174,17 +3174,17 @@ static int handler_ast_conditional(cuda_compilation_context_t *context, zend_ast
 
     if (false_type == LIST && true_type != LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Type mismatch Expected %s, got Array[%s].",
-                         get_cuda_type_str(false_type, false_second_type), get_cuda_type_str(true_type, DTYPE_UNKNOWN));
+        cuda_compiler_error_ex(context,
+                               "Type mismatch Expected %s, got Array[%s].",
+                               get_cuda_type_str(false_type, false_second_type), get_cuda_type_str(true_type, DTYPE_UNKNOWN));
         return 0;
     }
 
     if (true_type == LIST && false_type != LIST)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Type mismatch Expected Array[%s], got %s.",
-                         get_cuda_type_str(true_type, true_second_type), get_cuda_type_str(false_type, DTYPE_UNKNOWN));
+        cuda_compiler_error_ex(context,
+                               "Type mismatch Expected Array[%s], got %s.",
+                               get_cuda_type_str(true_type, true_second_type), get_cuda_type_str(false_type, DTYPE_UNKNOWN));
         return 0;
     }
 
@@ -3269,7 +3269,7 @@ static int handler_ast_break_continue(cuda_compilation_context_t *context, zend_
 {
     if (context->loop_depth <= 0)
     {
-        php_error_docref(NULL, E_ERROR, "break/continue outside of loop.");
+        cuda_compiler_error_ex(context, "break/continue outside of loop.");
         return 0;
     }
 
@@ -3296,8 +3296,8 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
 
     if (var_ast->kind != ZEND_AST_VAR && var_ast->kind != ZEND_AST_DIM)
     {
-        php_error_docref(NULL, E_ERROR,
-                         "Increment/decrement target must be a variable or array element.");
+        cuda_compiler_error_ex(context,
+                               "Increment/decrement target must be a variable or array element.");
         return 0;
     }
 
@@ -3347,56 +3347,56 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
 static int handler_ast_foreach(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "foreach loops are not supported in CUDA kernels. Use for loops instead.");
+                           "foreach loops are not supported in CUDA kernels. Use for loops instead.");
     return 0;
 }
 
 static int handler_ast_try(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "Exception handling (try/catch) is not supported in CUDA kernels.");
+                           "Exception handling (try/catch) is not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_match(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "match expressions are not supported in CUDA kernels.");
+                           "match expressions are not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_nullsafe_prop(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "Nullsafe operator (?->) is not supported in CUDA kernels.");
+                           "Nullsafe operator (?->) is not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_array(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "Array creation is not supported in CUDA kernels. Use parameters or local variables.");
+                           "Array creation is not supported in CUDA kernels. Use parameters or local variables.");
     return 0;
 }
 
 static int handler_ast_yield(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "Generators (yield) are not supported in CUDA kernels.");
+                           "Generators (yield) are not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_static_var(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "Static variables are not supported in CUDA kernels.");
+                           "Static variables are not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_global(cuda_compilation_context_t *context, zend_ast *ast)
 {
     cuda_compiler_error_ex(context,
-                        "Global variables are not supported in CUDA kernels.");
+                           "Global variables are not supported in CUDA kernels.");
     return 0;
 }
 

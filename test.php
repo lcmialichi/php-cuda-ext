@@ -263,27 +263,6 @@ class CudaAsyncVsSyncBenchmark
         );
 
         echo "\n" . str_repeat('=', 80) . "\n";
-        echo "💡 RECOMMENDATIONS\n";
-        echo str_repeat('=', 80) . "\n";
-
-        if ($avgSpeedup > 1.5) {
-            echo "✅ Significant improvement with async operations.\n";
-            echo "   Consider using async for:\n";
-            echo "   - Batch processing\n";
-            echo "   - Overlapping I/O with computation\n";
-            echo "   - Independent operations\n";
-        } elseif ($avgSpeedup > 1.1) {
-            echo "⚠️  Moderate improvement with async operations.\n";
-            echo "   Use async when:\n";
-            echo "   - Processing large batches\n";
-            echo "   - Operations are independent\n";
-        } else {
-            echo "⚠️  Minimal improvement with async operations.\n";
-            echo "   Consider:\n";
-            echo "   - Increasing batch size\n";
-            echo "   - Using larger data sizes\n";
-            echo "   - Checking GPU utilization\n";
-        }
     }
 
     private function formatNumber(int $num): string

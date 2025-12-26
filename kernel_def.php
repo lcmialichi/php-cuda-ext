@@ -11,9 +11,6 @@ function vectorAdd(
 ): void {
     /** @var \Cuda\Runtime $cuda */
 
-    foreach($a as $b => $c){
-        
-    }
     $idx = $cuda->blockIdx()->x * $cuda->blockDim()->x + $cuda->threadIdx()->x;
     if ($idx < $n) {
         $c[$idx] = $a[$idx] + $b[$idx];

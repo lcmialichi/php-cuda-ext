@@ -31,7 +31,6 @@ static char *extract_function_body_for_ast(const char *source, size_t source_len
 static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t *out_len);
 static char *compute_program_hash(cuda_compiler_object *compiler);
 
-// Cache de opções NVRTC
 static const char *g_cached_nvrtc_options[32] = {0};
 static int g_cached_option_count = 0;
 static char g_cached_target[64] = {0};
@@ -600,7 +599,7 @@ ZEND_METHOD(Compiler, kernel)
     }
 
     zend_ast_destroy(ast);
-	zend_arena_destroy(ast_arena);
+    zend_arena_destroy(ast_arena);
 
     smart_string_0(ctx->cuda_code_buffer);
 
@@ -705,6 +704,11 @@ ZEND_METHOD(Compiler, compile)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
+
+    if (target != NULL)
+    {
+        compiler->target_device = target;
+    }
 
     char *program_hash = compute_program_hash(compiler);
     zend_string *hash_zstr = zend_string_init(program_hash, strlen(program_hash), 0);

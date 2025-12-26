@@ -39,6 +39,10 @@ class Device
  */
 class CompiledModule
 {
+    public function initialize(): bool
+    {
+        return true;
+    }
 
     public function run(string $name, array $config = [], array $args): bool
     {

@@ -11,6 +11,7 @@
 #include "zend_hash.h"
 #include "zend_globals.h"
 #include "ast_cuda_compiler.h"
+#include "zend_exceptions.h"
 
 static const cuda_function_info_t cuda_functions[] = {
     {"max", "fmaxf", "fmax", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
@@ -99,6 +100,7 @@ static shared_memory_var_t *create_shared_var(const char *name, dtype_t dtype,
     return var;
 }
 
+static void cuda_compiler_error_ex(cuda_compilation_context_t *context, const char *format, ...);
 static int generate_function_signature(cuda_compilation_context_t *context);
 static int handle_not_allowed(cuda_compilation_context_t *context, zend_ast *ast);
 static int handle_ast_stmt_list(cuda_compilation_context_t *context, zend_ast *ast);
@@ -1884,6 +1886,7 @@ int compile_ast_as_valid_cuda(cuda_compilation_context_t *context, zend_ast *ast
     if (!ast)
         return 1;
 
+    context->current_line = zend_ast_get_lineno(ast);
     if (ast->kind != ZEND_AST_STMT_LIST && ast->kind != ZEND_AST_ARG_LIST &&
         ast->kind != ZEND_AST_EXPR_LIST)
     {
@@ -3343,58 +3346,88 @@ static int handler_ast_inc_dec(cuda_compilation_context_t *context, zend_ast *as
 
 static int handler_ast_foreach(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "foreach loops are not supported in CUDA kernels. Use for loops instead.");
+    cuda_compiler_error_ex(context,
+                        "foreach loops are not supported in CUDA kernels. Use for loops instead.");
     return 0;
 }
 
 static int handler_ast_try(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "Exception handling (try/catch) is not supported in CUDA kernels.");
+    cuda_compiler_error_ex(context,
+                        "Exception handling (try/catch) is not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_match(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "match expressions are not supported in CUDA kernels.");
+    cuda_compiler_error_ex(context,
+                        "match expressions are not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_nullsafe_prop(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "Nullsafe operator (?->) is not supported in CUDA kernels.");
+    cuda_compiler_error_ex(context,
+                        "Nullsafe operator (?->) is not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_array(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "Array creation is not supported in CUDA kernels. Use parameters or local variables.");
+    cuda_compiler_error_ex(context,
+                        "Array creation is not supported in CUDA kernels. Use parameters or local variables.");
     return 0;
 }
 
 static int handler_ast_yield(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "Generators (yield) are not supported in CUDA kernels.");
+    cuda_compiler_error_ex(context,
+                        "Generators (yield) are not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_static_var(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "Static variables are not supported in CUDA kernels.");
+    cuda_compiler_error_ex(context,
+                        "Static variables are not supported in CUDA kernels.");
     return 0;
 }
 
 static int handler_ast_global(cuda_compilation_context_t *context, zend_ast *ast)
 {
-    php_error_docref(NULL, E_ERROR,
-                     "Global variables are not supported in CUDA kernels.");
+    cuda_compiler_error_ex(context,
+                        "Global variables are not supported in CUDA kernels.");
     return 0;
+}
+
+static void cuda_compiler_error_ex(cuda_compilation_context_t *context, const char *format, ...)
+{
+    va_list args;
+    char *message;
+
+    va_start(args, format);
+    spprintf(&message, 0, format, args);
+    va_end(args);
+
+    zend_throw_exception_ex(zend_exception_get_default(), 0,
+                            "CUDA compilation error: %s", message);
+
+    if (context->current_line > 0)
+    {
+        zval line_zv;
+        ZVAL_LONG(&line_zv, context->current_line);
+
+        zend_object *exception = EG(exception);
+        if (exception)
+        {
+            zend_update_property(zend_exception_get_default(),
+                                 (zend_object *)exception,
+                                 "cuda_line", sizeof("cuda_line") - 1,
+                                 &line_zv);
+        }
+    }
+
+    efree(message);
 }
 
 char *generate_cuda_headers(HashTable *cuda_headers)
@@ -3461,6 +3494,7 @@ cuda_compilation_context_t *create_cuda_context(
     context->uses_shared_memory = 0;
     context->uses_static_shared_memory = 0;
     context->shared_memory_declared = 0;
+    context->current_line = 0;
 
     zend_hash_init(&context->local_variables, 8, NULL, destroy_local_variable, 0);
     zend_hash_init(&context->shared_memory_vars, 8, NULL,

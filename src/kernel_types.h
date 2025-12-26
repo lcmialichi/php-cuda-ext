@@ -102,6 +102,7 @@ typedef struct
     int uses_shared_memory;
     int uses_static_shared_memory;
     int shared_memory_declared;
+    int current_line;
 } cuda_compilation_context_t;
 
 typedef struct _cached_ptx

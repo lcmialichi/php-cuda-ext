@@ -3,10 +3,6 @@
 A native PHP extension that provides direct access to NVIDIA CUDA functionality, enabling high-performance GPU computing inside PHP applications.
 
 <div align="center">
-  <img src="https://i.imgur.com/EqIDkTp.gif" width="300px" height="170px" alt="GIF demonstrativo">
-</div>
-
-<div align="center">
   <img src="https://img.shields.io/badge/PHP-8.0+-purple?logo=php">
   <img src="https://img.shields.io/badge/CUDA-11.0%2B-76B900?logo=nvidia">  
   <img src="https://img.shields.io/badge/License-MIT-blue">

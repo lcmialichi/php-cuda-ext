@@ -310,7 +310,7 @@ static zend_bool module_validate_tensor_access(tensor_t *tensor, int total_threa
 static zend_bool module_initialize_global_cuda(void)
 {
     pthread_mutex_lock(&g_cuda_global_init_mutex);
-    
+
     if (!g_cuda_initialized)
     {
         CUresult cu_result = cuInit(0);
@@ -319,17 +319,17 @@ static zend_bool module_initialize_global_cuda(void)
             pthread_mutex_unlock(&g_cuda_global_init_mutex);
             return 0;
         }
-        
+
         cu_result = cuDeviceGet(&g_primary_device, 0);
         if (cu_result != CUDA_SUCCESS)
         {
             pthread_mutex_unlock(&g_cuda_global_init_mutex);
             return 0;
         }
-        
+
         g_cuda_initialized = 1;
     }
-    
+
     pthread_mutex_unlock(&g_cuda_global_init_mutex);
     return 1;
 }
@@ -459,7 +459,7 @@ static CUmodule module_get_or_load_module(cuda_module_object *module, zend_strin
 
     CUresult cu_result;
     CUmodule cu_module = NULL;
-    
+
     cu_result = cuModuleLoadDataEx(&cu_module, module->ptx_code, 0, NULL, NULL);
     if (cu_result != CUDA_SUCCESS)
     {
@@ -472,7 +472,7 @@ static CUmodule module_get_or_load_module(cuda_module_object *module, zend_strin
 
     CUmodule *module_ptr = (CUmodule *)emalloc(sizeof(CUmodule));
     *module_ptr = cu_module;
-    
+
     if (zend_hash_add_ptr(module->loaded_modules, kernel_name, module_ptr) == NULL)
     {
         efree(module_ptr);
@@ -489,11 +489,11 @@ static CUmodule module_get_or_load_module(cuda_module_object *module, zend_strin
 static void module_initialize_stream_pool(cuda_module_object *module)
 {
     pthread_mutex_lock(&module->stream_pool_mutex);
-    
+
     module->stream_pool_capacity = INITIAL_STREAM_POOL_SIZE;
     module->stream_pool_size = 0;
     module->stream_pool = (CUstream *)ecalloc(module->stream_pool_capacity, sizeof(CUstream));
-    
+
     for (int i = 0; i < INITIAL_STREAM_POOL_SIZE; i++)
     {
         CUresult cu_result = cuStreamCreate(&module->stream_pool[i], CU_STREAM_NON_BLOCKING);
@@ -508,14 +508,14 @@ static void module_initialize_stream_pool(cuda_module_object *module)
             module->stream_pool_size++;
         }
     }
-    
+
     pthread_mutex_unlock(&module->stream_pool_mutex);
 }
 
 static void module_destroy_stream_pool(cuda_module_object *module)
 {
     pthread_mutex_lock(&module->stream_pool_mutex);
-    
+
     for (int i = 0; i < module->stream_pool_size; i++)
     {
         if (module->stream_pool[i])
@@ -528,12 +528,12 @@ static void module_destroy_stream_pool(cuda_module_object *module)
             }
         }
     }
-    
+
     efree(module->stream_pool);
     module->stream_pool = NULL;
     module->stream_pool_size = 0;
     module->stream_pool_capacity = 0;
-    
+
     pthread_mutex_unlock(&module->stream_pool_mutex);
 }
 
@@ -665,35 +665,36 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
     {
         if (op && op->is_active)
         {
-            double elapsed = current_time - op->start_time;
-            if (elapsed > ASYNC_OP_TIMEOUT_MS)
+            CUresult result = cuStreamQuery(op->stream);
+            if (result == CUDA_SUCCESS)
             {
-                module_log_error("Async operation %d (kernel '%s') timeout after %.2f ms",
-                                 op->id,
-                                 op->kernel_name ? ZSTR_VAL(op->kernel_name) : "unknown",
-                                 elapsed);
+                op->is_active = 0;
+                continue;
+            }
+        }
 
-                CUresult result = cuStreamQuery(op->stream);
-                if (result == CUDA_SUCCESS)
+        if (!op || op->is_active == 0)
+        {
+            continue;
+        }
+
+        double elapsed = current_time - op->start_time;
+        if (elapsed > ASYNC_OP_TIMEOUT_MS)
+        {
+            CUresult result = cuStreamQuery(op->stream);
+            if (result == CUDA_ERROR_NOT_READY)
+            {
+                result = cuStreamSynchronize(op->stream);
+                if (result != CUDA_SUCCESS)
                 {
-                    module_log_error("Operation %d actually completed, just not marked as inactive", op->id);
+                    module_log_error("Failed to synchronize stream after timeout: %s",
+                                     module_get_cuda_error_string(result));
+                }
+                else
+                {
                     op->is_active = 0;
+                    module_log_error("Operation %d synchronized after timeout", op->id);
                 }
-                else if (result == CUDA_ERROR_NOT_READY)
-                {
-                    result = cuStreamSynchronize(op->stream);
-                    if (result != CUDA_SUCCESS)
-                    {
-                        module_log_error("Failed to synchronize stream after timeout: %s",
-                                         module_get_cuda_error_string(result));
-                    }
-                    else
-                    {
-                        op->is_active = 0;
-                        module_log_error("Operation %d synchronized after timeout", op->id);
-                    }
-                }
-
             }
         }
     }
@@ -1078,23 +1079,23 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
 ZEND_METHOD(CompiledModule, initialize)
 {
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
-    
+
     if (!module->ptx_code || module->ptx_size == 0)
     {
         zend_throw_exception_ex(NULL, 0, "No PTX code available");
         RETURN_FALSE;
     }
-    
+
     if (!module_initialize_cuda_context(module))
     {
         RETURN_FALSE;
     }
-    
+
     if (module->kernel_functions)
     {
         zend_string *key;
         cuda_kernel_data *kernel_data;
-        
+
         ZEND_HASH_FOREACH_STR_KEY_PTR(module->kernel_functions, key, kernel_data)
         {
             if (kernel_data)
@@ -1111,7 +1112,7 @@ ZEND_METHOD(CompiledModule, initialize)
         }
         ZEND_HASH_FOREACH_END();
     }
-    
+
     RETURN_TRUE;
 }
 
@@ -1129,13 +1130,13 @@ ZEND_METHOD(CompiledModule, run)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
-    
+
     if (!module->ptx_code || module->ptx_size == 0)
     {
         zend_throw_exception_ex(NULL, 0, "No PTX code available");
         RETURN_FALSE;
     }
-    
+
     cuda_kernel_data *kernel = zend_hash_find_ptr(module->kernel_functions, kernel_name);
     if (!kernel)
     {
@@ -1280,13 +1281,13 @@ ZEND_METHOD(CompiledModule, runAsync)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
-    
+
     if (!module->ptx_code || module->ptx_size == 0)
     {
         zend_throw_exception_ex(NULL, 0, "No PTX code available");
         RETURN_FALSE;
     }
-    
+
     if (!module_initialize_cuda_context(module))
     {
         RETURN_FALSE;
@@ -2012,10 +2013,10 @@ ZEND_METHOD(CompiledModule, __unserialize)
     module->cu_context = NULL;
     module->cu_stream = NULL;
     module->cu_device = 0;
-    
+
     ALLOC_HASHTABLE(module->loaded_modules);
     zend_hash_init(module->loaded_modules, 8, NULL, NULL, 0);
-    
+
     module->has_pending_operations = 0;
 
     ALLOC_HASHTABLE(module->async_operations);
@@ -2026,7 +2027,7 @@ ZEND_METHOD(CompiledModule, __unserialize)
     module->stream_pool_size = 0;
     module->stream_pool = NULL;
     pthread_mutex_init(&module->stream_pool_mutex, NULL);
-    
+
     module->total_memory_allocated = 0;
     module->peak_memory_usage = 0;
     module->kernel_execution_count = 0;
@@ -2342,10 +2343,10 @@ static zend_object *module_create_object(zend_class_entry *class_type)
     module->cu_device = 0;
     module->cu_context = NULL;
     module->cu_stream = NULL;
-    
+
     ALLOC_HASHTABLE(module->loaded_modules);
     zend_hash_init(module->loaded_modules, 8, NULL, NULL, 0);
-    
+
     module->from_serialize = 0;
 
     module->has_pending_operations = 0;

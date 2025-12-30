@@ -26,6 +26,10 @@ class Runtime
     {
     }
 
+    public function globalIdx(): int
+    {
+        return 0;
+    }
     public function __declare_shared(mixed &$var, string $type, int|array $size = 1): void
     {
     }

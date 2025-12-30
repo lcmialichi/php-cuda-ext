@@ -114,6 +114,8 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_return(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_unary_minus_op(cuda_compilation_context_t *context, zend_ast *ast);
+static int handler_ast_unary_plus_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_assign(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_comp_op(cuda_compilation_context_t *context, zend_ast *ast);
 static int handler_ast_list_container(cuda_compilation_context_t *context, zend_ast *ast);
@@ -355,8 +357,8 @@ php_ast_handler php_ast_handlers[] = {
     {ZEND_AST_VAR, handler_ast_var},
     {ZEND_AST_CONST, handler_ast_allowed_simple},
     {ZEND_AST_UNPACK, handle_not_allowed},
-    {ZEND_AST_UNARY_PLUS, handler_ast_unary_op},
-    {ZEND_AST_UNARY_MINUS, handler_ast_unary_op},
+    {ZEND_AST_UNARY_PLUS, handler_ast_unary_plus_op},
+    {ZEND_AST_UNARY_MINUS, handler_ast_unary_minus_op},
     {ZEND_AST_CAST, handler_ast_cast},
     {ZEND_AST_EMPTY, handle_not_allowed},
     {ZEND_AST_ISSET, handle_not_allowed},
@@ -1401,8 +1403,21 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
         smart_string_appends(context->cuda_code_buffer, "gridDim");
         context->last_evaluated_first_dtype = LIST;
         context->last_evaluated_second_dtype = INT32;
-
         context->current_cuda_object = CUDA_OBJ_GRIDDIM;
+        return 1;
+    }
+    else if (strcmp(method_name, "globalIdx") == 0)
+    {
+        if (args_ast && zend_ast_get_num_children(args_ast) > 0)
+        {
+            php_error_docref(NULL, E_WARNING,
+                             "$cuda->globalIdx() doesn't take arguments");
+        }
+
+        context->current_cuda_object = CUDA_OBJ_NONE;
+        smart_string_appends(context->cuda_code_buffer, "blockIdx.x * blockDim.x + threadIdx.x");
+        context->last_evaluated_first_dtype = INT32;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         return 1;
     }
     else if (strcmp(method_name, "__declare_shared") == 0)
@@ -2060,6 +2075,7 @@ static int handle_ast_stmt_list(cuda_compilation_context_t *context, zend_ast *a
         {
             return 0;
         }
+
         if (needs_semicolon(stmt))
         {
             smart_string_appends(context->cuda_code_buffer, ";\n");
@@ -2091,41 +2107,6 @@ static int handler_ast_var(cuda_compilation_context_t *context, zend_ast *ast)
     if (strcmp(name_c, "cuda") == 0)
     {
         context->current_cuda_object = CUDA_OBJ_CUDA;
-        return 1;
-    }
-    if (strcmp(name_c, "threadIdx") == 0)
-    {
-        context->current_cuda_object = CUDA_OBJ_THREADIDX;
-        smart_string_appends(context->cuda_code_buffer, "threadIdx");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-        return 1;
-    }
-
-    if (strcmp(name_c, "blockIdx") == 0)
-    {
-        context->current_cuda_object = CUDA_OBJ_BLOCKIDX;
-        smart_string_appends(context->cuda_code_buffer, "blockIdx");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-        return 1;
-    }
-
-    if (strcmp(name_c, "blockDim") == 0)
-    {
-        context->current_cuda_object = CUDA_OBJ_BLOCKDIM;
-        smart_string_appends(context->cuda_code_buffer, "blockDim");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
-        return 1;
-    }
-
-    if (strcmp(name_c, "gridDim") == 0)
-    {
-        context->current_cuda_object = CUDA_OBJ_GRIDDIM;
-        smart_string_appends(context->cuda_code_buffer, "gridDim");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
         return 1;
     }
 
@@ -3030,6 +3011,7 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
 
 static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *ast)
 {
+
     if (ast->attr == ZEND_NOP)
     {
         return compile_ast_as_valid_cuda(context, ast->child[0]);
@@ -3058,6 +3040,31 @@ static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *a
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
+    return 1;
+}
+
+static int handler_ast_unary_minus_op(cuda_compilation_context_t *context, zend_ast *ast)
+{
+    smart_string_appends(context->cuda_code_buffer, "(-");
+    if (!compile_ast_as_valid_cuda(context, ast->child[0]))
+    {
+        return 0;
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, ')');
+    return 1;
+}
+
+static int handler_ast_unary_plus_op(cuda_compilation_context_t *context, zend_ast *ast)
+{
+
+    smart_string_appends(context->cuda_code_buffer, "(+");
+    if (!compile_ast_as_valid_cuda(context, ast->child[0]))
+    {
+        return 0;
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, ')');
     return 1;
 }
 

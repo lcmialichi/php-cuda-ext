@@ -245,7 +245,8 @@ $x->prod(axis: null); // Computes the product of all elements along the axis.
 ## Run Benchmark
 You can run benchmark script to see real execution time
 ```bash
-php benchmark.php
+php benchmarks/cuda_array.php
+php benchmarks/kernels.php
 ```
 
 ## Use Cases

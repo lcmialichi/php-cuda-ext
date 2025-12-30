@@ -175,6 +175,20 @@ typedef struct _cuda_async_operation
     struct _cuda_async_operation *prev;
 } cuda_async_operation;
 
+typedef struct {
+    CUstream stream;
+    zend_bool in_use;
+    double last_used;
+} pooled_stream_t;
+
+typedef struct {
+    int actives;
+    pooled_stream_t *streams;
+    int size;
+    int capacity;
+    pthread_mutex_t mutex;
+} stream_pool_t;
+
 typedef struct _cuda_module_object
 {
     zend_object std;
@@ -198,7 +212,7 @@ typedef struct _cuda_module_object
     int kernel_execution_count;
     double total_execution_time_ms;
 
-    CUstream *stream_pool;
+    stream_pool_t *stream_pool;
     int stream_pool_size;
     int stream_pool_capacity;
     pthread_mutex_t stream_pool_mutex;

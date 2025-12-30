@@ -586,15 +586,26 @@ ZEND_METHOD(CudaArray, toArray)
             if (dim == t->ndims - 1)
             {
                 zval val;
+
                 if (dtype == FLOAT32)
                 {
                     float *float_data = (float *)data;
-                    ZVAL_DOUBLE(&val, float_data[child_offset]);
+                    ZVAL_DOUBLE(&val, (double)float_data[child_offset]);
+                }
+                else if (dtype == FLOAT64)
+                {
+                    double *double_data = (double *)data;
+                    ZVAL_DOUBLE(&val, double_data[child_offset]);
                 }
                 else if (dtype == INT32)
                 {
-                    int *int_data = (int *)data;
-                    ZVAL_LONG(&val, int_data[child_offset]);
+                    int32_t *int_data = (int32_t *)data;
+                    ZVAL_LONG(&val, (zend_long)int_data[child_offset]);
+                }
+                else if (dtype == INT64)
+                {
+                    int64_t *int64_data = (int64_t *)data;
+                    ZVAL_LONG(&val, (zend_long)int64_data[child_offset]);
                 }
 
                 zend_hash_index_update(Z_ARRVAL_P(result), i, &val);

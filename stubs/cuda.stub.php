@@ -141,6 +141,10 @@ class CudaArray implements \ArrayAccess
     {
     }
 
+    public function getNdims(): int
+    {
+    }
+
     public function __invoke(int|null|array ...$slices): CudaArray
     {
     }

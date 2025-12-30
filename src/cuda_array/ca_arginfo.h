@@ -46,6 +46,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_getShape, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_getNdims, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_getStrides, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -129,6 +132,8 @@ static zend_function_entry cuda_array_methods[] = {
 
     ZEND_ME(CudaArray, getShape, arginfo_cuda_array_getShape, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, getStrides, arginfo_cuda_array_getStrides, ZEND_ACC_PUBLIC)
+    ZEND_ME(CudaArray, getNdims, arginfo_cuda_array_getNdims, ZEND_ACC_PUBLIC)
+
     ZEND_ME(CudaArray, toArray, arginfo_cuda_array_toArray, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, reshape, arginfo_cuda_array_reshape, ZEND_ACC_PUBLIC)
     ZEND_ME(CudaArray, flatten, arginfo_cuda_array_reshape, ZEND_ACC_PUBLIC)

@@ -190,6 +190,7 @@ $ca->neg();
 $ca->toArray();     // Transfer tensor to CPU as nested PHP array
 $ca->getShape();    // Returns shape (array of ints)
 $ca->getStrides();  // Returns memory strides (array of ints)
+$ca->getNdims();    // Returns ndim (int)
 ```
 
 ### New Instance

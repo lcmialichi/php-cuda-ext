@@ -500,6 +500,18 @@ ZEND_METHOD(CudaArray, getStrides)
     }
 }
 
+ZEND_METHOD(CudaArray, getNdims)
+{
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *t = obj->tensor_handle;
+    if (!t->ndims)
+    {
+        RETURN_NULL();
+    }
+    
+    RETURN_LONG(t->ndims);
+}
+
 ZEND_METHOD(CudaArray, concat)
 {
     zval *this_ptr = ZEND_THIS;

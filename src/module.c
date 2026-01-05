@@ -542,6 +542,59 @@ static CUstream module_get_stream_from_pool(cuda_module_object *module)
     return stream;
 }
 
+static void free_parameter_list(func_parameter_list_t *params)
+{
+    if (!params)
+        return;
+
+    if (params->parameters)
+    {
+        for (int i = 0; i < params->total; i++)
+        {
+            func_parameter *param = params->parameters[i];
+
+            if (param)
+            {
+                efree(param);
+                params->parameters[i] = NULL;
+            }
+        }
+
+        efree(params->parameters);
+    }
+
+    efree(params);
+}
+
+static void free_kernel_data(cuda_kernel_data *kernel)
+{
+    if (!kernel)
+        return;
+
+    if (kernel->name)
+    {
+        zend_string_release(kernel->name);
+    }
+
+    if (kernel->parameters)
+    {
+        free_parameter_list(kernel->parameters);
+    }
+
+    if (kernel->cuda_code)
+    {
+        efree(kernel->cuda_code);
+    }
+
+    if (kernel->used_devices)
+    {
+        zend_hash_destroy(kernel->used_devices);
+        efree(kernel->used_devices);
+    }
+
+    efree(kernel);
+}
+
 static void module_return_stream_to_pool(cuda_module_object *module, CUstream stream)
 {
     if (!stream || !module->stream_pool)
@@ -1278,7 +1331,10 @@ ZEND_METHOD(CompiledModule, run)
     if (!args_prepared)
     {
         if (args)
+        {
             efree(args);
+        }
+
         RETURN_FALSE;
     }
 
@@ -1377,7 +1433,9 @@ ZEND_METHOD(CompiledModule, runAsync)
                                 ZSTR_VAL(kernel_name),
                                 expected_args, argc);
         if (args)
+        {
             efree(args);
+        }
         RETURN_FALSE;
     }
 
@@ -1389,7 +1447,10 @@ ZEND_METHOD(CompiledModule, runAsync)
         zend_throw_exception_ex(NULL, 0,
                                 "Kernel too small for async execution. Use run() instead.");
         if (args)
+        {
             efree(args);
+        }
+
         RETURN_FALSE;
     }
 
@@ -1790,23 +1851,20 @@ ZEND_METHOD(CompiledModule, save)
 ZEND_METHOD(CompiledModule, __serialize)
 {
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
-
     array_init(return_value);
 
     if (module->ptx_code && module->ptx_size > 0)
     {
-        zend_string *b64_zstr = php_base64_encode(
-            (unsigned char *)module->ptx_code,
-            module->ptx_size);
-
-        if (!b64_zstr)
+        zend_string *b64_zstr = php_base64_encode((unsigned char *)module->ptx_code, module->ptx_size);
+        if (b64_zstr)
         {
-            zend_throw_exception_ex(NULL, 0, "Failed to encode PTX to base64");
-            return;
+            add_assoc_str(return_value, "ptx_b64", b64_zstr);
+            add_assoc_long(return_value, "ptx_size", module->ptx_size);
         }
-
-        add_assoc_str(return_value, "ptx_b64", b64_zstr);
-        add_assoc_long(return_value, "ptx_size", module->ptx_size);
+        else
+        {
+            add_assoc_null(return_value, "ptx_b64");
+        }
     }
     else
     {
@@ -1821,37 +1879,45 @@ ZEND_METHOD(CompiledModule, __serialize)
 
     ZEND_HASH_FOREACH_STR_KEY_PTR(module->kernel_functions, key, kernel_data)
     {
-        if (kernel_data)
+        if (!kernel_data || !key)
         {
-            zval kernel_zv;
-            array_init(&kernel_zv);
+            continue;
+        }
 
-            add_assoc_string(&kernel_zv, "name", ZSTR_VAL(kernel_data->name));
+        zval kernel_zv;
+        array_init(&kernel_zv);
 
-            if (kernel_data->parameters)
+        add_assoc_str(&kernel_zv, "name", zend_string_copy(kernel_data->name));
+
+        if (kernel_data->parameters && kernel_data->parameters->parameters)
+        {
+            zval params_zv;
+            array_init(&params_zv);
+
+            int total = kernel_data->parameters->total;
+            for (int i = 0; i < kernel_data->parameters->total; i++)
             {
-                zval params_zv;
-                array_init(&params_zv);
-
-                for (int i = 0; i < kernel_data->parameters->total; i++)
+                func_parameter *param = kernel_data->parameters->parameters[i];
+                if (!param)
                 {
-                    func_parameter *param = kernel_data->parameters->parameters[i];
-                    zval param_zv;
-                    array_init(&param_zv);
-
-                    add_assoc_string(&param_zv, "name", param->name);
-                    add_assoc_long(&param_zv, "type", param->type);
-                    add_assoc_long(&param_zv, "dtype", param->dtype);
-                    add_assoc_long(&param_zv, "second_dtype", param->second_dtype);
-
-                    add_next_index_zval(&params_zv, &param_zv);
+                    continue;
                 }
 
-                add_assoc_zval(&kernel_zv, "parameters", &params_zv);
+                zval param_zv;
+                array_init(&param_zv);
+
+                add_assoc_string(&param_zv, "name", param->name);
+                add_assoc_long(&param_zv, "type", (zend_long)param->type);
+                add_assoc_long(&param_zv, "dtype", (zend_long)param->dtype);
+                add_assoc_long(&param_zv, "second_dtype", (zend_long)param->second_dtype);
+
+                add_next_index_zval(&params_zv, &param_zv);
             }
 
-            add_assoc_zval(&kernels_zv, ZSTR_VAL(key), &kernel_zv);
+            add_assoc_zval(&kernel_zv, "parameters", &params_zv);
         }
+
+        zend_hash_update(Z_ARRVAL(kernels_zv), key, &kernel_zv);
     }
     ZEND_HASH_FOREACH_END();
 
@@ -1875,28 +1941,10 @@ ZEND_METHOD(CompiledModule, __unserialize)
 
     if (module->kernel_functions)
     {
-        zend_string *key;
-        cuda_kernel_data *kernel_data;
-
-        ZEND_HASH_FOREACH_STR_KEY_PTR(module->kernel_functions, key, kernel_data)
+        cuda_kernel_data *kernel;
+        ZEND_HASH_FOREACH_PTR(module->kernel_functions, kernel)
         {
-            if (kernel_data)
-            {
-                if (kernel_data->name)
-                {
-                    zend_string_release(kernel_data->name);
-                }
-                if (kernel_data->parameters)
-                {
-                    for (int i = 0; i < kernel_data->parameters->total; i++)
-                    {
-                        efree(kernel_data->parameters->parameters[i]);
-                    }
-                    efree(kernel_data->parameters->parameters);
-                    efree(kernel_data->parameters);
-                }
-                efree(kernel_data);
-            }
+            free_kernel_data(kernel);
         }
         ZEND_HASH_FOREACH_END();
 
@@ -1945,9 +1993,7 @@ ZEND_METHOD(CompiledModule, __unserialize)
         {
             if (Z_TYPE_P(kernel_zv) == IS_ARRAY)
             {
-                cuda_kernel_data *kernel_data = (cuda_kernel_data *)emalloc(sizeof(cuda_kernel_data));
-                memset(kernel_data, 0, sizeof(cuda_kernel_data));
-
+                cuda_kernel_data *kernel_data = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
                 zval *name_zv = zend_hash_str_find(Z_ARR_P(kernel_zv), "name", sizeof("name") - 1);
                 if (name_zv && Z_TYPE_P(name_zv) == IS_STRING)
                 {
@@ -1960,13 +2006,12 @@ ZEND_METHOD(CompiledModule, __unserialize)
                     int param_count = zend_hash_num_elements(Z_ARR_P(params_zv));
                     kernel_data->parameters = (func_parameter_list_t *)emalloc(sizeof(func_parameter_list_t));
                     kernel_data->parameters->total = param_count;
-                    kernel_data->parameters->parameters = (func_parameter **)emalloc(sizeof(func_parameter *) * param_count);
+                    kernel_data->parameters->parameters = (func_parameter **)ecalloc(param_count, sizeof(func_parameter *));
 
-                    int i = 0;
-                    zval *param_zv;
-                    ZEND_HASH_FOREACH_VAL(Z_ARR_P(params_zv), param_zv)
+                    for (int i = 0; i < param_count; i++)
                     {
-                        if (Z_TYPE_P(param_zv) == IS_ARRAY)
+                        zval *param_zv = zend_hash_index_find(Z_ARR_P(params_zv), i);
+                        if (param_zv && Z_TYPE_P(param_zv) == IS_ARRAY)
                         {
                             kernel_data->parameters->parameters[i] = (func_parameter *)emalloc(sizeof(func_parameter));
                             memset(kernel_data->parameters->parameters[i], 0, sizeof(func_parameter));
@@ -1989,10 +2034,8 @@ ZEND_METHOD(CompiledModule, __unserialize)
                                 kernel_data->parameters->parameters[i]->dtype = zval_get_long(param_dtype);
                             if (param_second_dtype)
                                 kernel_data->parameters->parameters[i]->second_dtype = zval_get_long(param_second_dtype);
-                            i++;
                         }
                     }
-                    ZEND_HASH_FOREACH_END();
                 }
                 else
                 {
@@ -2255,7 +2298,6 @@ ZEND_METHOD(CompiledModule, cleanup)
 static void module_free_object(zend_object *object)
 {
     cuda_module_object *module = Z_CUDA_MODULE_FROM_OBJ(object);
-
     if (module->async_operations)
     {
         module_cleanup_all_async_operations(module);
@@ -2265,7 +2307,6 @@ static void module_free_object(zend_object *object)
     }
 
     module_destroy_stream_pool(module);
-
     module_cleanup_cuda_resources(module);
 
     if (module->ptx_code)
@@ -2276,28 +2317,10 @@ static void module_free_object(zend_object *object)
 
     if (module->kernel_functions)
     {
-        zend_string *key;
-        cuda_kernel_data *kernel_data;
-
-        ZEND_HASH_FOREACH_STR_KEY_PTR(module->kernel_functions, key, kernel_data)
+        cuda_kernel_data *kernel;
+        ZEND_HASH_FOREACH_PTR(module->kernel_functions, kernel)
         {
-            if (kernel_data)
-            {
-                if (kernel_data->name)
-                {
-                    zend_string_release(kernel_data->name);
-                }
-                if (kernel_data->parameters)
-                {
-                    for (int i = 0; i < kernel_data->parameters->total; i++)
-                    {
-                        efree(kernel_data->parameters->parameters[i]);
-                    }
-                    efree(kernel_data->parameters->parameters);
-                    efree(kernel_data->parameters);
-                }
-                efree(kernel_data);
-            }
+            free_kernel_data(kernel);
         }
         ZEND_HASH_FOREACH_END();
 

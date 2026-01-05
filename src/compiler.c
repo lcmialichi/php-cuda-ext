@@ -29,7 +29,13 @@ static char *extract_function_body_for_ast(const char *source, size_t source_len
                                            uint32_t start_line, uint32_t end_line,
                                            size_t *out_len);
 static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t *out_len);
+static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src);
 static char *compute_program_hash(cuda_compiler_object *compiler);
+
+static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src);
+
+static void free_parameter_list(func_parameter_list_t *params);
+static void free_kernel_data(cuda_kernel_data *kernel);
 
 static const char *g_cached_nvrtc_options[32] = {0};
 static int g_cached_option_count = 0;
@@ -366,7 +372,6 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
 static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char ***options_out)
 {
     const char *current_target = compiler->target_device ? compiler->target_device : "sm_60";
-
     if (g_cached_option_count > 0 &&
         strcmp(g_cached_target, current_target) == 0 &&
         g_cached_opt_level == compiler->optimization_level &&
@@ -466,6 +471,122 @@ static nvrtcResult compile_with_nvrtc(const char *cuda_program, size_t program_l
     return result;
 }
 
+static void free_parameter_list(func_parameter_list_t *params)
+{
+    if (!params)
+        return;
+
+    if (params->total < 0 || params->total > 1000)
+    {
+        efree(params);
+        return;
+    }
+
+    if (params->parameters)
+    {
+        for (int i = 0; i < params->total; i++)
+        {
+            func_parameter *param = params->parameters[i];
+            if (param)
+            {
+                efree(param);
+                params->parameters[i] = NULL;
+            }
+        }
+
+        efree(params->parameters);
+        params->parameters = NULL;
+    }
+
+    efree(params);
+}
+
+static void free_kernel_data(cuda_kernel_data *kernel)
+{
+    if (!kernel){
+        return;
+    }
+
+    if (kernel->name)
+    {
+        zend_string_release(kernel->name);
+        kernel->name = NULL;
+    }
+
+    if (kernel->parameters != NULL)
+    {
+        free_parameter_list(kernel->parameters);
+        kernel->parameters = NULL;
+    }
+
+    if (kernel->cuda_code)
+    {
+        efree(kernel->cuda_code);
+        kernel->cuda_code = NULL;
+    }
+
+    if (kernel->used_devices)
+    {
+        zend_hash_destroy(kernel->used_devices);
+        efree(kernel->used_devices);
+        kernel->used_devices = NULL;
+    }
+
+    efree(kernel);
+}
+
+static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src)
+{
+    if (!src)
+        return NULL;
+
+    cuda_kernel_data *dst = ecalloc(1, sizeof(cuda_kernel_data));
+    dst->target = NULL;
+    dst->used_devices = NULL;
+
+    if (src->name)
+    {
+        dst->name = zend_string_copy(src->name);
+    }
+
+    if (src->parameters)
+    {
+        dst->parameters = copy_parameter_list(src->parameters);
+    }
+
+    if (src->cuda_code)
+    {
+        dst->cuda_code = estrdup(src->cuda_code);
+    }
+
+    return dst;
+}
+
+static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src)
+{
+    if (!src) return NULL;
+
+    func_parameter_list_t *dst = ecalloc(1, sizeof(func_parameter_list_t));
+    if (src->total < 0 || src->total > 1000) {
+        return dst;
+    }
+
+    dst->total = src->total;
+
+    if (src->total > 0 && src->parameters) {
+        dst->parameters = ecalloc(src->total, sizeof(func_parameter *));
+
+        for (int i = 0; i < src->total; i++) {
+            if (src->parameters[i]) {
+                dst->parameters[i] = emalloc(sizeof(func_parameter));
+                memcpy(dst->parameters[i], src->parameters[i], sizeof(func_parameter));
+            }
+        }
+    }
+
+    return dst;
+}
+
 ZEND_METHOD(Compiler, __construct)
 {
     cuda_compiler_object *compiler;
@@ -483,9 +604,6 @@ ZEND_METHOD(Compiler, __construct)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
-
-    compiler->kernels = (HashTable *)emalloc(sizeof(HashTable));
-    zend_hash_init(compiler->kernels, 8, NULL, NULL, 0);
 
     compiler->devices = (HashTable *)emalloc(sizeof(HashTable));
     zend_hash_init(compiler->devices, 8, NULL, NULL, 0);
@@ -594,22 +712,30 @@ ZEND_METHOD(Compiler, kernel)
     {
         free_cuda_context(ctx);
         zend_string_release(source_code);
+        free_parameter_list(params);
         efree(fargs);
         return;
     }
 
     zend_ast_destroy(ast);
     zend_arena_destroy(ast_arena);
+    zend_string_release(source_code);
 
     smart_string_0(ctx->cuda_code_buffer);
 
     cuda_kernel_data *kernel = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
-    kernel->name = zend_string_copy(fargs->name);
-    kernel->fci = fci;
-    kernel->fcc = fcc;
-    kernel->source_code = source_code;
+    if (!fargs->name)
+    {
+        zend_throw_exception_ex(NULL, 0, "Kernel name is NULL");
+        efree(fargs);
+        efree(kernel);
+        return;
+    }
+
+    kernel->name = zend_string_dup(fargs->name, 0);
     kernel->parameters = params;
     kernel->used_devices = (HashTable *)emalloc(sizeof(HashTable));
+    zend_hash_init(kernel->used_devices, 4, NULL, NULL, 0);
 
     if (ctx->cuda_code_buffer && ctx->cuda_code_buffer->c)
     {
@@ -620,14 +746,10 @@ ZEND_METHOD(Compiler, kernel)
         kernel->cuda_code = estrdup("");
     }
 
-    zend_hash_init(kernel->used_devices, 4, NULL, NULL, 0);
-
-    zend_hash_add_ptr(compiler->kernels, kernel->name, kernel);
-
+    zend_hash_update_ptr(compiler->kernels, kernel->name, kernel);
     zend_hash_clean(compiler->ptx_cache);
-
     free_cuda_context(ctx);
-    zend_string_release(fargs->name);
+
     efree(fargs);
 
     RETURN_ZVAL(getThis(), 1, 0);
@@ -674,11 +796,10 @@ ZEND_METHOD(Compiler, device)
     object_init_ex(&device_zv, device_ce);
     cuda_device_object *device = Z_CUDA_DEVICE_P(&device_zv);
 
-    device->fci = fci;
-    device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
 
-    zend_hash_add_ptr(compiler->devices, zend_string_copy(fargs->name), device);
+    zend_string *key_name = zend_string_copy(device->name);
+    zend_hash_add_ptr(compiler->devices, key_name, device);
 
     zend_hash_clean(compiler->ptx_cache);
 
@@ -707,15 +828,27 @@ ZEND_METHOD(Compiler, compile)
 
     if (target != NULL)
     {
-        compiler->target_device = target;
+        if (compiler->target_device)
+        {
+            efree(compiler->target_device);
+        }
+        compiler->target_device = estrndup(target, target_len);
     }
 
     char *program_hash = compute_program_hash(compiler);
     zend_string *hash_zstr = zend_string_init(program_hash, strlen(program_hash), 0);
+    efree(program_hash);
 
     cached_ptx_t *cached = zend_hash_find_ptr(compiler->ptx_cache, hash_zstr);
     if (cached)
     {
+        if (!cached->ptx || cached->ptx_size == 0)
+        {
+            zend_string_release(hash_zstr);
+            zend_throw_exception_ex(NULL, 0, "Invalid cached PTX data");
+            RETURN_NULL();
+        }
+
         zend_string *module_class_name = zend_string_init("Cuda\\CompiledModule",
                                                           strlen("Cuda\\CompiledModule"), 0);
         zend_class_entry *module_ce = zend_lookup_class(module_class_name);
@@ -723,7 +856,6 @@ ZEND_METHOD(Compiler, compile)
 
         if (!module_ce)
         {
-            efree(program_hash);
             zend_string_release(hash_zstr);
             zend_throw_exception_ex(NULL, 0, "CompiledModule class not found");
             RETURN_NULL();
@@ -732,7 +864,6 @@ ZEND_METHOD(Compiler, compile)
         zval module_zv;
         object_init_ex(&module_zv, module_ce);
         cuda_module_object *module = Z_CUDA_MODULE_P(&module_zv);
-
         module->ptx_code = estrdup(cached->ptx);
         module->ptx_size = cached->ptx_size;
         module->kernel_functions = (HashTable *)emalloc(sizeof(HashTable));
@@ -744,16 +875,14 @@ ZEND_METHOD(Compiler, compile)
             if (!src_kernel || !src_kernel->name)
                 continue;
 
-            cuda_kernel_data *kernel_copy = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
-            kernel_copy->name = zend_string_copy(src_kernel->name);
-            kernel_copy->parameters = src_kernel->parameters;
-            kernel_copy->cuda_code = estrdup(src_kernel->cuda_code ? src_kernel->cuda_code : "");
+            cuda_kernel_data *kernel_copy = copy_kernel_data(src_kernel);
 
-            zend_hash_add_ptr(module->kernel_functions, kernel_copy->name, kernel_copy);
+            zend_string *key_copy = zend_string_copy(kernel_copy->name);
+            zend_hash_add_ptr(module->kernel_functions, key_copy, kernel_copy);
+            zend_string_release(key_copy);
         }
         ZEND_HASH_FOREACH_END();
 
-        efree(program_hash);
         zend_string_release(hash_zstr);
         RETURN_ZVAL(&module_zv, 1, 0);
     }
@@ -763,8 +892,9 @@ ZEND_METHOD(Compiler, compile)
     if (!cuda_program || program_len == 0)
     {
         if (cuda_program)
+        {
             efree(cuda_program);
-        efree(program_hash);
+        }
         zend_string_release(hash_zstr);
         zend_throw_exception_ex(NULL, 0, "Failed to build CUDA program");
         RETURN_NULL();
@@ -778,14 +908,15 @@ ZEND_METHOD(Compiler, compile)
     nvrtcResult nvrtc_result = compile_with_nvrtc(cuda_program, program_len,
                                                   options, option_count,
                                                   &ptx_code, &ptx_size);
-
     efree(cuda_program);
 
     if (nvrtc_result != NVRTC_SUCCESS)
     {
         if (ptx_code)
-            efree(ptx_code);
-        efree(program_hash);
+        {
+            free(ptx_code);
+        }
+
         zend_string_release(hash_zstr);
         zend_throw_exception_ex(NULL, 0,
                                 "NVRTC compilation failed: %s (code: %d)",
@@ -800,8 +931,7 @@ ZEND_METHOD(Compiler, compile)
 
     if (!module_ce)
     {
-        efree(ptx_code);
-        efree(program_hash);
+        free(ptx_code);
         zend_string_release(hash_zstr);
         zend_throw_exception_ex(NULL, 0, "CompiledModule class not found");
         RETURN_NULL();
@@ -811,8 +941,9 @@ ZEND_METHOD(Compiler, compile)
     object_init_ex(&module_zv, module_ce);
     cuda_module_object *module = Z_CUDA_MODULE_P(&module_zv);
 
-    module->ptx_code = ptx_code;
+    module->ptx_code = estrndup(ptx_code, ptx_size);
     module->ptx_size = ptx_size;
+
     module->kernel_functions = (HashTable *)emalloc(sizeof(HashTable));
     zend_hash_init(module->kernel_functions, 8, NULL, NULL, 0);
 
@@ -820,25 +951,25 @@ ZEND_METHOD(Compiler, compile)
     ZEND_HASH_FOREACH_PTR(compiler->kernels, src_kernel)
     {
         if (!src_kernel || !src_kernel->name)
+        {
             continue;
+        }
 
-        cuda_kernel_data *kernel_copy = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
-        kernel_copy->name = zend_string_copy(src_kernel->name);
-        kernel_copy->parameters = src_kernel->parameters;
-        kernel_copy->cuda_code = estrdup(src_kernel->cuda_code ? src_kernel->cuda_code : "");
+        cuda_kernel_data *kernel_copy = copy_kernel_data(src_kernel);
 
-        zend_hash_add_ptr(module->kernel_functions, kernel_copy->name, kernel_copy);
+        zend_string *key_copy = zend_string_copy(kernel_copy->name);
+        zend_hash_add_ptr(module->kernel_functions, key_copy, kernel_copy);
+        zend_string_release(key_copy);
     }
     ZEND_HASH_FOREACH_END();
 
     cached_ptx_t *new_cache = (cached_ptx_t *)emalloc(sizeof(cached_ptx_t));
-    new_cache->ptx = estrdup(ptx_code);
-    new_cache->ptx_size = ptx_size;
+    new_cache->ptx = estrdup(module->ptx_code);
+    new_cache->ptx_size = module->ptx_size;
     new_cache->timestamp = time(NULL);
 
-    zend_hash_add_ptr(compiler->ptx_cache, hash_zstr, new_cache);
+    zend_hash_add_ptr(compiler->ptx_cache, zend_string_copy(hash_zstr), new_cache);
 
-    efree(program_hash);
     zend_string_release(hash_zstr);
 
     RETURN_ZVAL(&module_zv, 1, 0);
@@ -920,7 +1051,10 @@ ZEND_METHOD(Compiler, getDevices)
     ZEND_HASH_FOREACH_PTR(compiler->devices, device)
     {
         if (!device)
+        {
             continue;
+        }
+
         zval device_zv;
         ZVAL_OBJ(&device_zv, &device->std);
         zend_hash_add(return_value->value.arr, device->name, &device_zv);
@@ -938,33 +1072,16 @@ static void compiler_free_object(zend_object *object)
         efree(compiler->target_device);
         compiler->target_device = NULL;
     }
-
     if (compiler->kernels)
     {
+
         cuda_kernel_data *kernel;
         ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
         {
-            if (!kernel)
-                continue;
-
-            if (kernel->target)
-                zend_string_release(kernel->target);
-
-            if (kernel->source_code)
-                zend_string_release(kernel->source_code);
-
-            if (kernel->cuda_code)
-                efree(kernel->cuda_code);
-
-            if (kernel->used_devices)
-            {
-                zend_hash_destroy(kernel->used_devices);
-                efree(kernel->used_devices);
-            }
-
-            efree(kernel);
+            free_kernel_data(kernel);
         }
         ZEND_HASH_FOREACH_END();
+
         zend_hash_destroy(compiler->kernels);
         efree(compiler->kernels);
         compiler->kernels = NULL;
@@ -972,16 +1089,6 @@ static void compiler_free_object(zend_object *object)
 
     if (compiler->devices)
     {
-        cuda_device_object *device;
-        ZEND_HASH_FOREACH_PTR(compiler->devices, device)
-        {
-            if (!device)
-                continue;
-            if (device->name)
-                zend_string_release(device->name);
-            zend_object_release(&device->std);
-        }
-        ZEND_HASH_FOREACH_END();
         zend_hash_destroy(compiler->devices);
         efree(compiler->devices);
         compiler->devices = NULL;
@@ -1028,12 +1135,13 @@ static zend_object *compiler_create_object(zend_class_entry *class_type)
     compiler->ptx_cache = (HashTable *)emalloc(sizeof(HashTable));
     zend_hash_init(compiler->ptx_cache, 8, NULL, NULL, 0);
 
+    compiler->kernels = (HashTable *)emalloc(sizeof(HashTable));
+    zend_hash_init(compiler->kernels, 8, NULL, NULL, 0);
+
     compiler->target_device = NULL;
     compiler->optimization_level = 2;
     compiler->debug_mode = 0;
     compiler->fast_math = 1;
-    compiler->kernels = NULL;
-    compiler->devices = NULL;
 
     return &compiler->std;
 }

@@ -3528,10 +3528,5 @@ void free_cuda_context(cuda_compilation_context_t *context)
     }
 
     context->headers = NULL;
-    if (context->parameters)
-    {
-        // @todo free context parameters
-    }
-
     efree(context);
 }

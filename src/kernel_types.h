@@ -129,8 +129,6 @@ typedef struct _cuda_kernel_data
 {
     zend_string *name;
     zend_string *target;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
     zend_string *source_code;
     char *cuda_code;
     HashTable *used_devices;
@@ -142,8 +140,6 @@ typedef struct _cuda_device_object
     zend_object std;
     zend_string *name;
     zend_string *target;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
 } cuda_device_object;
 
 typedef struct _cuda_async_operation

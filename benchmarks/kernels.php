@@ -5,7 +5,6 @@ use Cuda\CompiledModule;
 use Cuda\Compiler;
 use Cuda\CudaArray;
 
-
 class KernelDefs
 {
     #[Attr\Kernel(name: 'v_add')]
@@ -78,8 +77,11 @@ class KernelDefs
     }
 
     #[Attr\Kernel(name: 'v_log_sqrt')]
-    public function logSqrt(#[Attr\TensorType] array $in, #[Attr\TensorType] array &$out, #[Attr\IntType] int $n): void
-    {
+    public function logSqrt(
+        #[Attr\TensorType] array $in,
+        #[Attr\TensorType] array &$out,
+        #[Attr\IntType] int $n
+    ): void {
         /** @var \Cuda\Runtime $cuda */
         $idx = $cuda->globalIdx();
         if ($idx < $n) {
@@ -89,8 +91,11 @@ class KernelDefs
     }
 
     #[Attr\Kernel(name: 'v_trig_math')]
-    public function trigMath(#[Attr\TensorType] array $in, #[Attr\TensorType] array &$out, #[Attr\IntType] int $n): void
-    {
+    public function trigMath(
+        #[Attr\TensorType] array $in,
+        #[Attr\TensorType] array &$out,
+        #[Attr\IntType] int $n
+    ): void {
         /** @var \Cuda\Runtime $cuda */
         $idx = $cuda->globalIdx();
         if ($idx < $n) {
@@ -99,8 +104,12 @@ class KernelDefs
     }
 
     #[Attr\Kernel(name: 'matrix_multiply_tiled')]
-    public function matrixMultiplyTiled(#[Attr\TensorType] array $a, #[Attr\TensorType] array $b, #[Attr\TensorType] array &$c, #[Attr\IntType] int $n): void
-    {
+    public function matrixMultiplyTiled(
+        #[Attr\TensorType] array $a,
+        #[Attr\TensorType] array $b,
+        #[Attr\TensorType] array &$c,
+        #[Attr\IntType] int $n
+    ): void {
         /** @var \Cuda\Runtime $cuda */
         $tileDim = 16;
         $cuda->__declare_shared($sA, 'float32', 256);
@@ -201,17 +210,21 @@ $astStats = Profiler::measure(function () use ($compiler, $defs, $methods) {
     foreach ($methods as $m) {
         $compiler->kernel([$defs, $m]);
     }
-}, 1);
+});
 
 Summary::result("AST Generation (Method Registration)", $astStats);
 
 $compileStats = Profiler::measure(function () use ($compiler, &$module) {
     $module = $compiler->compile();
-}, 1);
+});
 
 Summary::result("PTX Compilation", $compileStats);
-$module->initialize();
 
+$JITStats = Profiler::measure(function () use (&$module): void {
+    $module->initialize();
+});
+
+Summary::result("JIT Module Initialization", $JITStats);
 Summary::header("PHASE 2: INTENSIVE PERFORMANCE COMPARISONS (21 TESTS)");
 
 $n = 512 * 512;

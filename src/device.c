@@ -35,8 +35,6 @@ ZEND_METHOD(Device, __construct)
         return;
     }
 
-    device->fci = fci;
-    device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
 
     zend_string_release(fargs->name);
@@ -71,8 +69,6 @@ ZEND_METHOD(Device, fn)
 
     cuda_device_object *device = Z_CUDA_DEVICE_P(&device_zv);
 
-    device->fci = fci;
-    device->fcc = fcc;
     device->name = zend_string_copy(fargs->name);
 
     zend_string_release(fargs->name);

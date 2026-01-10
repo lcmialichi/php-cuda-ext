@@ -8,6 +8,9 @@
 #include <nvrtc.h>
 #include <cuda.h>
 
+
+#define MAX_P_NAME_LEN 32
+
 typedef struct
 {
     zend_string *name;
@@ -43,7 +46,7 @@ typedef enum
 
 typedef struct
 {
-    char name[32];
+    char name[MAX_P_NAME_LEN];
     dtype_t dtype;
     dtype_t second_dtype;
     parameter_type_t type;
@@ -128,10 +131,7 @@ typedef struct _cuda_compiler_object
 typedef struct _cuda_kernel_data
 {
     zend_string *name;
-    zend_string *target;
-    zend_string *source_code;
     char *cuda_code;
-    HashTable *used_devices;
     func_parameter_list_t *parameters;
 } cuda_kernel_data;
 

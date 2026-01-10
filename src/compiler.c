@@ -503,7 +503,8 @@ static void free_parameter_list(func_parameter_list_t *params)
 
 static void free_kernel_data(cuda_kernel_data *kernel)
 {
-    if (!kernel){
+    if (!kernel)
+    {
         return;
     }
 
@@ -525,13 +526,6 @@ static void free_kernel_data(cuda_kernel_data *kernel)
         kernel->cuda_code = NULL;
     }
 
-    if (kernel->used_devices)
-    {
-        zend_hash_destroy(kernel->used_devices);
-        efree(kernel->used_devices);
-        kernel->used_devices = NULL;
-    }
-
     efree(kernel);
 }
 
@@ -541,8 +535,7 @@ static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src)
         return NULL;
 
     cuda_kernel_data *dst = ecalloc(1, sizeof(cuda_kernel_data));
-    dst->target = NULL;
-    dst->used_devices = NULL;
+    *dst = (cuda_kernel_data){0};
 
     if (src->name)
     {
@@ -552,6 +545,16 @@ static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src)
     if (src->parameters)
     {
         dst->parameters = copy_parameter_list(src->parameters);
+        if (!dst->parameters)
+        {
+            if (dst->name)
+            {
+                zend_string_release(dst->name);
+            }
+
+            efree(dst);
+            return NULL;
+        }
     }
 
     if (src->cuda_code)
@@ -564,23 +567,43 @@ static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src)
 
 static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src)
 {
-    if (!src) return NULL;
+    if (!src)
+        return NULL;
+
+    if (src->total < 0 || src->total > 1000)
+    {
+        return NULL;
+    }
 
     func_parameter_list_t *dst = ecalloc(1, sizeof(func_parameter_list_t));
-    if (src->total < 0 || src->total > 1000) {
+    dst->total = src->total;
+
+    if (src->total == 0)
+    {
+        dst->parameters = NULL;
         return dst;
     }
 
-    dst->total = src->total;
+    if (!src->parameters)
+    {
+        efree(dst);
+        return NULL;
+    }
 
-    if (src->total > 0 && src->parameters) {
-        dst->parameters = ecalloc(src->total, sizeof(func_parameter *));
+    dst->parameters = ecalloc(src->total, sizeof(func_parameter *));
 
-        for (int i = 0; i < src->total; i++) {
-            if (src->parameters[i]) {
-                dst->parameters[i] = emalloc(sizeof(func_parameter));
-                memcpy(dst->parameters[i], src->parameters[i], sizeof(func_parameter));
-            }
+    for (int i = 0; i < src->total; i++)
+    {
+        if (src->parameters[i])
+        {
+            dst->parameters[i] = ecalloc(1, sizeof(func_parameter));
+            
+            *dst->parameters[i] = *src->parameters[i];
+            dst->parameters[i]->name[MAX_P_NAME_LEN - 1] = '\0'; 
+        }
+        else
+        {
+            dst->parameters[i] = NULL;
         }
     }
 
@@ -734,9 +757,6 @@ ZEND_METHOD(Compiler, kernel)
 
     kernel->name = zend_string_dup(fargs->name, 0);
     kernel->parameters = params;
-    kernel->used_devices = (HashTable *)emalloc(sizeof(HashTable));
-    zend_hash_init(kernel->used_devices, 4, NULL, NULL, 0);
-
     if (ctx->cuda_code_buffer && ctx->cuda_code_buffer->c)
     {
         kernel->cuda_code = estrdup(ctx->cuda_code_buffer->c);
@@ -864,6 +884,7 @@ ZEND_METHOD(Compiler, compile)
         zval module_zv;
         object_init_ex(&module_zv, module_ce);
         cuda_module_object *module = Z_CUDA_MODULE_P(&module_zv);
+
         module->ptx_code = estrdup(cached->ptx);
         module->ptx_size = cached->ptx_size;
         module->kernel_functions = (HashTable *)emalloc(sizeof(HashTable));
@@ -1028,10 +1049,6 @@ ZEND_METHOD(Compiler, getKernels)
         array_init(&kernel_info);
 
         add_assoc_str(&kernel_info, "name", zend_string_copy(kernel->name));
-        if (kernel->target)
-        {
-            add_assoc_str(&kernel_info, "target", zend_string_copy(kernel->target));
-        }
         if (kernel->cuda_code)
         {
             add_assoc_stringl(&kernel_info, "cuda_code", kernel->cuda_code, strlen(kernel->cuda_code));

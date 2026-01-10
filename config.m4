@@ -65,7 +65,6 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda/memory_pool.c \
     src/cuda_array/tensor_fabric.c \
     src/operations.c \
-    src/kernel/kernel.c \
     src/cuda_attributes.c \
     src/kernel_reflection.c \
     src/compiler.c \

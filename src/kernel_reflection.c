@@ -347,18 +347,22 @@ cuda_param_info *extract_param_info(zend_attribute *attr,
 
     return info;
 }
-
 void convert_param_info_to_func_parameter(cuda_param_info *info, func_parameter *param)
 {
-    if (!info || !param)
+    memset(param, 0, sizeof(func_parameter));
+    
+    if (!info)
     {
         return;
     }
 
-    size_t name_len = ZSTR_LEN(info->name);
-    size_t copy_len = name_len < 31 ? name_len : 31;
-    memcpy(param->name, ZSTR_VAL(info->name), copy_len);
-    param->name[copy_len] = '\0';
+    if (info->name)
+    {
+        size_t name_len = ZSTR_LEN(info->name);
+        if (name_len > MAX_P_NAME_LEN - 1) name_len = MAX_P_NAME_LEN - 1;
+        memcpy(param->name, ZSTR_VAL(info->name), name_len);
+        param->name[name_len] = '\0';
+    }
 
     param->dtype = info->dtype ? map_dtype_string_to_int(info->dtype) : DTYPE_UNKNOWN;
 
@@ -381,23 +385,22 @@ void convert_param_info_to_func_parameter(cuda_param_info *info, func_parameter 
 
 void add_param_info_to_list(func_parameter_list_t *list, cuda_param_info *info)
 {
-    if (!list || !info)
-    {
-        return;
-    }
+    if (!list || !info) return;
 
-    list->total++;
-    list->parameters = (func_parameter **)erealloc(
-        list->parameters,
-        list->total * sizeof(func_parameter *));
+    func_parameter **new_params = (func_parameter **)safe_erealloc(
+        list->parameters, 
+        (list->total + 1), 
+        sizeof(func_parameter *), 
+        0
+    );
 
-    func_parameter *param = (func_parameter *)emalloc(sizeof(func_parameter));
-    memset(param, 0, sizeof(func_parameter));
-
+    list->parameters = new_params;
+    func_parameter *param = (func_parameter *)ecalloc(1, sizeof(func_parameter));
     convert_param_info_to_func_parameter(info, param);
-
-    list->parameters[list->total - 1] = param;
+    list->parameters[list->total] = param;
+    list->total++;
 }
+
 
 func_parameter_list_t *cuda_extract_parameters(zend_function *fptr)
 {
@@ -517,7 +520,6 @@ cuda_method_attribute_args *cuda_extract_method_attribute(
             zend_string_release(args->name);
             args->name = zend_string_copy(Z_STR(a->value));
         }
-
     }
 
     return args;

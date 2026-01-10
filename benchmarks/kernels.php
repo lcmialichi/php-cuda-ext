@@ -115,6 +115,11 @@ class KernelDefs
         $cuda->__declare_shared($sA, 'float32', 256);
         $cuda->__declare_shared($sB, 'float32', 256);
 
+        $idx = $cuda->globalIdx();
+        if ($idx < $n) {
+            $c[$idx] = $cuda->math->sin($a[$idx]) + $cuda->math->cos($a[$idx]);
+        }
+
         $tx = $cuda->threadIdx()->x;
         $ty = $cuda->threadIdx()->y;
         $row = $cuda->blockIdx()->y * $tileDim + $ty;
@@ -124,10 +129,10 @@ class KernelDefs
             $sA[$ty * $tileDim + $tx] = $a[$row * $n + ($m * $tileDim + $tx)];
             $sB[$ty * $tileDim + $tx] = $b[($m * $tileDim + $ty) * $n + $col];
             $cuda->sync->threads();
+
             for ($k = 0; $k < $tileDim; ++$k) {
                 $p_val += $sA[$ty * $tileDim + $k] * $sB[$k * $tileDim + $tx];
             }
-
             $cuda->sync->threads();
         }
 
@@ -219,6 +224,15 @@ $compileStats = Profiler::measure(function () use ($compiler, &$module) {
 });
 
 Summary::result("PTX Compilation", $compileStats);
+
+
+$compileStats = Profiler::measure(function () use ($module, &$serialize) {
+    $serialize = serialize($module);
+});
+
+echo $serialize;
+var_dump($compiler);
+exit;
 
 $JITStats = Profiler::measure(function () use (&$module): void {
     $module->initialize();

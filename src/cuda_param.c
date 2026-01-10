@@ -170,7 +170,7 @@ ZEND_METHOD(CudaAttr_FloatType, isList)
     RETURN_FALSE;
 }
 
-// ==================== BOOL ====================
+// ==================== DTYPE_BOOL ====================
 
 ZEND_METHOD(CudaAttr_BoolType, __construct)
 {

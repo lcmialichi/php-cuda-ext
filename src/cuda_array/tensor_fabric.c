@@ -175,11 +175,11 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
         return NULL;
 
     size_t element_size;
-    if (dtype == FLOAT32)
+    if (dtype == DTYPE_FLOAT32)
     {
         element_size = sizeof(float);
     }
-    else if (dtype == INT32)
+    else if (dtype == DTYPE_INT32)
     {
         element_size = sizeof(int);
     }
@@ -264,12 +264,12 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
 
 tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[])
 {
-    return cuda_tensor_create(shape, ndims, data, FLOAT32);
+    return cuda_tensor_create(shape, ndims, data, DTYPE_FLOAT32);
 }
 
 tensor_t *cuda_tensor_create_int(const int shape[], int ndims, const int data[])
 {
-    return cuda_tensor_create(shape, ndims, data, INT32);
+    return cuda_tensor_create(shape, ndims, data, DTYPE_INT32);
 }
 
 tensor_t *cuda_tensor_create_scalar(float value, int *shape, int ndims)

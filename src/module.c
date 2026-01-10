@@ -249,17 +249,17 @@ static const char *module_dtype_to_string(dtype_t dtype)
 {
     switch (dtype)
     {
-    case FLOAT32:
+    case DTYPE_FLOAT32:
         return "float32";
-    case FLOAT64:
+    case DTYPE_FLOAT64:
         return "float64";
-    case INT32:
+    case DTYPE_INT32:
         return "int32";
-    case INT64:
+    case DTYPE_INT64:
         return "int64";
-    case BOOL:
+    case DTYPE_BOOL:
         return "bool";
-    case LIST:
+    case DTYPE_LIST:
         return "array";
     default:
         return "unknown";
@@ -1002,7 +1002,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
         {
         case INPUT:
         case PARAMETER:
-            if (param->dtype == LIST)
+            if (param->dtype == DTYPE_LIST)
             {
                 if (Z_TYPE_P(arg) != IS_OBJECT ||
                     !instanceof_function(Z_OBJCE_P(arg), cuda_array_ce))
@@ -1042,7 +1042,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
             {
                 switch (param->dtype)
                 {
-                case INT32:
+                case DTYPE_INT32:
                 {
                     int *int_ptr = (int *)emalloc(sizeof(int));
                     *int_ptr = (int)zval_get_long(arg);
@@ -1050,7 +1050,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                     temp_gpu_buffers[temp_buffers_count++] = int_ptr;
                     break;
                 }
-                case FLOAT32:
+                case DTYPE_FLOAT32:
                 {
                     float *float_ptr = (float *)emalloc(sizeof(float));
                     *float_ptr = (float)zval_get_double(arg);
@@ -1058,7 +1058,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                     temp_gpu_buffers[temp_buffers_count++] = float_ptr;
                     break;
                 }
-                case FLOAT64:
+                case DTYPE_FLOAT64:
                 {
                     double *double_ptr = (double *)emalloc(sizeof(double));
                     *double_ptr = zval_get_double(arg);
@@ -1066,7 +1066,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                     temp_gpu_buffers[temp_buffers_count++] = double_ptr;
                     break;
                 }
-                case INT64:
+                case DTYPE_INT64:
                 {
                     zend_long *long_ptr = (zend_long *)emalloc(sizeof(zend_long));
                     *long_ptr = zval_get_long(arg);
@@ -1074,7 +1074,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                     temp_gpu_buffers[temp_buffers_count++] = long_ptr;
                     break;
                 }
-                case BOOL:
+                case DTYPE_BOOL:
                 {
                     int *bool_ptr = (int *)emalloc(sizeof(int));
                     *bool_ptr = zval_is_true(arg) ? 1 : 0;

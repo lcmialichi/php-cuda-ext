@@ -10,7 +10,6 @@
 #include "cuda_arginfo.h"
 #include "cuda_array.h"
 #include "cuda.h"
-#include "kernel.h"
 #include "cuda_attributes.h"
 #include "cuda_param.h"
 #include "device.h"
@@ -71,11 +70,6 @@ PHP_MINIT_FUNCTION(cuda)
     cuda_register_attributes();
 
     if (!cuda_array_init(pool_size))
-    {
-        return FAILURE;
-    }
-
-    if (!kernel_init())
     {
         return FAILURE;
     }

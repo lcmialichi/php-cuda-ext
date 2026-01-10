@@ -20,6 +20,7 @@ extern "C"
 
     tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type);
     tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type);
+    tensor_t *cuda_inv_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type);
     tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type);
     tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operation_type);
     tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, operation_type_t operation_type);

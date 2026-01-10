@@ -242,12 +242,12 @@ extern "C"
 
         switch (output_tensor->dtype)
         {
-        case FLOAT32:
+        case DTYPE_FLOAT32:
             concat_kernel_float<<<grid_size, block_size>>>(
                 d_params,
                 (float *)output_tensor->data);
             break;
-        case INT32:
+        case DTYPE_INT32:
             concat_kernel_int32<<<grid_size, block_size>>>(
                 d_params,
                 (int *)output_tensor->data);

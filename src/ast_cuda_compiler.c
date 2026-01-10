@@ -14,37 +14,37 @@
 #include "zend_exceptions.h"
 
 static const cuda_function_info_t cuda_functions[] = {
-    {"max", "fmaxf", "fmax", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"min", "fminf", "fmin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"exp", "expf", "exp", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"log", "logf", "log", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"sin", "sinf", "sin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"cos", "cosf", "cos", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"tan", "tanf", "tan", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"asin", "asinf", "asin", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"acos", "acosf", "acos", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"atan", "atanf", "atan", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"atan2", "atan2f", "atan2", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"sinh", "sinhf", "sinh", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"cosh", "coshf", "cosh", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"tanh", "tanhf", "tanh", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"sqrt", "sqrtf", "sqrt", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"pow", "powf", "pow", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 2, {FLOAT32, FLOAT32}, {FLOAT64, FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"abs", NULL, NULL, "abs", DTYPE_UNKNOWN, DTYPE_UNKNOWN, INT32, 1, {0}, {0}, {INT32}, "stdlib.h", FUNC_CATEGORY_MATH, 0},
-    {"fabs", "fabsf", "fabs", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"ceil", "ceilf", "ceil", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"floor", "floorf", "floor", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"round", "roundf", "round", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"trunc", "truncf", "trunc", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"exp2", "exp2f", "exp2", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"exp10", "exp10f", "exp10", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"log2", "log2f", "log2", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
-    {"log10", "log10f", "log10", NULL, FLOAT32, FLOAT64, DTYPE_UNKNOWN, 1, {FLOAT32}, {FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"max", "fmaxf", "fmax", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 2, {DTYPE_FLOAT32, DTYPE_FLOAT32}, {DTYPE_FLOAT64, DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"min", "fminf", "fmin", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 2, {DTYPE_FLOAT32, DTYPE_FLOAT32}, {DTYPE_FLOAT64, DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"exp", "expf", "exp", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"log", "logf", "log", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"sin", "sinf", "sin", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"cos", "cosf", "cos", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"tan", "tanf", "tan", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"asin", "asinf", "asin", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"acos", "acosf", "acos", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"atan", "atanf", "atan", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"atan2", "atan2f", "atan2", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 2, {DTYPE_FLOAT32, DTYPE_FLOAT32}, {DTYPE_FLOAT64, DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"sinh", "sinhf", "sinh", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"cosh", "coshf", "cosh", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"tanh", "tanhf", "tanh", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"sqrt", "sqrtf", "sqrt", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"pow", "powf", "pow", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 2, {DTYPE_FLOAT32, DTYPE_FLOAT32}, {DTYPE_FLOAT64, DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"abs", NULL, NULL, "abs", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_INT32, 1, {0}, {0}, {DTYPE_INT32}, "stdlib.h", FUNC_CATEGORY_MATH, 0},
+    {"fabs", "fabsf", "fabs", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"ceil", "ceilf", "ceil", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"floor", "floorf", "floor", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"round", "roundf", "round", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"trunc", "truncf", "trunc", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"exp2", "exp2f", "exp2", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"exp10", "exp10f", "exp10", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"log2", "log2f", "log2", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
+    {"log10", "log10f", "log10", NULL, DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_UNKNOWN, 1, {DTYPE_FLOAT32}, {DTYPE_FLOAT64}, {0}, "math_functions.h", FUNC_CATEGORY_MATH, 0},
 
-    {"threadIdx", "threadIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"blockIdx", "blockIdx.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"blockDim", "blockDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"gridDim", "gridDim.x", NULL, NULL, INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"threadIdx", "threadIdx.x", NULL, NULL, DTYPE_INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"blockIdx", "blockIdx.x", NULL, NULL, DTYPE_INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"blockDim", "blockDim.x", NULL, NULL, DTYPE_INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"gridDim", "gridDim.x", NULL, NULL, DTYPE_INT32, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
 
     {"atomicAdd", NULL, NULL, "atomicAdd", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
     {"atomicSub", NULL, NULL, "atomicSub", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
@@ -58,23 +58,23 @@ static const cuda_function_info_t cuda_functions[] = {
     {"atomicOr", NULL, NULL, "atomicOr", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
     {"atomicXor", NULL, NULL, "atomicXor", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 2, {0}, {0}, {0}, NULL, FUNC_CATEGORY_ATOMIC, 1},
 
-    {"threads", NULL, NULL, "__syncthreads", VOID, VOID, VOID, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
-    {"warp", NULL, NULL, "__syncwarp", VOID, VOID, VOID, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
-    {"threadsCount", NULL, NULL, "__syncthreads_count", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
-    {"threadsAnd", NULL, NULL, "__syncthreads_and", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
-    {"threadsOr", NULL, NULL, "__syncthreads_or", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threads", NULL, NULL, "__syncthreads", DTYPE_VOID, DTYPE_VOID, DTYPE_VOID, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"warp", NULL, NULL, "__syncwarp", DTYPE_VOID, DTYPE_VOID, DTYPE_VOID, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threadsCount", NULL, NULL, "__syncthreads_count", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 1, {DTYPE_INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threadsAnd", NULL, NULL, "__syncthreads_and", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 1, {DTYPE_INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
+    {"threadsOr", NULL, NULL, "__syncthreads_or", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 1, {DTYPE_INT32}, {0}, {0}, NULL, FUNC_CATEGORY_SYNC, 1},
 
-    {"ballot", NULL, NULL, "__ballot_sync", INT32, INT32, INT32, 1, {INT32}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
+    {"ballot", NULL, NULL, "__ballot_sync", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 1, {DTYPE_INT32}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
     {"shfl", NULL, NULL, "__shfl_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
     {"shflUp", NULL, NULL, "__shfl_up_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
     {"shflDown", NULL, NULL, "__shfl_down_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
     {"shflXor", NULL, NULL, "__shfl_xor_sync", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 4, {0}, {0}, {0}, NULL, FUNC_CATEGORY_WARP, 1},
 
     {"shuffle", NULL, NULL, "__shfl", DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 3, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"laneId", NULL, NULL, "__laneid", INT32, INT32, INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"warpid", NULL, NULL, "__warpid", INT32, INT32, INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"clock", NULL, NULL, "__clock", INT32, INT32, INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
-    {"clock64", NULL, NULL, "__clock64", INT64, INT64, INT64, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"laneId", NULL, NULL, "__laneid", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"warpid", NULL, NULL, "__warpid", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"clock", NULL, NULL, "__clock", DTYPE_INT32, DTYPE_INT32, DTYPE_INT32, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
+    {"clock64", NULL, NULL, "__clock64", DTYPE_INT64, DTYPE_INT64, DTYPE_INT64, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_SYSTEM, 1},
 
     {NULL, NULL, NULL, NULL, DTYPE_UNKNOWN, DTYPE_UNKNOWN, DTYPE_UNKNOWN, 0, {0}, {0}, {0}, NULL, FUNC_CATEGORY_OTHER, 0}};
 
@@ -569,31 +569,31 @@ static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
 {
     static char buffer[256];
 
-    if (type == LIST)
+    if (type == DTYPE_LIST)
     {
         const char *base_type;
 
         switch (second_dtype)
         {
-        case FLOAT32:
+        case DTYPE_FLOAT32:
             base_type = "float";
             break;
-        case FLOAT64:
+        case DTYPE_FLOAT64:
             base_type = "double";
             break;
-        case INT32:
+        case DTYPE_INT32:
             base_type = "int";
             break;
-        case INT64:
+        case DTYPE_INT64:
             base_type = "long long";
             break;
-        case UINT32:
+        case DTYPE_UINT32:
             base_type = "unsigned int";
             break;
-        case UINT64:
+        case DTYPE_UINT64:
             base_type = "unsigned long long";
             break;
-        case BOOL:
+        case DTYPE_BOOL:
             base_type = "bool";
             break;
         default:
@@ -607,23 +607,23 @@ static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
 
     switch (type)
     {
-    case VOID:
+    case DTYPE_VOID:
         return "void";
-    case FLOAT32:
+    case DTYPE_FLOAT32:
         return "float";
-    case FLOAT64:
+    case DTYPE_FLOAT64:
         return "double";
-    case INT32:
+    case DTYPE_INT32:
         return "int";
-    case INT64:
+    case DTYPE_INT64:
         return "long long";
-    case UINT32:
+    case DTYPE_UINT32:
         return "unsigned int";
-    case UINT64:
+    case DTYPE_UINT64:
         return "unsigned long long";
-    case BOOL:
+    case DTYPE_BOOL:
         return "bool";
-    case LIST:
+    case DTYPE_LIST:
         return "void*";
     default:
         return "void";
@@ -655,44 +655,44 @@ static dtype_t determine_dominant_type(dtype_t arg_types[], uint32_t num_args)
 
     for (uint32_t i = 0; i < num_args; i++)
     {
-        if (arg_types[i] == FLOAT64)
+        if (arg_types[i] == DTYPE_FLOAT64)
         {
-            dominant_type = FLOAT64;
+            dominant_type = DTYPE_FLOAT64;
             break;
         }
-        else if (arg_types[i] == FLOAT32)
+        else if (arg_types[i] == DTYPE_FLOAT32)
         {
-            if (dominant_type != FLOAT64)
+            if (dominant_type != DTYPE_FLOAT64)
             {
-                dominant_type = FLOAT32;
+                dominant_type = DTYPE_FLOAT32;
             }
         }
-        else if (arg_types[i] == INT64)
+        else if (arg_types[i] == DTYPE_INT64)
         {
-            if (dominant_type == DTYPE_UNKNOWN || dominant_type == INT32)
+            if (dominant_type == DTYPE_UNKNOWN || dominant_type == DTYPE_INT32)
             {
-                dominant_type = INT64;
+                dominant_type = DTYPE_INT64;
             }
         }
-        else if (arg_types[i] == INT32)
+        else if (arg_types[i] == DTYPE_INT32)
         {
             if (dominant_type == DTYPE_UNKNOWN)
             {
-                dominant_type = INT32;
+                dominant_type = DTYPE_INT32;
             }
         }
-        else if (arg_types[i] == UINT64)
+        else if (arg_types[i] == DTYPE_UINT64)
         {
-            if (dominant_type == DTYPE_UNKNOWN || dominant_type == UINT32)
+            if (dominant_type == DTYPE_UNKNOWN || dominant_type == DTYPE_UINT32)
             {
-                dominant_type = UINT64;
+                dominant_type = DTYPE_UINT64;
             }
         }
-        else if (arg_types[i] == UINT32)
+        else if (arg_types[i] == DTYPE_UINT32)
         {
             if (dominant_type == DTYPE_UNKNOWN)
             {
-                dominant_type = UINT32;
+                dominant_type = DTYPE_UINT32;
             }
         }
     }
@@ -763,39 +763,39 @@ static dtype_t string_to_dtype(const char *type_str)
 {
     if (strcmp(type_str, "float") == 0 || strcmp(type_str, "float32") == 0)
     {
-        return FLOAT32;
+        return DTYPE_FLOAT32;
     }
     else if (strcmp(type_str, "double") == 0 || strcmp(type_str, "float64") == 0)
     {
-        return FLOAT64;
+        return DTYPE_FLOAT64;
     }
     else if (strcmp(type_str, "int") == 0 || strcmp(type_str, "int32") == 0)
     {
-        return INT32;
+        return DTYPE_INT32;
     }
     else if (strcmp(type_str, "long") == 0 || strcmp(type_str, "int64") == 0)
     {
-        return INT64;
+        return DTYPE_INT64;
     }
     else if (strcmp(type_str, "uint") == 0 || strcmp(type_str, "uint32") == 0)
     {
-        return UINT32;
+        return DTYPE_UINT32;
     }
     else if (strcmp(type_str, "ulong") == 0 || strcmp(type_str, "uint64") == 0)
     {
-        return UINT64;
+        return DTYPE_UINT64;
     }
     else if (strcmp(type_str, "bool") == 0)
     {
-        return BOOL;
+        return DTYPE_BOOL;
     }
     else if (strcmp(type_str, "char") == 0)
     {
-        return INT8;
+        return DTYPE_INT8;
     }
     else if (strcmp(type_str, "short") == 0)
     {
-        return INT16;
+        return DTYPE_INT16;
     }
     else
     {
@@ -826,19 +826,19 @@ static cuda_function_match_t find_cuda_function_by_type(
 
         dtype_t dominant_type = determine_dominant_type(arg_types, num_args);
 
-        if (dominant_type == FLOAT64 && func->cuda_name_f64 != NULL)
+        if (dominant_type == DTYPE_FLOAT64 && func->cuda_name_f64 != NULL)
         {
             result.cuda_name = func->cuda_name_f64;
             result.return_type = func->return_type_f64;
             break;
         }
-        else if (dominant_type == FLOAT32 && func->cuda_name_f32 != NULL)
+        else if (dominant_type == DTYPE_FLOAT32 && func->cuda_name_f32 != NULL)
         {
             result.cuda_name = func->cuda_name_f32;
             result.return_type = func->return_type_f32;
             break;
         }
-        else if ((dominant_type == INT32 || dominant_type == INT64) &&
+        else if ((dominant_type == DTYPE_INT32 || dominant_type == DTYPE_INT64) &&
                  func->cuda_name_i32 != NULL)
         {
             result.cuda_name = func->cuda_name_i32;
@@ -1041,7 +1041,7 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
     zend_ast *size_ast = list->child[2];
 
     shared_memory_var_t *shared_var = create_shared_var(
-        var_name, LIST, element_type, 1, 0);
+        var_name, DTYPE_LIST, element_type, 1, 0);
 
     zend_string *var_key = zend_string_init(var_name, strlen(var_name), 0);
     zend_hash_add_ptr(&context->shared_memory_vars, var_key, shared_var);
@@ -1063,7 +1063,7 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
     smart_string_appendc(context->cuda_code_buffer, ']');
     smart_string_appends(context->cuda_code_buffer, ";\n");
 
-    context->last_evaluated_first_dtype = LIST;
+    context->last_evaluated_first_dtype = DTYPE_LIST;
     context->last_evaluated_second_dtype = element_type;
 
     return 1;
@@ -1145,7 +1145,7 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
     context->shared_memory_declared = 1;
 
     shared_memory_var_t *shared_var = create_shared_var(
-        var_name, LIST, element_type, -1, 1);
+        var_name, DTYPE_LIST, element_type, -1, 1);
 
     zend_string *var_key = zend_string_init(var_name, strlen(var_name), 0);
     zend_hash_add_ptr(&context->shared_memory_vars, var_key, shared_var);
@@ -1159,7 +1159,7 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
     smart_string_appends(context->cuda_code_buffer, var_name);
     smart_string_appends(context->cuda_code_buffer, "[];\n");
 
-    context->last_evaluated_first_dtype = LIST;
+    context->last_evaluated_first_dtype = DTYPE_LIST;
     context->last_evaluated_second_dtype = element_type;
 
     return 1;
@@ -1256,27 +1256,27 @@ static zend_bool types_are_compatible(dtype_t t1, dtype_t t1_second,
         return 1;
     }
 
-    if (t1 == FLOAT64 && (t2 == FLOAT32 || t2 == INT32 || t2 == INT64))
+    if (t1 == DTYPE_FLOAT64 && (t2 == DTYPE_FLOAT32 || t2 == DTYPE_INT32 || t2 == DTYPE_INT64))
     {
         return 1;
     }
 
-    if (t1 == FLOAT32 && (t2 == INT32 || t2 == INT64))
+    if (t1 == DTYPE_FLOAT32 && (t2 == DTYPE_INT32 || t2 == DTYPE_INT64))
     {
         return 1;
     }
 
-    if (t1 == INT64 && t2 == INT32)
+    if (t1 == DTYPE_INT64 && t2 == DTYPE_INT32)
     {
         return 1;
     }
 
-    if (t1 == UINT64 && t2 == UINT32)
+    if (t1 == DTYPE_UINT64 && t2 == DTYPE_UINT32)
     {
         return 1;
     }
 
-    if (t1 == LIST && t2 == LIST)
+    if (t1 == DTYPE_LIST && t2 == DTYPE_LIST)
     {
         return (t1_second == t2_second);
     }
@@ -1356,8 +1356,8 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
         }
 
         smart_string_appends(context->cuda_code_buffer, "threadIdx");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_LIST;
+        context->last_evaluated_second_dtype = DTYPE_INT32;
 
         context->current_cuda_object = CUDA_OBJ_THREADIDX;
         return 1;
@@ -1371,8 +1371,8 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
         }
 
         smart_string_appends(context->cuda_code_buffer, "blockIdx");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_LIST;
+        context->last_evaluated_second_dtype = DTYPE_INT32;
 
         context->current_cuda_object = CUDA_OBJ_BLOCKIDX;
         return 1;
@@ -1386,8 +1386,8 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
         }
 
         smart_string_appends(context->cuda_code_buffer, "blockDim");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_LIST;
+        context->last_evaluated_second_dtype = DTYPE_INT32;
 
         context->current_cuda_object = CUDA_OBJ_BLOCKDIM;
         return 1;
@@ -1401,8 +1401,8 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
         }
 
         smart_string_appends(context->cuda_code_buffer, "gridDim");
-        context->last_evaluated_first_dtype = LIST;
-        context->last_evaluated_second_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_LIST;
+        context->last_evaluated_second_dtype = DTYPE_INT32;
         context->current_cuda_object = CUDA_OBJ_GRIDDIM;
         return 1;
     }
@@ -1416,7 +1416,7 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
 
         context->current_cuda_object = CUDA_OBJ_NONE;
         smart_string_appends(context->cuda_code_buffer, "blockIdx.x * blockDim.x + threadIdx.x");
-        context->last_evaluated_first_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_INT32;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         return 1;
     }
@@ -1604,7 +1604,7 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
     zend_string *var_name_zend = zend_string_init(var_name, strlen(var_name), 0);
     local_variable_t *new_var = (local_variable_t *)ecalloc(1, sizeof(local_variable_t));
     new_var->name = zend_string_copy(var_name_zend);
-    new_var->dtype = is_array ? LIST : element_type;
+    new_var->dtype = is_array ? DTYPE_LIST : element_type;
     new_var->second_dtype = is_array ? element_type : DTYPE_UNKNOWN;
     new_var->level = context->loop_depth;
     new_var->var_type = VAR_LOCAL_SHARED;
@@ -1700,17 +1700,17 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
     {
         dtype_t dominant_type = determine_dominant_type(arg_types, num_args);
 
-        if (dominant_type == FLOAT64 && func_info->cuda_name_f64)
+        if (dominant_type == DTYPE_FLOAT64 && func_info->cuda_name_f64)
         {
             cuda_func_name = func_info->cuda_name_f64;
             return_type = func_info->return_type_f64;
         }
-        else if (dominant_type == FLOAT32 && func_info->cuda_name_f32)
+        else if (dominant_type == DTYPE_FLOAT32 && func_info->cuda_name_f32)
         {
             cuda_func_name = func_info->cuda_name_f32;
             return_type = func_info->return_type_f32;
         }
-        else if ((dominant_type == INT32 || dominant_type == INT64) &&
+        else if ((dominant_type == DTYPE_INT32 || dominant_type == DTYPE_INT64) &&
                  func_info->cuda_name_i32)
         {
             cuda_func_name = func_info->cuda_name_i32;
@@ -2646,7 +2646,7 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
         {
             if (access_levels < var->array_dimensions)
             {
-                context->last_evaluated_first_dtype = LIST;
+                context->last_evaluated_first_dtype = DTYPE_LIST;
                 context->last_evaluated_second_dtype = var->second_dtype;
             }
             else
@@ -2685,7 +2685,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     case IS_LONG:
     {
         smart_string_append_long(context->cuda_code_buffer, Z_LVAL_P(zv));
-        context->last_evaluated_first_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_INT32;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
         break;
@@ -2694,10 +2694,10 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     {
         char buffer[64];
         double value = Z_DVAL_P(zv);
-        if (context->last_evaluated_first_dtype == FLOAT64)
+        if (context->last_evaluated_first_dtype == DTYPE_FLOAT64)
         {
             snprintf(buffer, sizeof(buffer), "%.17g", value);
-            context->last_evaluated_first_dtype = FLOAT64;
+            context->last_evaluated_first_dtype = DTYPE_FLOAT64;
             context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         }
         else
@@ -2721,7 +2721,7 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
             }
 
             strcat(buffer, "f");
-            context->last_evaluated_first_dtype = FLOAT32;
+            context->last_evaluated_first_dtype = DTYPE_FLOAT32;
             context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
         }
 
@@ -2730,13 +2730,13 @@ static int handler_ast_zval(cuda_compilation_context_t *context, zend_ast *ast)
     }
     case IS_TRUE:
         smart_string_appends(context->cuda_code_buffer, "true");
-        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_first_dtype = DTYPE_BOOL;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
         break;
     case IS_FALSE:
         smart_string_appends(context->cuda_code_buffer, "false");
-        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_first_dtype = DTYPE_BOOL;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
         break;
@@ -2895,7 +2895,7 @@ static int handler_ast_prop(cuda_compilation_context_t *context, zend_ast *ast)
         smart_string_appendc(context->cuda_code_buffer, '.');
         smart_string_appends(context->cuda_code_buffer, prop_name_c);
 
-        context->last_evaluated_first_dtype = INT32;
+        context->last_evaluated_first_dtype = DTYPE_INT32;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
 
         context->current_cuda_object = CUDA_OBJ_NONE;
@@ -2954,7 +2954,7 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
     dtype_t right_type = context->last_evaluated_first_dtype;
     dtype_t right_second_type = context->last_evaluated_second_dtype;
 
-    if (right_type == LIST && left_type != LIST)
+    if (right_type == DTYPE_LIST && left_type != DTYPE_LIST)
     {
         cuda_compiler_error_ex(context,
                                "Type mismatch Expected %s, got Array[%s].",
@@ -2962,7 +2962,7 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
         return 0;
     }
 
-    if (left_type == LIST && right_type != LIST)
+    if (left_type == DTYPE_LIST && right_type != DTYPE_LIST)
     {
         cuda_compiler_error_ex(context,
                                "Type mismatch Expected Array[%s], got %s.",
@@ -2976,21 +2976,21 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
         ast->attr == ZEND_MUL || ast->attr == ZEND_DIV)
     {
 
-        if (left_type == FLOAT64 || right_type == FLOAT64)
+        if (left_type == DTYPE_FLOAT64 || right_type == DTYPE_FLOAT64)
         {
-            context->last_evaluated_first_dtype = FLOAT64;
+            context->last_evaluated_first_dtype = DTYPE_FLOAT64;
         }
-        else if (left_type == FLOAT32 || right_type == FLOAT32)
+        else if (left_type == DTYPE_FLOAT32 || right_type == DTYPE_FLOAT32)
         {
-            context->last_evaluated_first_dtype = FLOAT32;
+            context->last_evaluated_first_dtype = DTYPE_FLOAT32;
         }
-        else if (left_type == INT64 || right_type == INT64)
+        else if (left_type == DTYPE_INT64 || right_type == DTYPE_INT64)
         {
-            context->last_evaluated_first_dtype = INT64;
+            context->last_evaluated_first_dtype = DTYPE_INT64;
         }
-        else if (left_type == INT32 || right_type == INT32)
+        else if (left_type == DTYPE_INT32 || right_type == DTYPE_INT32)
         {
-            context->last_evaluated_first_dtype = INT32;
+            context->last_evaluated_first_dtype = DTYPE_INT32;
         }
         else
         {
@@ -3002,7 +3002,7 @@ static int handler_ast_binary_op(cuda_compilation_context_t *context, zend_ast *
              ast->attr == ZEND_IS_IDENTICAL || ast->attr == ZEND_IS_NOT_IDENTICAL ||
              ast->attr == ZEND_IS_SMALLER || ast->attr == ZEND_IS_SMALLER_OR_EQUAL)
     {
-        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_first_dtype = DTYPE_BOOL;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
@@ -3036,7 +3036,7 @@ static int handler_ast_unary_op(cuda_compilation_context_t *context, zend_ast *a
 
     if (ast->attr == ZEND_BOOL_NOT)
     {
-        context->last_evaluated_first_dtype = BOOL;
+        context->last_evaluated_first_dtype = DTYPE_BOOL;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 
@@ -3103,7 +3103,7 @@ static int handler_ast_comp_op(cuda_compilation_context_t *context, zend_ast *as
     }
     smart_string_appendc(context->cuda_code_buffer, ')');
 
-    context->last_evaluated_first_dtype = BOOL;
+    context->last_evaluated_first_dtype = DTYPE_BOOL;
     context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     return 1;
 }
@@ -3118,15 +3118,15 @@ static int handler_ast_cast(cuda_compilation_context_t *context, zend_ast *ast)
     {
     case IS_LONG:
         cast_str = "(int)";
-        target_type = INT32;
+        target_type = DTYPE_INT32;
         break;
     case IS_DOUBLE:
         cast_str = "(float)";
-        target_type = FLOAT32;
+        target_type = DTYPE_FLOAT32;
         break;
     case _IS_NUMBER:
         cast_str = "";
-        target_type = FLOAT32;
+        target_type = DTYPE_FLOAT32;
         break;
     default:
         cuda_compiler_error_ex(context, "Cast type %d not supported in CUDA.", cast_type);
@@ -3179,7 +3179,7 @@ static int handler_ast_conditional(cuda_compilation_context_t *context, zend_ast
     dtype_t false_type = context->last_evaluated_first_dtype;
     dtype_t false_second_type = context->last_evaluated_second_dtype;
 
-    if (false_type == LIST && true_type != LIST)
+    if (false_type == DTYPE_LIST && true_type != DTYPE_LIST)
     {
         cuda_compiler_error_ex(context,
                                "Type mismatch Expected %s, got Array[%s].",
@@ -3187,7 +3187,7 @@ static int handler_ast_conditional(cuda_compilation_context_t *context, zend_ast
         return 0;
     }
 
-    if (true_type == LIST && false_type != LIST)
+    if (true_type == DTYPE_LIST && false_type != DTYPE_LIST)
     {
         cuda_compiler_error_ex(context,
                                "Type mismatch Expected Array[%s], got %s.",
@@ -3199,22 +3199,22 @@ static int handler_ast_conditional(cuda_compilation_context_t *context, zend_ast
 
     if (true_type == false_type)
     {
-        context->last_evaluated_first_dtype = true_type == LIST ? true_second_type : true_type;
+        context->last_evaluated_first_dtype = true_type == DTYPE_LIST ? true_second_type : true_type;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
-    else if (true_type == FLOAT64 || false_type == FLOAT64)
+    else if (true_type == DTYPE_FLOAT64 || false_type == DTYPE_FLOAT64)
     {
-        context->last_evaluated_first_dtype = FLOAT64;
+        context->last_evaluated_first_dtype = DTYPE_FLOAT64;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
-    else if (true_type == FLOAT32 || false_type == FLOAT32)
+    else if (true_type == DTYPE_FLOAT32 || false_type == DTYPE_FLOAT32)
     {
-        context->last_evaluated_first_dtype = FLOAT32;
+        context->last_evaluated_first_dtype = DTYPE_FLOAT32;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
     else
     {
-        context->last_evaluated_first_dtype = true_type == LIST ? true_second_type : true_type;
+        context->last_evaluated_first_dtype = true_type == DTYPE_LIST ? true_second_type : true_type;
         context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
     }
 

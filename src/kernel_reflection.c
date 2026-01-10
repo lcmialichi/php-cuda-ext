@@ -33,47 +33,47 @@ static dtype_t map_dtype_string_to_int(zend_string *dtype_str)
 
     if (strcasecmp(lower, "float32") == 0 || strcasecmp(lower, "float") == 0)
     {
-        result = FLOAT32;
+        result = DTYPE_FLOAT32;
     }
     else if (strcasecmp(lower, "float64") == 0 || strcasecmp(lower, "double") == 0)
     {
-        result = FLOAT64;
+        result = DTYPE_FLOAT64;
     }
     else if (strcasecmp(lower, "int32") == 0 || strcasecmp(lower, "int") == 0)
     {
-        result = INT32;
+        result = DTYPE_INT32;
     }
     else if (strcasecmp(lower, "int64") == 0 || strcasecmp(lower, "long") == 0)
     {
-        result = INT64;
+        result = DTYPE_INT64;
     }
     else if (strcasecmp(lower, "int8") == 0)
     {
-        result = INT8;
+        result = DTYPE_INT8;
     }
     else if (strcasecmp(lower, "int16") == 0)
     {
-        result = INT16;
+        result = DTYPE_INT16;
     }
     else if (strcasecmp(lower, "uint8") == 0)
     {
-        result = UINT8;
+        result = DTYPE_UINT8;
     }
     else if (strcasecmp(lower, "uint16") == 0)
     {
-        result = UINT16;
+        result = DTYPE_UINT16;
     }
     else if (strcasecmp(lower, "uint32") == 0)
     {
-        result = UINT32;
+        result = DTYPE_UINT32;
     }
     else if (strcasecmp(lower, "uint64") == 0)
     {
-        result = UINT64;
+        result = DTYPE_UINT64;
     }
     else if (strcasecmp(lower, "bool") == 0 || strcasecmp(lower, "boolean") == 0)
     {
-        result = BOOL;
+        result = DTYPE_BOOL;
     }
 
     efree(lower);
@@ -369,7 +369,7 @@ void convert_param_info_to_func_parameter(cuda_param_info *info, func_parameter 
     if (info->is_list)
     {
         param->second_dtype = param->dtype;
-        param->dtype = LIST;
+        param->dtype = DTYPE_LIST;
     }
     else
     {

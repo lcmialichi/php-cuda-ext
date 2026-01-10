@@ -225,18 +225,7 @@ $compileStats = Profiler::measure(function () use ($compiler, &$module) {
 
 Summary::result("PTX Compilation", $compileStats);
 
-
-$compileStats = Profiler::measure(function () use ($module, &$serialize) {
-    $serialize = serialize($module);
-});
-
-echo $serialize;
-var_dump($compiler);
-exit;
-
-$JITStats = Profiler::measure(function () use (&$module): void {
-    $module->initialize();
-});
+$JITStats = Profiler::measure(fn() => $module->initialize());
 
 Summary::result("JIT Module Initialization", $JITStats);
 Summary::header("PHASE 2: INTENSIVE PERFORMANCE COMPARISONS (21 TESTS)");

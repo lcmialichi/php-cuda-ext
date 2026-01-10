@@ -508,7 +508,7 @@ ZEND_METHOD(CudaArray, getNdims)
     {
         RETURN_NULL();
     }
-    
+
     RETURN_LONG(t->ndims);
 }
 
@@ -599,22 +599,22 @@ ZEND_METHOD(CudaArray, toArray)
             {
                 zval val;
 
-                if (dtype == FLOAT32)
+                if (dtype == DTYPE_FLOAT32)
                 {
                     float *float_data = (float *)data;
                     ZVAL_DOUBLE(&val, (double)float_data[child_offset]);
                 }
-                else if (dtype == FLOAT64)
+                else if (dtype == DTYPE_FLOAT64)
                 {
                     double *double_data = (double *)data;
                     ZVAL_DOUBLE(&val, double_data[child_offset]);
                 }
-                else if (dtype == INT32)
+                else if (dtype == DTYPE_INT32)
                 {
                     int32_t *int_data = (int32_t *)data;
                     ZVAL_LONG(&val, (zend_long)int_data[child_offset]);
                 }
-                else if (dtype == INT64)
+                else if (dtype == DTYPE_INT64)
                 {
                     int64_t *int64_data = (int64_t *)data;
                     ZVAL_LONG(&val, (zend_long)int64_data[child_offset]);
@@ -715,12 +715,12 @@ ZEND_METHOD(CudaArray, __debugInfo)
     const char *dtype_str;
     size_t element_size;
 
-    if (tensor->dtype == FLOAT32)
+    if (tensor->dtype == DTYPE_FLOAT32)
     {
         dtype_str = "float32";
         element_size = sizeof(float);
     }
-    else if (tensor->dtype == INT32)
+    else if (tensor->dtype == DTYPE_INT32)
     {
         dtype_str = "int32";
         element_size = sizeof(int);
@@ -1054,30 +1054,6 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
 {
     zend_bool define_value = 0;
     float op_value = 0.0f;
-    zval *obj_p;
-    zval *val_s;
-
-    if (Z_TYPE_P(op1) == IS_OBJECT && Z_OBJCE_P(op1) == cuda_array_ce)
-    {
-        obj_p = op1;
-        val_s = op2;
-    }
-    else if (Z_TYPE_P(op2) == IS_OBJECT && Z_OBJCE_P(op2) == cuda_array_ce)
-    {
-        obj_p = op2;
-        val_s = op1;
-    }
-    else
-    {
-        return FAILURE;
-    }
-
-    cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(obj_p));
-    if (!this_obj || this_obj->tensor_handle == NULL)
-    {
-        return FAILURE;
-    }
-
     const char *operation_name = NULL;
     int operation_type = 0;
 
@@ -1107,36 +1083,58 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
     case ZEND_POST_INC:
         operation_name = "Increment (++)";
         operation_type = OP_ADD;
-        op_value = 1.0f;
-        define_value = 1;
         break;
     case ZEND_PRE_DEC:
     case ZEND_POST_DEC:
         operation_name = "Decrement (--)";
         operation_type = OP_SUB;
-        op_value = 1.0f;
-        define_value = 1;
         break;
     default:
         return FAILURE;
     }
 
     tensor_t *result_tensor = NULL;
-    zval *other_zv = val_s;
 
-    if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
+    if (Z_TYPE_P(op1) == IS_OBJECT && Z_OBJCE_P(op1) == cuda_array_ce)
     {
-        cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(other_zv));
-        result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
+        cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op1));
+        if (!this_obj || this_obj->tensor_handle == NULL)
+        {
+            return FAILURE;
+        }
+
+        if (Z_TYPE_P(op2) == IS_OBJECT && instanceof_function(Z_OBJCE_P(op2), cuda_array_ce))
+        {
+            cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op2));
+            result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
+        }
+        else if (Z_TYPE_P(op2) == IS_DOUBLE || Z_TYPE_P(op2) == IS_LONG)
+        {
+            float scalar_value = (Z_TYPE_P(op2) == IS_DOUBLE) ? (float)Z_DVAL_P(op2) : (float)Z_LVAL_P(op2);
+            result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
+        }
+        else
+        {
+            return FAILURE;
+        }
     }
-    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
+    else if (Z_TYPE_P(op2) == IS_OBJECT && Z_OBJCE_P(op2) == cuda_array_ce)
     {
-        float scalar_value = (Z_TYPE_P(other_zv) == IS_DOUBLE) ? (float)Z_DVAL_P(other_zv) : (float)Z_LVAL_P(other_zv);
-        result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
-    }
-    else if (define_value == 1)
-    {
-        result_tensor = cuda_scalar_op(this_obj->tensor_handle, op_value, operation_type);
+        cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op2));
+        if (!this_obj || this_obj->tensor_handle == NULL)
+        {
+            return FAILURE;
+        }
+
+        if (Z_TYPE_P(op1) == IS_DOUBLE || Z_TYPE_P(op1) == IS_LONG)
+        {
+            float scalar_value = (Z_TYPE_P(op1) == IS_DOUBLE) ? (float)Z_DVAL_P(op1) : (float)Z_LVAL_P(op1);
+            result_tensor = cuda_inv_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
+        }
+        else
+        {
+            return FAILURE;
+        }
     }
     else
     {
@@ -1147,11 +1145,6 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
     {
         zend_throw_error(NULL, "CudaArray operation %s failed (incompatible shapes or internal error)", operation_name);
         return FAILURE;
-    }
-
-    if (result == obj_p)
-    {
-        zval_ptr_dtor(result);
     }
 
     create_result_object(result, result_tensor);

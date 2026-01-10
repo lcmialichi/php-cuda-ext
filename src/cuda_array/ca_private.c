@@ -24,6 +24,20 @@ ScalarDispatchEntry scalar_dispatch[] = {
     {OP_LE, launch_scalar_less_equal_kernel},
 };
 
+ScalarDispatchEntry inv_scalar_dispatch[] = {
+    {OP_ADD, launch_inv_scalar_add_kernel},
+    {OP_SUB, launch_inv_scalar_subtract_kernel},
+    {OP_MUL, launch_inv_scalar_multiply_kernel},
+    {OP_DIV, launch_inv_scalar_divide_kernel},
+    {OP_POW, launch_inv_scalar_power_kernel},
+    {OP_GT, launch_inv_scalar_greater_kernel},
+    {OP_LT, launch_inv_scalar_less_kernel},
+    {OP_EQ, launch_inv_scalar_equal_kernel},
+    {OP_NE, launch_inv_scalar_not_equal_kernel},
+    {OP_GE, launch_inv_scalar_greater_equal_kernel},
+    {OP_LE, launch_inv_scalar_less_equal_kernel},
+};
+
 BroadcastDispatchEntry broadcast_dispatch[] = {
     {OP_ADD, launch_broadcast_add},
     {OP_SUB, launch_broadcast_subtract},
@@ -64,6 +78,15 @@ scalar_fn get_scalar_fn(operation_type_t op)
     for (int i = 0; i < sizeof(scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
         if (scalar_dispatch[i].op == op)
             return scalar_dispatch[i].fn;
+
+    return NULL;
+}
+
+scalar_fn get_inv_scalar_fn(operation_type_t op)
+{
+    for (int i = 0; i < sizeof(inv_scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
+        if (inv_scalar_dispatch[i].op == op)
+            return inv_scalar_dispatch[i].fn;
 
     return NULL;
 }
@@ -164,6 +187,36 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_t
     }
 
     scalar_fn func = get_scalar_fn(operation_type);
+    if (func == NULL)
+    {
+        php_error_docref(NULL, E_ERROR, "Operation handler not found.");
+        return NULL;
+    }
+
+    func(a->data, scalar, result->data, a->gpu_offset, a->shape, a->strides, a->ndims, a->total_size);
+    cudaError_t status = cudaDeviceSynchronize();
+
+    if (status != cudaSuccess)
+    {
+        php_error_docref(NULL, E_WARNING, "Scalar operation failed: %s", cudaGetErrorString(status));
+        cuda_tensor_destroy(result);
+        return NULL;
+    }
+
+    return result;
+}
+
+tensor_t *cuda_inv_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type)
+{
+    CUDA_CHECK_AND_RETURN_NULL(a);
+    tensor_t *result = resolve_result_tensor(a);
+    if (!result)
+    {
+        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        return NULL;
+    }
+
+    scalar_fn func = get_inv_scalar_fn(operation_type);
     if (func == NULL)
     {
         php_error_docref(NULL, E_ERROR, "Operation handler not found.");

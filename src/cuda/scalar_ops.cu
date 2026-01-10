@@ -18,6 +18,19 @@ extern "C"
         launch_scalar_op<Op>(base, scalar, result, base_offset, shape, strides, ndims, total_size); \
     }
 
+#define DEFINE_INV_SCALAR_WRAPPER(name, Op)                                                             \
+    void name(float *base,                                                                              \
+              float scalar,                                                                             \
+              float *result,                                                                            \
+              size_t base_offset,                                                                       \
+              int *shape,                                                                               \
+              size_t *strides,                                                                          \
+              int ndims,                                                                                \
+              size_t total_size)                                                                        \
+    {                                                                                                   \
+        launch_inv_scalar_op<Op>(base, scalar, result, base_offset, shape, strides, ndims, total_size); \
+    }
+
     DEFINE_SCALAR_WRAPPER(launch_scalar_add_kernel, AddOp)
     DEFINE_SCALAR_WRAPPER(launch_scalar_subtract_kernel, SubOp)
     DEFINE_SCALAR_WRAPPER(launch_scalar_multiply_kernel, MulOp)
@@ -29,4 +42,16 @@ extern "C"
     DEFINE_SCALAR_WRAPPER(launch_scalar_not_equal_kernel, NotEqualOp)
     DEFINE_SCALAR_WRAPPER(launch_scalar_greater_equal_kernel, GreaterEqualOp)
     DEFINE_SCALAR_WRAPPER(launch_scalar_less_equal_kernel, LessEqualOp)
+
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_add_kernel, AddOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_subtract_kernel, SubOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_multiply_kernel, MulOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_divide_kernel, DivOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_power_kernel, PowOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_greater_kernel, GreaterOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_less_kernel, LessOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_equal_kernel, EqualOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_not_equal_kernel, NotEqualOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_greater_equal_kernel, GreaterEqualOp)
+    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_less_equal_kernel, LessEqualOp)
 }

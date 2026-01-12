@@ -57,152 +57,46 @@ Verify that it loaded correctly:
 php -m | grep cuda
 ```
 
-## Quick start
+## Quick start: CudaArray
 ### Operator Overloading
-CudaArray supports native PHP operator overloading, providing an intuitive syntax for GPU-accelerated tensor operations. This allows you to write mathematical expressions that look like standard PHP code but execute entirely on the NVIDIA GPU.
+CudaArray supports native PHP operator overloading, providing an intuitive syntax for GPU-accelerated tensor operations.
 ```php
 $a = Cuda\CudaArray::ones([3, 3]);
 $b = Cuda\CudaArray::full([3, 3], 2.0);
-$scalar = 5.0;
 
-// Addition
-$result = $a + $b;      // Element-wise addition
-$result = $a + $scalar; // Broadcasting: adds 5.0 to every element
-$result = $a++;        // same as $a + 1 
-
-// Subtraction  
-$result = $a - $b;      // Element-wise subtraction
-$result = $a - 2.0;     // Broadcasting: subtracts 2.0 from every element
-$result = $a--;         // same as $a - 1 
-
-// Multiplication
-$result = $a * $b;      // Element-wise multiplication (Hadamard product)
-$result = $a * 3.0;     // Broadcasting: multiplies every element by 3.0
-
-// Division
-$result = $a / $b;      // Element-wise division
-$result = $a / 2.0;     // Broadcasting: divides every element by 2.0
-
-// Exponentiation
-$result = $a ** $b;     // Element-wise power: aᵢⱼ ^ bᵢⱼ
-$result = $a ** 2;      // Broadcasting: squares every element
+// Mathematical expressions execute entirely on the GPU
+$result = ($a * 2.0 + $b) ** 2;
 ```
 Operator overloading enables complex mathematical expressions that execute efficiently on the ``GPU``:
 
-```php
-// Complex GPU-accelerated expression
-$result = ($a * 2.0 + $b) ** ($c / 3.0) - $d;
+### Basic Operations
 
-// Equivalent to:
-$temp1 = $a->multiply(2.0);
-$temp2 = $temp1->add($b);
-$temp3 = $c->divide(3.0);
-$temp4 = $temp2->power($temp3);
-$result = $temp4->subtract($d);
-```
-
-### Basic Cuda\CudaArray Operations
 ```php
-/**
- * Creates a CudaArray with a 4×4×4 shape filled with ones.
- */
 $ca = Cuda\CudaArray::ones([4, 4, 4]);
 
-/**
- * Performs:  (ca[1] * 2) + ca[2]
- * Both slices have shape 4×4.
- */
-$result = ($ca[1] * 2) + $ca[2];
+// Slicing and Assignment
+$ca[0] = ($ca[1] * 2) + $ca[2];
 
-/**
- * Assigns the result to index 0.
- * The overall tensor shape remains 4×4×4.
- */
-$ca[0] = $result;
+// Reshaping
+$newCa = $ca->reshape([64]);
 
-/**
- * Get tensor shape.
- */
-[$x, $y, $z] = $ca->getShape();
-
-/**
- * Reshape into a flat 1D tensor of size 64.
- */
-$newCa = $ca->reshape([$x * $y * $z]);
-
-/**
- * - Creates a view/window from indices 0 to 4 (no new GPU memory allocated)
- * - clone() then forces materialization (new GPU tensor)
- */
-$newCa = clone $newCa([0, 4]);
-
-/**
- * Transfer the result back to CPU as a PHP array.
- *
- * Output example:
- * array(5) {
- *   [0] => float(3)
- *   [1] => float(3)
- *   [2] => float(3)
- *   [3] => float(3)
- *   [4] => float(3)
- * }
- */
-var_dump($newCa->toArray());
+// Transfer back to CPU
+$phpArray = $newCa->toArray();
 
 ```
 
-## Methods
-### Basic math
-All operations support automatic shape broadcasting and accept both Cuda\CudaArray instances and scalar values.
+## Methods Reference
+### Math & Comparison
+- **Arithmetic**: ``add``, ``subtract``, ``multiply``, ``divide``, ``power``, ``neg``, ``matmul``
+- **Functions**: ``exp``, ``log``, ``sqrt``, ``abs``, ``ceil``, ``floor``, ``round``
+- **Trigonometry**: ``sin``, ``cos``, ``tan``
+- **Comparison**: ``gt(>)`` , ``lt(<)`` , ``eq(==)`` , ``ne(!=)`` , ``ge(>=)`` , ``le(<=)``
 
-```php
-// Multiplication
-$ca->multiply($x);
-$ca * $x;
+### Reduction
+- ``sum(axis)``, ``min(axis)``, ``max(axis)``, ``prod(axis)``, ``argMax(axis)``, ``argMin(axis)``
 
-// Addition
-$ca->add($x);
-$ca + $x;
-
-// Division
-$ca->divide($x);
-$ca / $x;
-
-// Subtraction
-$ca->subtract($x);
-$ca - $x;
-
-// Power
-$ca->power($x);
-$ca ** $x;
-
-// Exponential / Square Root / Logarithm
-$ca->exp();
-$ca->sqrt();
-$ca->log();
-
-// Trigonometry
-$ca->cos();
-$ca->sin();
-$ca->tan();
-
-// other operations
-$ca->matmul($other);
-$ca->neg(); 
-$ca->ceil();
-$ca->floor();
-$ca->round();
-
-```
-### Getters
-
-```php
-$ca->toArray();     // Transfer tensor to CPU as nested PHP array
-$ca->getShape();    // Returns shape (array of ints)
-$ca->getStrides();  // Returns memory strides (array of ints)
-$ca->getNdims();    // Returns ndim (int)
-```
+### Shape & Manipulation
+- ``reshape(shape)``, ``flatten()``, ``transpose(axes)``, ``concat(tensors, axis)``
 
 ### New Instance
 
@@ -217,42 +111,7 @@ $ca = Cuda\CudaArray::full($shape, 1.5);
 $ca = Cuda\CudaArray::rand($shape, 0, 10);
 ```
 
-### Shape Manipulation
 
-```php
-$ca->reshape([4, 4, 4]);
-$ca->flatten(); // Same as reshape([n])
-$ca->concat([$a, $b, $c], axis: null);
-$ca->transpose([0, 2, 1]); // returns a view/window
-```
-
-### Comparing
-All comparison methods return a new Cuda\CudaArray stored on the GPU, containing 1.0 for true and 0.0 for false.
-They accept either:
- - a scalar, or another Cuda\CudaArray (broadcasting is automatically applied)
-```php
-$x->gt($y);   // greater than      (x > y)
-$y->lt($x);   // less than         (x < y)
-$x->eq($y);   // equal             (x == y)
-$x->ne($y);   // not equal         (x != y)
-$x->ge($y);   // greater or equal  (x >= y)
-$x->le($y);   // less or equal     (x <= y)
-```
-
-### Reduction
-Reduction operations collapse one or more axes of a tensor into a smaller shape.
-All reduction methods accept:
- - axis (optional)
- - Positive or negative axis indices
- - If axis is not specified, the reduction is applied to the entire tensor, returning a tensor with shape [1].
-```php
-$x->argMax(axis: null); // Returns the index of the maximum value along the specified axis.
-$x->argMin(axis: null); // Same behavior as argMax, but finds the index of the minimum value. flatten
-$x->sum(axis: null); // Computes the sum along the given axis.
-$x->min(axis: null); // Computes the minimum value along the axis.
-$x->max(axis: null); // Computes the maximum value along the axis.
-$x->prod(axis: null); // Computes the product of all elements along the axis.
-```
 ## Custom CUDA Kernels (JIT Compilation)
 The extension allows you to define custom GPU kernels using PHP syntax. These are compiled JIT (Just-In-Time) into optimized PTX code.
 

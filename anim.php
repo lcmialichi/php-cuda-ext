@@ -47,8 +47,8 @@ $Z_final = ($x * $sin_a) - ($z * $cos_a);
 $Y_final = $y + (HEIGHT / 2.0);
 $Z_Normalized = ($Z_final - $z_min) / $z_range;
 
-$X_final = $X_final->toArray();
-$Y_final = $Y_final->toArray();
+$X_final = $X_final->floor()->toArray();
+$Y_final = $Y_final->floor()->toArray();
 $Z_final = $Z_final->toArray();
 $Z_Normalized = $Z_Normalized->toArray();
 
@@ -65,29 +65,23 @@ for ($t = 0; $t < FRAMES; $t++) {
         $y = $Y_proj[$i];
         $z = $Z_depth[$i];
 
-        $tx = floor($x);
-        $ty = floor($y);
-
-        if ($tx >= 0 && $tx < WIDTH && $ty >= 0 && $ty < HEIGHT) {
+        if ($x >= 0 && $x < WIDTH && $y >= 0 && $y < HEIGHT) {
             $normalized_z = $Z_Norm[$i];
             $is_strand_1 = ($i < N_POINTS_PER_STRAND);
             $char_set = $is_strand_1 ? $STRAND_1_CHARS : $STRAND_2_CHARS;
 
-            if ($normalized_z > 0.8) {
-                $char = $char_set[0];
-            } elseif ($normalized_z > 0.6) {
-                $char = $char_set[1];
-            } elseif ($normalized_z > 0.4) {
-                $char = $char_set[2];
-            } else {
-                $char = $char_set[3];
-            }
+            $char = match (true) {
+                $normalized_z > 0.8 => $char_set[0],
+                $normalized_z > 0.6 => $char_set[1],
+                $normalized_z > 0.4 => $char_set[2],
+                default => $char_set[3]
+            };
 
-            $terminal_y = HEIGHT - 1 - $ty;
+            $terminal_y = HEIGHT - 1 - $y;
 
-            if ($z > $grid[$terminal_y][$tx]['depth']) {
-                $grid[$terminal_y][$tx]['char'] = $char;
-                $grid[$terminal_y][$tx]['depth'] = $z;
+            if ($z > $grid[$terminal_y][$x]['depth']) {
+                $grid[$terminal_y][$x]['char'] = $char;
+                $grid[$terminal_y][$x]['depth'] = $z;
             }
         }
     }

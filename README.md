@@ -182,7 +182,9 @@ $ca->tan();
 // other operations
 $ca->matmul($other);
 $ca->neg(); 
+$ca->ceil();
 $ca->floor();
+$ca->round();
 
 ```
 ### Getters

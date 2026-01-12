@@ -27,6 +27,14 @@ To build and run this extension, you need:
 - make / autoconf
 - Linux (Ubuntu, Debian, CentOS, Arch, etc.)
 
+## Features
+ - JIT CUDA Compiler: Write CUDA kernels directly in PHP using Attributes. The extension compiles them to PTX at runtime.
+ - Operator Overloading: Use standard math operators (+, -, *, /, **) directly on CudaArray objects.
+ - High-Performance Tensors: Optimized CudaArray class for multi-dimensional data management on the GPU.
+ - Automatic Broadcasting: Seamlessly perform operations between tensors of different (but compatible) shapes.
+ - Async Execution: Support for non-blocking kernel execution with runAsync() and stream synchronization.
+ - Advanced Memory Control: Direct access to Shared Memory and thread synchronization (__syncthreads) within PHP.
+- Mathematical Library: Built-in GPU-accelerated functions for Trigonometry, Logarithms, and Exponentials.
 
 ## How to Compile
 ```bash
@@ -244,6 +252,97 @@ $x->sum(axis: null); // Computes the sum along the given axis.
 $x->min(axis: null); // Computes the minimum value along the axis.
 $x->max(axis: null); // Computes the maximum value along the axis.
 $x->prod(axis: null); // Computes the product of all elements along the axis.
+```
+## Custom CUDA Kernels (JIT Compilation)
+The extension allows you to define custom GPU kernels using PHP syntax. These are compiled JIT (Just-In-Time) into optimized PTX code.
+
+### 1. Define your Kernels
+Use PHP 8 Attributes to define the kernel entry point and variable types.
+```php
+use Cuda\Attr as Attr;
+
+class MyKernelDefinitions
+{
+    #[Attr\Kernel(name: 'v_add')]
+    public function vectorAdd(
+        #[Attr\TensorType] array $a,
+        #[Attr\TensorType] array $b,
+        #[Attr\TensorType] array &$c,
+        #[Attr\IntType] int $n
+    ): void {
+        /** @var \Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $n) {
+            $c[$idx] = $a[$idx] + $b[$idx];
+        }
+    }
+}
+
+```
+
+### 2. Compile and Execute
+```php
+$compiler = new \Cuda\Compiler();
+$defs = new MyKernelDefinitions();
+
+// Register and compile to PTX
+$compiler->kernel([$defs, 'vectorAdd']);
+$module = $compiler->compile();
+$module->initialize();
+
+// Prepare Tensors
+$n = 1024 * 1024;
+$a = \Cuda\CudaArray::ones([$n]);
+$b = \Cuda\CudaArray::full([$n], 5.0);
+$c = \Cuda\CudaArray::zeros([$n]);
+
+// Launch Kernel
+$module->run('v_add', 
+    args: [$a, $b, $c, $n], 
+    config: [
+        'block' => [256, 1, 1], 
+        'grid' => [(int)ceil($n / 256), 1, 1]
+    ]
+);
+
+// launch kernel async
+$opId = $module->runAsync('v_add', 
+    args: [$a, $b, $c, $n], 
+    config: [
+        'block' => [256, 1, 1], 
+        'grid' => [(int)ceil($n / 256), 1, 1]
+    ]
+);
+
+$module->sync(); 
+```
+
+### Advanced: Shared Memory & Sync
+You can implement complex algorithms (like Tiled Matrix Multiplication) using shared memory:
+
+```php
+// Inside a kernel method
+$cuda->__declare_shared($sharedMem, 'float32', 256);
+$cuda->sync->threads(); // __syncthreads()
+$val = $cuda->math->sqrt($in[$idx]); // GPU Intrinsics
+```
+
+### Cuda\CompiledModule Methods:
+```php
+$module->initialize(); // if you want to initialize before first op
+$module->run();
+$id = $module->runAsync(); // returns op id
+$module->sync();
+$module->isFinished(); // $id as an optional arg
+$module->getAsyncStatus($id); // $id as an optional arg
+$module->wait();
+$module->getPendingOperations();
+$module->cancelOperation($id);
+$module->cleanup();
+$module->hasKernel();
+$modules->getKernels();
+$module->getPtx();
+
 ```
 
 ## Run Benchmark

@@ -16,6 +16,9 @@ extern "C"
     void launch_unary_tan_kernel(float *base, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
     void launch_unary_abs_kernel(float *base, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
     void launch_unary_neg_kernel(float *base, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
+    void launch_unary_floor_kernel(float *base, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
+    void launch_unary_ceil_kernel(float *base, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
+    void launch_unary_round_kernel(float *base, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
 
 #ifdef __cplusplus
 }

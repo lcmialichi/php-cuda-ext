@@ -1,7 +1,6 @@
 <?php
 
 use Cuda\Attr as Attr;
-use Cuda\CompiledModule;
 use Cuda\Compiler;
 use Cuda\CudaArray;
 

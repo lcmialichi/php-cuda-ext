@@ -25,4 +25,7 @@ extern "C"
     DEFINE_UNARY_WRAPPER(launch_unary_tan_kernel, TanOp)
     DEFINE_UNARY_WRAPPER(launch_unary_abs_kernel, AbsOp)
     DEFINE_UNARY_WRAPPER(launch_unary_neg_kernel, NegOp)
+    DEFINE_UNARY_WRAPPER(launch_unary_floor_kernel, FloorOp)
+    DEFINE_UNARY_WRAPPER(launch_unary_ceil_kernel, CeilOp)
+    DEFINE_UNARY_WRAPPER(launch_unary_round_kernel, RoundOp)
 }

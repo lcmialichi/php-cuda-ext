@@ -254,6 +254,21 @@ ZEND_METHOD(CudaArray, sqrt)
     unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Sqrt", OP_SQRT);
 }
 
+ZEND_METHOD(CudaArray, floor)
+{
+    unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Floor", OP_FLOOR);
+}
+
+ZEND_METHOD(CudaArray, ceil)
+{
+    unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Ceil", OP_CEIL);
+}
+
+ZEND_METHOD(CudaArray, round)
+{
+    unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Round", OP_ROUND);
+}
+
 ZEND_METHOD(CudaArray, exp)
 {
     unary_operation_handler(INTERNAL_FUNCTION_PARAM_PASSTHRU, "Exp", OP_EXP);

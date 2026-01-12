@@ -59,6 +59,9 @@ UnaryDispatchEntry unary_dispatch[] = {
     {OP_COS, launch_unary_cos_kernel},
     {OP_TAN, launch_unary_tan_kernel},
     {OP_ABS, launch_unary_abs_kernel},
+    {OP_FLOOR, launch_unary_floor_kernel},
+    {OP_CEIL, launch_unary_ceil_kernel},
+    {OP_ROUND, launch_unary_round_kernel},
     {OP_NEG, launch_unary_neg_kernel}};
 
 ReductionDispatchEntry reduction_dispatch[] = {

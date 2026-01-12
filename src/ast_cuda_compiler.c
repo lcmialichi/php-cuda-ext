@@ -567,42 +567,27 @@ static const char *get_unary_op_symbol(uint32_t op_type)
 
 static const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
 {
-    static char buffer[256];
-
     if (type == DTYPE_LIST)
     {
-        const char *base_type;
-
         switch (second_dtype)
         {
         case DTYPE_FLOAT32:
-            base_type = "float";
-            break;
+            return "float*";
         case DTYPE_FLOAT64:
-            base_type = "double";
-            break;
+            return "double*";
         case DTYPE_INT32:
-            base_type = "int";
-            break;
+            return "int*";
         case DTYPE_INT64:
-            base_type = "long long";
-            break;
+            return "long long*";
         case DTYPE_UINT32:
-            base_type = "unsigned int";
-            break;
+            return "unsigned int*";
         case DTYPE_UINT64:
-            base_type = "unsigned long long";
-            break;
+            return "unsigned long long*";
         case DTYPE_BOOL:
-            base_type = "bool";
-            break;
+            return "bool*";
         default:
-            base_type = "void";
-            break;
+            return "void*";
         }
-
-        snprintf(buffer, sizeof(buffer), "%s*", base_type);
-        return buffer;
     }
 
     switch (type)
@@ -1189,6 +1174,7 @@ static func_parameter *find_kernel_parameter(func_parameter_list_t *list, const 
             return list->parameters[i];
         }
     }
+    
     return NULL;
 }
 
@@ -2622,6 +2608,23 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
         return 0;
     }
 
+    if (var != NULL && var->dtype != DTYPE_LIST)
+    {
+        const char *type_str = get_cuda_type_str(param->dtype, param->second_dtype);
+        cuda_compiler_error_ex(context,
+                               "Variable '%.*s': Type mismatch Expected Array got %s",
+                               (int)var_name_len, var_name_cstr, type_str);
+        return 0;
+    }
+    else if (param != NULL && param->dtype != DTYPE_LIST)
+    {
+        const char *type_str = get_cuda_type_str(param->dtype, param->second_dtype);
+        cuda_compiler_error_ex(context,
+                               "Variable '%.*s': Type mismatch Expected Array got %s",
+                                (int)var_name_len, var_name_cstr, type_str);
+        return 0;
+    }
+
     if (var != NULL && var->var_type == VAR_LOCAL_SHARED)
     {
         if (access_levels > var->array_dimensions)
@@ -3413,7 +3416,7 @@ static void cuda_compiler_error_ex(cuda_compilation_context_t *context, const ch
     char *message;
 
     va_start(args, format);
-    spprintf(&message, 0, format, args);
+    vspprintf(&message, 0, format, args);
     va_end(args);
 
     zend_throw_exception_ex(zend_exception_get_default(), 0,

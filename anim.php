@@ -109,6 +109,6 @@ function drawGrid($grid)
         echo $line . "|\n";
     }
     echo str_repeat('-', WIDTH) . "\n";
-    usleep(40000);
+    usleep(20000);
 }
 

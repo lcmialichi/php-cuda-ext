@@ -63,7 +63,6 @@ class CudaBenchmark
         echo "\n\nOVERVIEW: \n\tTotal time: {$time} s\n\tFastest op: \033[32m{$this->fastestOp['op']}\033[0m\n\tSlowest op: \033[91m{$this->slowestOp['op']}\033[0m";
         echo "\n\tTotal elements: {$elements}\n\tTotal operations: {$this->totalOp}";
         echo "\n\nBENCHMARK FINISHED!\n";
-
     }
 
     private function suiteElementWise($tests)
@@ -79,6 +78,9 @@ class CudaBenchmark
             'Sqrt' => fn($x) => $x->sqrt(),
             'Abs' => fn($x) => $x->abs(),
             'Sin' => fn($x) => $x->sin(),
+            'Floor' => fn($x) => $x->floor(),
+            'Ceil' => fn($x) => $x->ceil(),
+            'Round' => fn($x) => $x->round(),
             'Cos' => fn($x) => $x->cos(),
             'Neg' => fn($x) => $x->neg(),
             'Exp' => fn($x) => $x->exp(),

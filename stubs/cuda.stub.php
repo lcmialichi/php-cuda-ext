@@ -253,6 +253,21 @@ class CudaArray implements \ArrayAccess
     {
     }
 
+    public function floor(): CudaArray
+    {
+
+    }
+
+    public function ceil(): CudaArray
+    {
+
+    }
+
+    public function round(): CudaArray
+    {
+
+    }
+
     public function sum(?int $axis = null): CudaArray
     {
     }

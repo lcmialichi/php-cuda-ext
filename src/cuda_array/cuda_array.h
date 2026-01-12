@@ -39,6 +39,9 @@ ZEND_METHOD(CudaArray, cos);
 ZEND_METHOD(CudaArray, tan);
 ZEND_METHOD(CudaArray, abs);
 ZEND_METHOD(CudaArray, neg);
+ZEND_METHOD(CudaArray, floor);
+ZEND_METHOD(CudaArray, ceil);
+ZEND_METHOD(CudaArray, round);
 
 ZEND_METHOD(CudaArray, gt);
 ZEND_METHOD(CudaArray, lt);

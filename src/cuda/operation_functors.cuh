@@ -94,6 +94,31 @@ struct LessEqualOp
     }
 };
 
+struct FloorOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return floorf(a);
+    }
+};
+
+struct CeilOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return ceilf(a);
+    }
+};
+
+struct RoundOp
+{
+    __device__ __forceinline__ float operator()(float a) const
+    {
+        return roundf(a);
+    }
+};
+
+
 struct ExpOp
 {
     __device__ __forceinline__ float operator()(float a) const

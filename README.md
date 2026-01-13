@@ -1,7 +1,7 @@
 
 <p align="center">
   <a href="https://github.com/lcmialichi/php-cuda-ext">
-    <img src="https://repository-images.githubusercontent.com/1091968129/520375bf-6506-4732-9834-9c5b51d9888b" alt="php-cuda-ext banner" width="800">
+    <img src="https://repository-images.githubusercontent.com/1091968129/520375bf-6506-4732-9834-9c5b51d9888b" alt="php-cuda-ext banner" width="600px">
   </a>
 </p>
 

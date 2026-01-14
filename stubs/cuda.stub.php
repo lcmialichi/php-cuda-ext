@@ -2,6 +2,15 @@
 
 namespace Cuda;
 
+
+#[\Attribute(Attribute::TARGET_PARAMETER)]
+abstract class ParamAttribute
+{
+    abstract public function getDtype(): string;
+    abstract public function isList(): bool;
+    abstract public function isNullable(): bool;
+}
+
 class Compiler
 {
     public function kernel(callable $fn): static
@@ -49,12 +58,12 @@ class CompiledModule
         return true;
     }
 
-    public function runAsync(string $name, array $config = [], array $args): bool
+    public function runAsync(string $name, array $config = [], array $args): int
     {
         return true;
     }
 
-    public function isFinished(): bool
+    public function isFinished(?int $id = null): bool
     {
         return true;
     }
@@ -64,7 +73,7 @@ class CompiledModule
         return true;
     }
 
-    public function getAsyncStatus(): array
+    public function getAsyncStatus(?int $id = null): array
     {
         return [];
     }
@@ -143,6 +152,10 @@ class CudaArray implements \ArrayAccess
 
     public function getNdims(): int
     {
+    }
+
+    public function getSize(): int{
+        
     }
 
     public function __invoke(int|null|array ...$slices): CudaArray

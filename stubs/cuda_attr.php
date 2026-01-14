@@ -3,6 +3,7 @@
 namespace Cuda\Attr;
 
 use Attribute;
+use Cuda\ParamAttribute;
 
 #[Attribute(Attribute::TARGET_METHOD)]
 class Kernel
@@ -22,13 +23,6 @@ class Device
     }
 }
 
-#[Attribute(Attribute::TARGET_PARAMETER)]
-abstract class ParamAttribute
-{
-    abstract public function getDtype(): string;
-    abstract public function isList(): bool;
-    abstract public function isNullable(): bool;
-}
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class TensorType extends ParamAttribute

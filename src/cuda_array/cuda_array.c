@@ -527,6 +527,18 @@ ZEND_METHOD(CudaArray, getNdims)
     RETURN_LONG(t->ndims);
 }
 
+ZEND_METHOD(CudaArray, getSize)
+{
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *t = obj->tensor_handle;
+    if (!t->total_size)
+    {
+        RETURN_LONG(0);
+    }
+
+    RETURN_LONG((int)t->total_size);
+}
+
 ZEND_METHOD(CudaArray, concat)
 {
     zval *this_ptr = ZEND_THIS;

@@ -280,11 +280,11 @@ To help you get started, we provide a collection of documented examples in the [
 
 | Example | Description |
 | :--- | :--- |
-| **[Tensor Basics](./examples/01_tensor_basics.php)** | Initialization, VRAM allocation, and operator overloading. |
+| **[Tensor Basics](./examples/01_basics_cuda_array.php)** | Initialization, VRAM allocation, and operator overloading. |
 | **[Math & Reductions](./examples/02_math_and_reductions.php)** | Parallel mathematical functions and data aggregations (sum, max). |
-| **[Shape Manipulation](./examples/03_shape_manipulation.php)** | Reshaping, Transposition, and NumPy-style Broadcasting. |
+| **[Shape Manipulation](./examples/03_advanced_manipulation.php)** | Reshaping, Transposition, and NumPy-style Broadcasting. |
 | **[Custom JIT Kernels](./examples/04_custom_jit_kernels.php)** | Writing CUDA kernels in PHP using Attributes and JIT compilation. |
-| **[Asynchronous Execution](./examples/05_asynchronous_execution.php)** | Non-blocking kernel launches and stream synchronization. |
+| **[Asynchronous Execution](./examples/05_jit_async_execution.php)** | Non-blocking kernel launches and stream synchronization. |
 
 Explore the [Examples README](./examples/README.md) for a technical overview of the GPU memory lifecycle and the JIT compilation pipeline.
 

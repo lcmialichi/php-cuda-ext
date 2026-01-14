@@ -168,6 +168,7 @@ $array = $newCa->toArray();
 - **Functions**: ``exp``, ``log``, ``sqrt``, ``abs``, ``ceil``, ``floor``, ``round``
 - **Trigonometry**: ``sin``, ``cos``, ``tan``
 - **Comparison**: ``gt``, ``lt``, ``eq``, ``ne``, ``ge``, ``le``
+- **info**: ``getNdims``, ``getShape``, ``getSize``,  ``getStrides``
 
 ### Reductions
 - ``sum(axis)``
@@ -272,6 +273,20 @@ $value = $cuda->math->sqrt($input[$idx]);
  - ``hasKernel()``
  - ``getKernels()``
  - ``getPtx()``
+
+## 📚 Examples & Learning Path
+
+To help you get started, we provide a collection of documented examples in the [`/examples`](./examples) directory. These are organized from high-level abstractions to advanced custom kernel development:
+
+| Example | Description |
+| :--- | :--- |
+| **[Tensor Basics](./examples/01_tensor_basics.php)** | Initialization, VRAM allocation, and operator overloading. |
+| **[Math & Reductions](./examples/02_math_and_reductions.php)** | Parallel mathematical functions and data aggregations (sum, max). |
+| **[Shape Manipulation](./examples/03_shape_manipulation.php)** | Reshaping, Transposition, and NumPy-style Broadcasting. |
+| **[Custom JIT Kernels](./examples/04_custom_jit_kernels.php)** | Writing CUDA kernels in PHP using Attributes and JIT compilation. |
+| **[Asynchronous Execution](./examples/05_asynchronous_execution.php)** | Non-blocking kernel launches and stream synchronization. |
+
+Explore the [Examples README](./examples/README.md) for a technical overview of the GPU memory lifecycle and the JIT compilation pipeline.
 
 ## 📊 Benchmarks
 ### Run built-in benchmarks:

@@ -144,7 +144,7 @@ $b = CudaArray::full([3, 3], 2.0);
 // Executes entirely on the GPU
 $result = ($a * 2.0 + $b) ** 2;
 ```
-Complex mathematical expressions are fused and executed on the GPU, not the CPU.
+Complex mathematical executed on the GPU.
 
 ### Basic Operations
 

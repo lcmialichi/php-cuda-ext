@@ -6,11 +6,11 @@ This directory contains functional implementations of the extension's API. The e
 
 | File | Feature Demonstrated | Key Concepts |
 | :--- | :--- | :--- |
-| `01_tensor_basics.php` | Memory Management | VRAM allocation, Operator overloading. |
+| `01_basics_cuda_array.php` | Memory Management | VRAM allocation, Operator overloading. |
 | `02_math_and_reductions.php` | Data Aggregation | Parallel math functions, Reductions (sum/max). |
-| `03_shape_manipulation.php` | Tensor Geometry | Reshaping, Transposition, Broadcasting. |
+| `03_advanced_manipulation.php` | Tensor Geometry | Reshaping, Transposition, Broadcasting. |
 | `04_custom_jit_kernels.php` | JIT Compilation | PHP 8 Attributes, Kernel definitions, Grid/Block config. |
-| `05_asynchronous_execution.php` | Concurrency | Non-blocking execution, Op polling, Stream sync. |
+| `05_jit_async_execution.php` | Concurrency | Non-blocking execution, Op polling, Stream sync. |
 
 ## Execution Requirements
 

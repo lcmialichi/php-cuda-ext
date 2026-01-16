@@ -564,3 +564,66 @@ const char *get_cuda_object_name(int obj_type)
         return "unknown";
     }
 }
+
+const char *get_unary_op_symbol(uint32_t op_type)
+{
+    switch (op_type)
+    {
+    case ZEND_BOOL_NOT:
+        return "!";
+    case ZEND_BW_NOT:
+        return "~";
+    default:
+        return NULL;
+    }
+}
+
+const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype)
+{
+    if (type == DTYPE_LIST)
+    {
+        switch (second_dtype)
+        {
+        case DTYPE_FLOAT32:
+            return "float*";
+        case DTYPE_FLOAT64:
+            return "double*";
+        case DTYPE_INT32:
+            return "int*";
+        case DTYPE_INT64:
+            return "long long*";
+        case DTYPE_UINT32:
+            return "unsigned int*";
+        case DTYPE_UINT64:
+            return "unsigned long long*";
+        case DTYPE_BOOL:
+            return "bool*";
+        default:
+            return "void*";
+        }
+    }
+
+    switch (type)
+    {
+    case DTYPE_VOID:
+        return "void";
+    case DTYPE_FLOAT32:
+        return "float";
+    case DTYPE_FLOAT64:
+        return "double";
+    case DTYPE_INT32:
+        return "int";
+    case DTYPE_INT64:
+        return "long long";
+    case DTYPE_UINT32:
+        return "unsigned int";
+    case DTYPE_UINT64:
+        return "unsigned long long";
+    case DTYPE_BOOL:
+        return "bool";
+    case DTYPE_LIST:
+        return "void*";
+    default:
+        return "void";
+    }
+}

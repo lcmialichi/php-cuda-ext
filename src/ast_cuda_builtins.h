@@ -33,23 +33,20 @@ typedef struct
     zend_bool requires_this;
 } cuda_function_info_t;
 
-dtype_t determine_dominant_type(dtype_t arg_types[], uint32_t num_args);
-const cuda_function_info_t *find_cuda_function_by_category(
-    const char *php_name, cuda_func_category_t category);
-
-cuda_function_match_t find_cuda_function_by_type(
-    const char *php_name,
-    dtype_t arg_types[],
-    uint32_t num_args);
+const cuda_function_info_t *find_cuda_function_by_category(const char *php_name, cuda_func_category_t category);
+const cuda_function_info_t *find_cuda_function(const char *php_name);
+cuda_function_match_t find_cuda_function_by_type(const char *php_name, dtype_t arg_types[], uint32_t num_args);
 
 dtype_t string_to_dtype(const char *type_str);
-const cuda_function_info_t *find_cuda_function(const char *php_name);
 func_parameter *find_kernel_parameter(func_parameter_list_t *list, const char *name);
-zend_bool types_are_compatible(dtype_t t1, dtype_t t1_second,
-                               dtype_t t2, dtype_t t2_second);
+zend_bool types_are_compatible(dtype_t t1, dtype_t t1_second, dtype_t t2, dtype_t t2_second);
 
+dtype_t determine_dominant_type(dtype_t arg_types[], uint32_t num_args);
+
+const char *get_cuda_type_str(dtype_t type, dtype_t second_dtype);
 const char *get_ast_kind_name(zend_ast_kind kind);
 const char *get_binary_op_symbol(uint32_t op_type);
 const char *get_assign_op_symbol(uint32_t op_type);
 const char *get_cuda_object_name(int obj_type);
+const char *get_unary_op_symbol(uint32_t op_type);
 #endif

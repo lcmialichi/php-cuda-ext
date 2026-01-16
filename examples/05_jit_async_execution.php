@@ -29,8 +29,6 @@ class HeavyWorkload
         }
 
         $idx = $row * $cols + $col;
-
-        // Simulating heavy workload with trigonometric iterations
         $val = $data[$idx];
         for ($i = 0; $i < 100; $i++) {
             $val = $cuda->math->sin($val) * $cuda->math->cos($val);
@@ -80,7 +78,7 @@ echo "GPU is processing heavy math in the background...\n";
 while (!$module->isFinished($opId)) {
     // Perform some CPU work here
     usleep(1000); // Simulate other logic
-    echo "PHP is still free to run other code...\n";
+    // echo "PHP is still free to run other code...\n";
 
     // Optional: Check status
     $status = $module->getAsyncStatus($opId);

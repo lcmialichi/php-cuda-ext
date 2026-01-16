@@ -9,6 +9,9 @@ class Runtime
     public Memory $memory;
     public Sync $sync;
 
+    public function dump(mixed ...$args): void
+    {
+    }
 
     public function threadIdx(): \stdClass
     {

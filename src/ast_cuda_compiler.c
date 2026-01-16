@@ -1174,7 +1174,7 @@ static func_parameter *find_kernel_parameter(func_parameter_list_t *list, const 
             return list->parameters[i];
         }
     }
-    
+
     return NULL;
 }
 
@@ -1328,6 +1328,238 @@ static int handle_warp_functions(cuda_compilation_context_t *context,
     return 1;
 }
 
+static int handle_cuda_dump_with_format(cuda_compilation_context_t *context,
+                                        zend_ast_list *args_list)
+{
+    zend_ast *format_ast = args_list->child[0];
+    zval *format_zv = zend_ast_get_zval(format_ast);
+    const char *format_str = Z_STRVAL_P(format_zv);
+
+    smart_string_appends(context->cuda_code_buffer, "printf(\"");
+
+    for (size_t i = 0; i < Z_STRLEN_P(format_zv); i++)
+    {
+        unsigned char c = (unsigned char)format_str[i];
+        
+        switch (c)
+        {
+            case '\n':
+                smart_string_appends(context->cuda_code_buffer, "\\n");
+                break;
+            case '\r':
+                smart_string_appends(context->cuda_code_buffer, "\\r");
+                break;
+            case '\t':
+                smart_string_appends(context->cuda_code_buffer, "\\t");
+                break;
+            case '\\':
+                smart_string_appends(context->cuda_code_buffer, "\\\\");
+                break;
+            case '"':
+                smart_string_appends(context->cuda_code_buffer, "\\\"");
+                break;
+            default:
+                if (c >= 32 && c < 127)
+                {
+                    smart_string_appendc(context->cuda_code_buffer, c);
+                }
+                else if (c == 0)
+                {
+                    break;
+                }
+                else
+                {
+                    char buf[5];
+                    snprintf(buf, sizeof(buf), "\\x%02x", c);
+                    smart_string_appends(context->cuda_code_buffer, buf);
+                }
+                break;
+        }
+    }
+
+    smart_string_appends(context->cuda_code_buffer, "\"");
+
+    for (uint32_t i = 1; i < args_list->children; i++)
+    {
+        smart_string_appends(context->cuda_code_buffer, ", ");
+
+        if (!compile_ast_as_valid_cuda(context, args_list->child[i]))
+        {
+            return 0;
+        }
+
+        if (context->last_evaluated_first_dtype == DTYPE_BOOL)
+        {
+            smart_string temp_buffer = {0};
+            smart_string_alloc(&temp_buffer, 256, 0);
+
+            smart_string *original = context->cuda_code_buffer;
+            context->cuda_code_buffer = &temp_buffer;
+
+            if (!compile_ast_as_valid_cuda(context, args_list->child[i]))
+            {
+                smart_string_free(&temp_buffer);
+                context->cuda_code_buffer = original;
+                return 0;
+            }
+
+            context->cuda_code_buffer = original;
+
+            smart_string_appends(context->cuda_code_buffer, "(");
+            smart_string_append(context->cuda_code_buffer, &temp_buffer);
+            smart_string_appends(context->cuda_code_buffer, " ? \"true\" : \"false\")");
+
+            smart_string_free(&temp_buffer);
+        }
+    }
+
+    smart_string_appendc(context->cuda_code_buffer, ')');
+
+    context->last_evaluated_first_dtype = DTYPE_VOID;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+
+    return 1;
+}
+
+static int handle_cuda_dump_simple(cuda_compilation_context_t *context,
+                                   zend_ast_list *args_list)
+{
+    smart_string_appends(context->cuda_code_buffer, "printf(\"");
+    
+    for (uint32_t i = 0; i < args_list->children; i++)
+    {
+        if (i > 0)
+        {
+            smart_string_appends(context->cuda_code_buffer, " ");
+        }
+        
+        smart_string temp_buffer = {0};
+        smart_string_alloc(&temp_buffer, 256, 0);
+        
+        smart_string *original = context->cuda_code_buffer;
+        context->cuda_code_buffer = &temp_buffer;
+        
+        if (!compile_ast_as_valid_cuda(context, args_list->child[i]))
+        {
+            smart_string_free(&temp_buffer);
+            context->cuda_code_buffer = original;
+            return 0;
+        }
+        
+        dtype_t arg_type = context->last_evaluated_first_dtype;
+        
+        context->cuda_code_buffer = original;
+        
+        if (arg_type == DTYPE_INT32)
+        {
+            smart_string_appends(context->cuda_code_buffer, "%d");
+        }
+        else if (arg_type == DTYPE_INT64)
+        {
+            smart_string_appends(context->cuda_code_buffer, "%lld");
+        }
+        else if (arg_type == DTYPE_FLOAT32 || arg_type == DTYPE_FLOAT64)
+        {
+            smart_string_appends(context->cuda_code_buffer, "%f");
+        }
+        else if (arg_type == DTYPE_BOOL)
+        {
+            smart_string_appends(context->cuda_code_buffer, "%s");
+        }
+        else if (arg_type == DTYPE_LIST)
+        {
+            smart_string_appends(context->cuda_code_buffer, "%p");
+        }
+        else
+        {
+            smart_string_appends(context->cuda_code_buffer, "[unknown]");
+        }
+    }
+    
+    smart_string_appends(context->cuda_code_buffer, "\\n\"");
+    for (uint32_t i = 0; i < args_list->children; i++)
+    {
+        smart_string_appends(context->cuda_code_buffer, ", ");
+        
+        smart_string temp_buffer = {0};
+        smart_string_alloc(&temp_buffer, 256, 0);
+        
+        smart_string *original = context->cuda_code_buffer;
+        context->cuda_code_buffer = &temp_buffer;
+        
+        if (!compile_ast_as_valid_cuda(context, args_list->child[i]))
+        {
+            smart_string_free(&temp_buffer);
+            context->cuda_code_buffer = original;
+            return 0;
+        }
+        
+        dtype_t arg_type = context->last_evaluated_first_dtype;
+        
+        context->cuda_code_buffer = original;
+        
+        if (arg_type == DTYPE_BOOL)
+        {
+            smart_string_appends(context->cuda_code_buffer, "(");
+            smart_string_append(context->cuda_code_buffer, &temp_buffer);
+            smart_string_appends(context->cuda_code_buffer, " ? \"true\" : \"false\")");
+        }
+        else if (arg_type == DTYPE_LIST)
+        {
+            smart_string_appends(context->cuda_code_buffer, "(void*)");
+            smart_string_append(context->cuda_code_buffer, &temp_buffer);
+        }
+        else
+        {
+            smart_string_append(context->cuda_code_buffer, &temp_buffer);
+        }
+        
+        smart_string_free(&temp_buffer);
+    }
+    
+    smart_string_appendc(context->cuda_code_buffer, ')');
+    
+    context->last_evaluated_first_dtype = DTYPE_VOID;
+    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    
+    return 1;
+}
+
+static int handle_cuda_dump(cuda_compilation_context_t *context,
+                            zend_ast *args_ast)
+{
+    if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
+    {
+        cuda_compiler_error_ex(context,
+                               "$cuda->dump() requires at least one argument");
+        return 0;
+    }
+
+    zend_ast_list *list = (zend_ast_list *)args_ast;
+
+    if (list->children == 0)
+    {
+        smart_string_appends(context->cuda_code_buffer,
+                             "printf(\"\\n\")");
+        context->last_evaluated_first_dtype = DTYPE_VOID;
+        context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+        return 1;
+    }
+
+    zend_ast *first_arg = list->child[0];
+
+    if (first_arg->kind == ZEND_AST_ZVAL)
+    {
+        zval *zv = zend_ast_get_zval(first_arg);
+        if (zv && Z_TYPE_P(zv) == IS_STRING)
+        {
+            return handle_cuda_dump_with_format(context, list);
+        }
+    }
+
+    return handle_cuda_dump_simple(context, list);
+}
+
 static int handle_cuda_direct_method(cuda_compilation_context_t *context,
                                      const char *method_name,
                                      zend_ast *args_ast)
@@ -1409,6 +1641,10 @@ static int handle_cuda_direct_method(cuda_compilation_context_t *context,
     else if (strcmp(method_name, "__declare_shared") == 0)
     {
         return handle_cuda_declare_shared(context, args_ast);
+    }
+    else if (strcmp(method_name, "dump") == 0)
+    {
+        return handle_cuda_dump(context, args_ast);
     }
 
     cuda_compiler_error_ex(context,
@@ -2621,7 +2857,7 @@ static int handler_ast_dim(cuda_compilation_context_t *context, zend_ast *ast)
         const char *type_str = get_cuda_type_str(param->dtype, param->second_dtype);
         cuda_compiler_error_ex(context,
                                "Variable '%.*s': Type mismatch Expected Array got %s",
-                                (int)var_name_len, var_name_cstr, type_str);
+                               (int)var_name_len, var_name_cstr, type_str);
         return 0;
     }
 

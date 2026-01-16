@@ -229,8 +229,8 @@ $JITStats = Profiler::measure(fn() => $module->initialize());
 Summary::result("JIT Module Initialization", $JITStats);
 Summary::header("PHASE 2: INTENSIVE PERFORMANCE COMPARISONS (21 TESTS)");
 
-$n = 512 * 512;
-$shape = [512, 512];
+$n = 1024 * 32;
+$shape = [1024, 32];
 $repeat = 10;
 $batchItems = [5, 12, 24];
 

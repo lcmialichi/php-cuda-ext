@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "ext/standard/php_standard.h"
+#include "ast_cuda_types.h"
 
 #define MAX_KERNEL_ERROR_LEN 1024
 #define ERROR_CHECK_INTERVAL 50

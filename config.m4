@@ -69,6 +69,7 @@ if test "$PHP_CUDA" != "no"; then
     src/kernel_reflection.c \
     src/compiler.c \
     src/module.c \
+    src/ast_cuda_builtins.c \
     src/ast_cuda_compiler.c \
     src/cuda_param.c"
 

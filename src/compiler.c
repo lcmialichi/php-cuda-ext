@@ -292,18 +292,6 @@ static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t 
     }
     ZEND_HASH_FOREACH_END();
 
-    cuda_device_object *device;
-    ZEND_HASH_FOREACH_PTR(compiler->devices, device)
-    {
-        if (device && device->name)
-        {
-            smart_string_appendl(&program, "\n// Device function: ", strlen("\n// Device function: "));
-            smart_string_appendl(&program, ZSTR_VAL(device->name), ZSTR_LEN(device->name));
-            smart_string_appendl(&program, "\n", 1);
-        }
-    }
-    ZEND_HASH_FOREACH_END();
-
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
         if (kernel && kernel->name && kernel->cuda_code)

@@ -3,6 +3,7 @@
 
 #include "php.h"
 #include "kernel_types.h"
+#include "ast_cuda_types.h"
 
 extern zend_class_entry *cuda_compiler_ce;
 

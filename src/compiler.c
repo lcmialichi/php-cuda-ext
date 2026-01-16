@@ -18,6 +18,7 @@
 #include <cuda.h>
 #include <stdio.h>
 #include <string.h>
+#include "nvidia_types.h"
 
 zend_class_entry *cuda_compiler_ce;
 static zend_object_handlers compiler_handlers;
@@ -43,66 +44,6 @@ static char g_cached_target[64] = {0};
 static zend_long g_cached_opt_level = 0;
 static zend_bool g_cached_debug = 0;
 static zend_bool g_cached_fast_math = 0;
-
-static const char *get_nvrtc_error_string(nvrtcResult result)
-{
-    switch (result)
-    {
-    case NVRTC_SUCCESS:
-        return "NVRTC_SUCCESS";
-    case NVRTC_ERROR_OUT_OF_MEMORY:
-        return "NVRTC_ERROR_OUT_OF_MEMORY";
-    case NVRTC_ERROR_PROGRAM_CREATION_FAILURE:
-        return "NVRTC_ERROR_PROGRAM_CREATION_FAILURE";
-    case NVRTC_ERROR_INVALID_INPUT:
-        return "NVRTC_ERROR_INVALID_INPUT";
-    case NVRTC_ERROR_INVALID_PROGRAM:
-        return "NVRTC_ERROR_INVALID_PROGRAM";
-    case NVRTC_ERROR_INVALID_OPTION:
-        return "NVRTC_ERROR_INVALID_OPTION";
-    case NVRTC_ERROR_COMPILATION:
-        return "NVRTC_ERROR_COMPILATION";
-    case NVRTC_ERROR_BUILTIN_OPERATION_FAILURE:
-        return "NVRTC_ERROR_BUILTIN_OPERATION_FAILURE";
-    case NVRTC_ERROR_NO_NAME_EXPRESSIONS_AFTER_COMPILATION:
-        return "NVRTC_ERROR_NO_NAME_EXPRESSIONS_AFTER_COMPILATION";
-    case NVRTC_ERROR_NO_LOWERED_NAMES_BEFORE_COMPILATION:
-        return "NVRTC_ERROR_NO_LOWERED_NAMES_BEFORE_COMPILATION";
-    case NVRTC_ERROR_NAME_EXPRESSION_NOT_VALID:
-        return "NVRTC_ERROR_NAME_EXPRESSION_NOT_VALID";
-    case NVRTC_ERROR_INTERNAL_ERROR:
-        return "NVRTC_ERROR_INTERNAL_ERROR";
-    default:
-        return "Unknown NVRTC error";
-    }
-}
-
-static const char *get_cuda_error_string(CUresult result)
-{
-    switch (result)
-    {
-    case CUDA_SUCCESS:
-        return "CUDA_SUCCESS";
-    case CUDA_ERROR_INVALID_VALUE:
-        return "CUDA_ERROR_INVALID_VALUE";
-    case CUDA_ERROR_OUT_OF_MEMORY:
-        return "CUDA_ERROR_OUT_OF_MEMORY";
-    case CUDA_ERROR_NOT_INITIALIZED:
-        return "CUDA_ERROR_NOT_INITIALIZED";
-    case CUDA_ERROR_DEINITIALIZED:
-        return "CUDA_ERROR_DEINITIALIZED";
-    case CUDA_ERROR_PROFILER_DISABLED:
-        return "CUDA_ERROR_PROFILER_DISABLED";
-    case CUDA_ERROR_PROFILER_NOT_INITIALIZED:
-        return "CUDA_ERROR_PROFILER_NOT_INITIALIZED";
-    case CUDA_ERROR_PROFILER_ALREADY_STARTED:
-        return "CUDA_ERROR_PROFILER_ALREADY_STARTED";
-    case CUDA_ERROR_PROFILER_ALREADY_STOPPED:
-        return "CUDA_ERROR_PROFILER_ALREADY_STOPPED";
-    default:
-        return "Unknown CUDA error";
-    }
-}
 
 static void ensure_common_headers(cuda_compiler_object *compiler)
 {

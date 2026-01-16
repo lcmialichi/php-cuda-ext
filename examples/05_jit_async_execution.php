@@ -18,19 +18,25 @@ class HeavyWorkload
      * A computationally expensive kernel simulation
      */
     #[K\Kernel(name: 'heavy_math')]
-    public function compute(#[K\TensorType] &$data, #[K\IntType] $n): void 
+    public function compute(#[K\TensorType] &$data, #[K\IntType] $rows, #[K\IntType] $cols): void
     {
         /** @var \Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        
-        if ($idx < $n) {
-            // Simulating heavy workload with trigonometric iterations
-            $val = $data[$idx];
-            for ($i = 0; $i < 100; $i++) {
-                $val = $cuda->math->sin($val) * $cuda->math->cos($val);
-            }
-            $data[$idx] = $val;
+        $col = $cuda->blockIdx()->x * $cuda->blockDim()->x + $cuda->threadIdx()->x;
+        $row = $cuda->blockIdx()->y * $cuda->blockDim()->y + $cuda->threadIdx()->y;
+
+        if ($row >= $rows || $col >= $cols) {
+            return;
         }
+
+        $idx = $row * $cols + $col;
+
+        // Simulating heavy workload with trigonometric iterations
+        $val = $data[$idx];
+        for ($i = 0; $i < 100; $i++) {
+            $val = $cuda->math->sin($val) * $cuda->math->cos($val);
+        }
+
+        $data[$idx] = $val;
     }
 }
 
@@ -43,12 +49,14 @@ $module->initialize();
 
 // --- 2. Data & Configuration ---
 
-$size = 2_000_000 * 32;
-$data = CudaArray::rand([$size], 0, 1);
+$size = 2_000_000;
+$data = CudaArray::rand([32, $size], 0, 1);
+[$rows, $cols] = $data->getShape();
 
+$block = [32, 8, 1];
 $config = [
     'block' => [256, 1, 1],
-    'grid'  => [(int) ceil($size / 256), 1, 1]
+    'grid' => [(int) ceil($cols / $block[0]), (int) ceil($rows / $block[1]), 1]
 ];
 
 // --- 3. Asynchronous Launch ---
@@ -57,7 +65,9 @@ $config = [
  * runAsync() returns an operation ID immediately.
  * The PHP engine does not wait for the GPU to finish.
  */
-$opId = $module->runAsync('heavy_math', args: [$data, $size], config: $config);
+$startGpu = microtime(true);
+
+$opId = $module->runAsync('heavy_math', args: [$data, $rows, $cols], config: $config);
 
 // --- 4. Concurrent CPU Processing ---
 
@@ -71,7 +81,7 @@ while (!$module->isFinished($opId)) {
     // Perform some CPU work here
     usleep(1000); // Simulate other logic
     echo "PHP is still free to run other code...\n";
-    
+
     // Optional: Check status
     $status = $module->getAsyncStatus($opId);
 }
@@ -83,6 +93,5 @@ while (!$module->isFinished($opId)) {
  * Required before calling toArray() to ensure data integrity.
  */
 $module->sync();
-
 $result = $data->toArray();
 echo "Computation finished successfully.\n";

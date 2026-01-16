@@ -63,8 +63,6 @@ $config = [
  * runAsync() returns an operation ID immediately.
  * The PHP engine does not wait for the GPU to finish.
  */
-$startGpu = microtime(true);
-
 $opId = $module->runAsync('heavy_math', args: [$data, $rows, $cols], config: $config);
 
 // --- 4. Concurrent CPU Processing ---

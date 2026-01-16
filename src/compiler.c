@@ -775,60 +775,6 @@ ZEND_METHOD(Compiler, kernel)
     RETURN_ZVAL(getThis(), 1, 0);
 }
 
-ZEND_METHOD(Compiler, device)
-{
-    cuda_compiler_object *compiler;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-    Z_PARAM_FUNC(fci, fcc)
-    ZEND_PARSE_PARAMETERS_END();
-
-    compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
-    zend_function *fptr = fcc.function_handler;
-
-    if (!fptr || fptr->type != ZEND_USER_FUNCTION)
-    {
-        zend_throw_exception_ex(NULL, 0, "Invalid device function");
-        return;
-    }
-
-    cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_device_ce);
-    if (!fargs)
-    {
-        zend_throw_exception_ex(NULL, 0, "Failed to extract device attributes");
-        return;
-    }
-
-    zend_string *device_class_name = zend_string_init("Cuda\\Device", strlen("Cuda\\Device"), 0);
-    zend_class_entry *device_ce = zend_lookup_class(device_class_name);
-    zend_string_release(device_class_name);
-
-    if (!device_ce)
-    {
-        efree(fargs);
-        zend_throw_exception_ex(NULL, 0, "Class Cuda\\Device not found");
-        RETURN_NULL();
-    }
-
-    zval device_zv;
-    object_init_ex(&device_zv, device_ce);
-    cuda_device_object *device = Z_CUDA_DEVICE_P(&device_zv);
-
-    device->name = zend_string_copy(fargs->name);
-
-    zend_string *key_name = zend_string_copy(device->name);
-    zend_hash_add_ptr(compiler->devices, key_name, device);
-
-    zend_hash_clean(compiler->ptx_cache);
-
-    zend_string_release(fargs->name);
-    efree(fargs);
-
-    RETURN_ZVAL(getThis(), 1, 0);
-}
-
 ZEND_METHOD(Compiler, compile)
 {
     cuda_compiler_object *compiler;
@@ -1055,27 +1001,6 @@ ZEND_METHOD(Compiler, getKernels)
         }
 
         add_assoc_zval(return_value, ZSTR_VAL(kernel->name), &kernel_info);
-    }
-    ZEND_HASH_FOREACH_END();
-}
-
-ZEND_METHOD(Compiler, getDevices)
-{
-    cuda_compiler_object *compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
-    array_init(return_value);
-
-    cuda_device_object *device;
-    ZEND_HASH_FOREACH_PTR(compiler->devices, device)
-    {
-        if (!device)
-        {
-            continue;
-        }
-
-        zval device_zv;
-        ZVAL_OBJ(&device_zv, &device->std);
-        zend_hash_add(return_value->value.arr, device->name, &device_zv);
-        Z_ADDREF(device_zv);
     }
     ZEND_HASH_FOREACH_END();
 }

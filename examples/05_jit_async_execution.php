@@ -64,7 +64,6 @@ $config = [
  * The PHP engine does not wait for the GPU to finish.
  */
 $opId = $module->runAsync('heavy_math', args: [$data, $rows, $cols], config: $config);
-
 // --- 4. Concurrent CPU Processing ---
 
 /**
@@ -76,12 +75,11 @@ echo "GPU is processing heavy math in the background...\n";
 while (!$module->isFinished($opId)) {
     // Perform some CPU work here
     usleep(1000); // Simulate other logic
-    // echo "PHP is still free to run other code...\n";
+    echo "PHP is still free to run other code...\n";
 
     // Optional: Check status
     $status = $module->getAsyncStatus($opId);
 }
-
 // --- 5. Final Synchronization ---
 
 /**

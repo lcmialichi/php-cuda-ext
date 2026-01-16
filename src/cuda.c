@@ -12,7 +12,6 @@
 #include "cuda.h"
 #include "cuda_attributes.h"
 #include "cuda_param.h"
-#include "device.h"
 #include "compiler.h"
 #include "module.h"
 
@@ -64,7 +63,6 @@ PHP_MINIT_FUNCTION(cuda)
 
     cuda_attr_init();
     compiler_init();
-    device_init();
     module_init();
     cuda_param_attribute_init();
     cuda_register_attributes();

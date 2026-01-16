@@ -16,10 +16,6 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_kernel, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, closure, IS_CALLABLE, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_device, 0, 0, 2)
-    ZEND_ARG_TYPE_INFO(0, closure, IS_CALLABLE, 0)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_compile, 0, 0, 0)
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, target, IS_STRING, 1, "null")
     ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, optimize, _IS_BOOL, 0, "true")
@@ -35,10 +31,8 @@ ZEND_END_ARG_INFO()
 static zend_function_entry compiler_methods[] = {
     ZEND_ME(Compiler, __construct, arginfo_compiler_construct, ZEND_ACC_PUBLIC)
     ZEND_ME(Compiler, kernel, arginfo_compiler_kernel, ZEND_ACC_PUBLIC)
-    ZEND_ME(Compiler, device, arginfo_compiler_device, ZEND_ACC_PUBLIC)
     ZEND_ME(Compiler, compile, arginfo_compiler_compile, ZEND_ACC_PUBLIC)
     ZEND_ME(Compiler, getKernels, arginfo_compiler_get_kernels, ZEND_ACC_PUBLIC)
-    ZEND_ME(Compiler, getDevices, arginfo_compiler_get_devices, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

@@ -8,12 +8,12 @@
 #include "zend_attributes.h"
 #include "cuda_wrapper.h"
 #include "cuda_arginfo.h"
-#include "cuda_array.h"
+#include "cuda_array_ce.h"
 #include "cuda.h"
 #include "cuda_attributes.h"
 #include "cuda_param.h"
-#include "compiler.h"
-#include "module.h"
+#include "compiler_ce.h"
+#include "module_ce.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(cuda);
 

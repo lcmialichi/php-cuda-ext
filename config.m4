@@ -60,7 +60,7 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda.c \
     src/nvidia_types.c \
     src/cuda_wrapper.cpp \
-    src/cuda_array/cuda_array.c \ 
+    src/cuda_array/cuda_array_ce.c \ 
     src/cuda_array/ca_private.c \
     src/tensor.c \
     src/cuda/memory_pool.c \
@@ -68,8 +68,8 @@ if test "$PHP_CUDA" != "no"; then
     src/operations.c \
     src/cuda_attributes.c \
     src/kernel_reflection.c \
-    src/compiler.c \
-    src/module.c \
+    src/compiler_ce.c \
+    src/module_ce.c \
     src/ast_cuda_builtins.c \
     src/ast_cuda_compiler.c \
     src/cuda_param.c"

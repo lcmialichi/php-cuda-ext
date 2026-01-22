@@ -2,6 +2,8 @@
 
 namespace Cuda;
 
+use IteratorAggregate;
+
 
 #[\Attribute(Attribute::TARGET_PARAMETER)]
 abstract class ParamAttribute
@@ -128,6 +130,49 @@ class Kernel
 {
 }
 
+class HostArray implements \ArrayAccess
+{
+    function offsetExists(mixed $offset): bool
+    {
+    }
+
+    function offsetGet(mixed $offset): mixed
+    {
+    }
+
+    function offsetSet(mixed $offset, mixed $value): void
+    {
+    }
+
+    function offsetUnset(mixed $offset): void
+    {
+    }
+
+    public function getNdims(): int
+    {
+    }
+
+    public function getShape(): array
+    {
+    }
+
+    public function toArray(): array
+    {
+    }
+
+    public function getSize(): int
+    {
+    }
+
+    public function count(): int
+    {
+    }
+
+    public function getDtype(): string
+    {
+    }
+}
+
 /**
  * <psalm
  * disallowLiteralKeysOnUnshapedArrays="[bool]"
@@ -146,6 +191,11 @@ class CudaArray implements \ArrayAccess
     public function toArray(): array
     {
     }
+
+    public function toHost(): HostArray
+    {
+    }
+    
     public function getShape(): array
     {
     }
@@ -154,8 +204,9 @@ class CudaArray implements \ArrayAccess
     {
     }
 
-    public function getSize(): int{
-        
+    public function getSize(): int
+    {
+
     }
 
     public function __invoke(int|null|array ...$slices): CudaArray

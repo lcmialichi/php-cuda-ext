@@ -34,7 +34,6 @@ typedef struct tensor
 {
     void *data;
     dtype_t dtype;
-    void *device_ptr;
     int *shape;
     size_t element_size;
     size_t *strides;
@@ -43,7 +42,7 @@ typedef struct tensor
     int ref_count;
     size_t allocated_size;
     int is_view;
-    size_t gpu_offset;
+    size_t offset;
     slice_info_t *slices;
     struct tensor *base_tensor;
     int num_slices;

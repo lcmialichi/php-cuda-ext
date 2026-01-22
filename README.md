@@ -25,7 +25,7 @@
 
 ---
 
-## ⚠️ Project Status — Experimental
+## ⚠️ Project Status — Under development
 
 > **This project is under active development.**
 

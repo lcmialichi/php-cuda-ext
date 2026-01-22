@@ -69,3 +69,4 @@ ZEND_METHOD(CudaArray, getSize);
 ZEND_METHOD(CudaArray, getStrides);
 ZEND_METHOD(CudaArray, getNdims);
 ZEND_METHOD(CudaArray, toArray);
+ZEND_METHOD(CudaArray, toHost);

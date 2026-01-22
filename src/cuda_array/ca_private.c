@@ -173,7 +173,7 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
          a_strides, a->ndims,
          b_strides, b->ndims,
          result_shape, result_dims,
-         total_elements, a->gpu_offset, b->gpu_offset);
+         total_elements, a->offset, b->offset);
 
     cudaError_t status = cudaDeviceSynchronize();
     return (status == cudaSuccess) ? result : NULL;
@@ -196,7 +196,7 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_t
         return NULL;
     }
 
-    func(a->data, scalar, result->data, a->gpu_offset, a->shape, a->strides, a->ndims, a->total_size);
+    func(a->data, scalar, result->data, a->offset, a->shape, a->strides, a->ndims, a->total_size);
     cudaError_t status = cudaDeviceSynchronize();
 
     if (status != cudaSuccess)
@@ -226,7 +226,7 @@ tensor_t *cuda_inv_scalar_op(tensor_t *a, float scalar, operation_type_t operati
         return NULL;
     }
 
-    func(a->data, scalar, result->data, a->gpu_offset, a->shape, a->strides, a->ndims, a->total_size);
+    func(a->data, scalar, result->data, a->offset, a->shape, a->strides, a->ndims, a->total_size);
     cudaError_t status = cudaDeviceSynchronize();
 
     if (status != cudaSuccess)
@@ -256,7 +256,7 @@ tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
         return NULL;
     }
 
-    func(a->data, result->data, a->gpu_offset, a->d_shape, a->d_strides, a->ndims, a->total_size);
+    func(a->data, result->data, a->offset, a->d_shape, a->d_strides, a->ndims, a->total_size);
 
     cudaError_t status = cudaDeviceSynchronize();
     if (status != cudaSuccess)
@@ -287,7 +287,7 @@ tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, operation_type_t ope
         return NULL;
 
     reduction_arg_fn func = get_reduction_arg_fn(operation_type);
-    func(input->data, result->data, input->shape, input->ndims, input->strides, axis, total_elements_out, input->gpu_offset);
+    func(input->data, result->data, input->shape, input->ndims, input->strides, axis, total_elements_out, input->offset);
     if (!result)
     {
         zend_throw_error(NULL, "CudaArray creation failed during reduction.");
@@ -331,7 +331,7 @@ tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operati
         return NULL;
 
     func(input->data, result->data, input->shape, input->ndims,
-         result_shape_arr, input->strides, result_ndims, axis, total_elements_out, input->gpu_offset);
+         result_shape_arr, input->strides, result_ndims, axis, total_elements_out, input->offset);
 
     if (operation_type == OP_REDUCE_MEAN)
     {
@@ -432,7 +432,7 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
         final_shape,
         new_strides,
         new_ndims,
-        original->gpu_offset,
+        original->offset,
         original->total_size);
 
     return reshaped;
@@ -473,7 +473,7 @@ tensor_t *cuda_tensor_transpose(tensor_t *tensor, int *axis, int axis_len)
         new_shape,
         new_strides,
         tensor->ndims,
-        tensor->gpu_offset,
+        tensor->offset,
         tensor->total_size);
 
     return transposed ? transposed : NULL;

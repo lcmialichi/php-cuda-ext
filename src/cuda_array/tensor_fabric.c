@@ -214,7 +214,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
 
     tensor->total_size = stride;
     tensor->is_view = 0;
-    tensor->gpu_offset = 0;
+    tensor->offset = 0;
     tensor->slices = NULL;
     tensor->num_slices = 0;
     tensor->ref_count = 1;

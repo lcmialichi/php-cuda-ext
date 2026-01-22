@@ -116,7 +116,7 @@ tensor_t *cuda_tensor_allocate_base(const int shape[], int ndims)
 
     tensor->total_size = stride;
     tensor->element_size = sizeof(float); // @todo remove this mocked element_size
-    
+
     err = cudaMalloc((void **)&tensor->d_shape, ndims * sizeof(int));
     if (err != cudaSuccess)
     {
@@ -166,7 +166,7 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     memset(view, 0, sizeof(tensor_t));
 
     view->is_view = 1;
-    view->gpu_offset = 0;
+    view->offset = 0;
     view->data = (float *)((char *)base_tensor->data + byte_offset);
     view->total_size = total_size;
     view->ref_count = 1;
@@ -221,7 +221,7 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
         }
     }
 
-    size_t element_offset = base_tensor->is_view ? (base_tensor->gpu_offset / sizeof(float)) : 0;
+    size_t element_offset = base_tensor->is_view ? (base_tensor->offset / sizeof(float)) : 0;
 
     int view_shape[MAX_DIMS];
     size_t view_strides[MAX_DIMS];
@@ -372,7 +372,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
         }
     }
 
-    size_t element_offset = base_tensor->is_view ? (base_tensor->gpu_offset / base_tensor->element_size) : 0;
+    size_t element_offset = base_tensor->is_view ? (base_tensor->offset / base_tensor->element_size) : 0;
 
     int view_shape[MAX_DIMS];
     size_t view_strides[MAX_DIMS];
@@ -486,29 +486,43 @@ int cuda_initialized()
 void cuda_tensor_destroy(tensor_t *tensor)
 {
     if (!tensor)
+    {
         return;
+    }
 
     if (tensor->is_view && !tensor->base_tensor)
     {
         if (tensor->shape)
+        {
             efree(tensor->shape);
+        }
         if (tensor->strides)
+        {
             efree(tensor->strides);
+        }
         if (tensor->slices)
+        {
             efree(tensor->slices);
+        }
 
         if (tensor->d_shape)
+        {
             cudaFree(tensor->d_shape);
-        if (tensor->d_strides)
-            cudaFree(tensor->d_strides);
+        }
 
+        if (tensor->d_strides)
+        {
+            cudaFree(tensor->d_strides);
+        }
         efree(tensor);
         return;
     }
 
     tensor->ref_count--;
     if (tensor->ref_count > 0)
+    {
         return;
+    }
 
     if (tensor->is_view)
     {
@@ -522,7 +536,9 @@ void cuda_tensor_destroy(tensor_t *tensor)
         }
 
         if (tensor->slices)
+        {
             efree(tensor->slices);
+        }
     }
     else
     {
@@ -534,14 +550,22 @@ void cuda_tensor_destroy(tensor_t *tensor)
     }
 
     if (tensor->d_shape)
+    {
         cudaFree(tensor->d_shape);
+    }
     if (tensor->d_strides)
+    {
         cudaFree(tensor->d_strides);
+    }
 
     if (tensor->shape)
+    {
         efree(tensor->shape);
+    }
     if (tensor->strides)
+    {
         efree(tensor->strides);
+    }
 
     efree(tensor);
 }

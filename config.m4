@@ -61,7 +61,7 @@ if test "$PHP_CUDA" != "no"; then
     src/nvidia_types.c \
     src/cuda_wrapper.cpp \
     src/cuda_array/cuda_array_ce.c \ 
-    src/host_array_ce.c \
+    src/contiguous_array_ce.c \
     src/cuda_array/ca_private.c \
     src/tensor.c \
     src/cuda/memory_pool.c \

@@ -14,7 +14,7 @@
 #include "cuda_param.h"
 #include "compiler_ce.h"
 #include "module_ce.h"
-#include "host_array_ce.h"
+#include "contiguous_array_ce.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(cuda);
 
@@ -67,7 +67,7 @@ PHP_MINIT_FUNCTION(cuda)
     module_init();
     cuda_param_attribute_init();
     cuda_register_attributes();
-    host_array_init();
+    contiguous_array_init();
 
     if (!cuda_array_init(pool_size))
     {

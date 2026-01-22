@@ -166,7 +166,7 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     memset(view, 0, sizeof(tensor_t));
 
     view->is_view = 1;
-    view->offset = 0;
+    view->offset = offset;
     view->data = (float *)((char *)base_tensor->data + byte_offset);
     view->total_size = total_size;
     view->ref_count = 1;
@@ -178,7 +178,7 @@ tensor_t *cuda_tensor_create_view(tensor_t *base_tensor, int *shape, size_t *str
     view->slices = NULL;
     view->element_size = base_tensor->element_size;
     view->allocated_size = base_tensor->allocated_size;
-
+    view->is_on_gpu = 1;
     view->shape = NULL;
     view->strides = NULL;
     view->d_strides = NULL;
@@ -542,10 +542,14 @@ void cuda_tensor_destroy(tensor_t *tensor)
     }
     else
     {
-        if (tensor->data)
+        if (tensor->data && tensor->is_on_gpu)
         {
             tensor_mem_free(tensor->data);
             tensor->data = NULL;
+        }
+        else if (tensor->data && !tensor->is_on_gpu)
+        {
+            efree(tensor->data);
         }
     }
 

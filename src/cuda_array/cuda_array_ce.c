@@ -8,7 +8,7 @@
 #include "cuda.h"
 #include "zend_smart_str.h"
 #include "data_types.h"
-#include "host_array_ce.h"
+#include "contiguous_array_ce.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -669,12 +669,9 @@ ZEND_METHOD(CudaArray, toHost)
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
     tensor_t *tensor = obj->tensor_handle;
 
-    zend_object *zobj = host_array_create_object(host_array_ce);
-    host_array_object *host_obj = (host_array_object *)((char *)zobj - XtOffsetOf(host_array_object, std));
-    
     tensor_t *host_tensor = (tensor_t *)emalloc(sizeof(tensor_t));
-    if (!host_tensor) {
-        zend_object_std_dtor(zobj);
+    if (!host_tensor)
+    {
         zend_throw_error(NULL, "Failed to allocate tensor structure");
         RETURN_NULL();
     }
@@ -684,68 +681,70 @@ ZEND_METHOD(CudaArray, toHost)
     host_tensor->ndims = tensor->ndims;
     host_tensor->element_size = dtype_to_size(tensor->dtype);
     host_tensor->offset = 0;
-    
-    if (tensor->ndims > 0) {
+
+    if (tensor->ndims > 0)
+    {
         host_tensor->shape = (int *)emalloc(sizeof(int) * tensor->ndims);
-        if (!host_tensor->shape) {
+        if (!host_tensor->shape)
+        {
             efree(host_tensor);
-            zend_object_std_dtor(zobj);
             zend_throw_error(NULL, "Failed to allocate shape array");
             RETURN_NULL();
         }
         memcpy(host_tensor->shape, tensor->shape, sizeof(int) * tensor->ndims);
-        
+
         host_tensor->strides = (size_t *)emalloc(sizeof(size_t) * tensor->ndims);
-        if (!host_tensor->strides) {
+        if (!host_tensor->strides)
+        {
             efree(host_tensor->shape);
             efree(host_tensor);
-            zend_object_std_dtor(zobj);
             zend_throw_error(NULL, "Failed to allocate strides array");
             RETURN_NULL();
         }
         memcpy(host_tensor->strides, tensor->strides, sizeof(size_t) * tensor->ndims);
     }
-    
+    else
+    {
+        host_tensor->shape = NULL;
+        host_tensor->strides = NULL;
+    }
+
     host_tensor->total_size = 1;
-    for (int i = 0; i < tensor->ndims; i++) {
+    for (int i = 0; i < tensor->ndims; i++)
+    {
         host_tensor->total_size *= tensor->shape[i];
     }
-    
+
     host_tensor->allocated_size = host_tensor->total_size * host_tensor->element_size;
-    
     host_tensor->data = allocate_for_dtype(host_tensor->dtype, host_tensor->total_size);
-    
-    if (!host_tensor->data) {
-        if (host_tensor->shape) efree(host_tensor->shape);
-        if (host_tensor->strides) efree(host_tensor->strides);
+
+    if (!host_tensor->data)
+    {
+        if (host_tensor->shape)
+            efree(host_tensor->shape);
+        if (host_tensor->strides)
+            efree(host_tensor->strides);
         efree(host_tensor);
-        zend_object_std_dtor(zobj);
         zend_throw_error(NULL, "Failed to allocate host memory");
         RETURN_NULL();
     }
-    
-    if (tensor->is_on_gpu) {
-        cudaError_t err = cudaMemcpy(host_tensor->data, tensor->data,
-                                     host_tensor->allocated_size,
-                                     cudaMemcpyDeviceToHost);
-        
-        if (err != cudaSuccess) {
-            efree(host_tensor->data);
-            if (host_tensor->shape) efree(host_tensor->shape);
-            if (host_tensor->strides) efree(host_tensor->strides);
-            efree(host_tensor);
-            zend_object_std_dtor(zobj);
-            zend_throw_error(NULL, "CUDA error copying data to host: %s", cudaGetErrorString(err));
-            RETURN_NULL();
-        }
-    } else {
-        if (tensor->data) {
-            memcpy(host_tensor->data, tensor->data, host_tensor->allocated_size);
-        } else {
-            memset(host_tensor->data, 0, host_tensor->allocated_size);
-        }
+
+    cudaError_t err = cudaMemcpy(host_tensor->data, tensor->data,
+                                 host_tensor->allocated_size,
+                                 cudaMemcpyDeviceToHost);
+
+    if (err != cudaSuccess)
+    {
+        efree(host_tensor->data);
+        if (host_tensor->shape)
+            efree(host_tensor->shape);
+        if (host_tensor->strides)
+            efree(host_tensor->strides);
+        efree(host_tensor);
+        zend_throw_error(NULL, "CUDA error copying data to host: %s", cudaGetErrorString(err));
+        RETURN_NULL();
     }
-    
+
     host_tensor->is_on_gpu = 0;
     host_tensor->is_view = 0;
     host_tensor->base_tensor = NULL;
@@ -756,12 +755,21 @@ ZEND_METHOD(CudaArray, toHost)
     host_tensor->num_slices = 0;
     host_tensor->d_strides = NULL;
     host_tensor->d_shape = NULL;
-    
-    host_obj->tensor = host_tensor;
-    host_obj->is_view = 0;
-    host_obj->read_only = 1;
-    
-    ZVAL_OBJ(return_value, zobj);
+
+    zend_object *host_obj = contiguous_array_from_tensor(host_tensor);
+    if (!host_obj)
+    {
+        efree(host_tensor->data);
+        if (host_tensor->shape)
+            efree(host_tensor->shape);
+        if (host_tensor->strides)
+            efree(host_tensor->strides);
+        efree(host_tensor);
+        zend_throw_error(NULL, "Failed to create ContiguousArray object");
+        RETURN_NULL();
+    }
+
+    ZVAL_OBJ(return_value, host_obj);
 }
 
 ZEND_METHOD(CudaArray, __invoke)

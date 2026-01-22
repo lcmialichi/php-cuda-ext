@@ -130,7 +130,7 @@ class Kernel
 {
 }
 
-class HostArray implements \ArrayAccess
+class ContiguosArray implements \ArrayAccess
 {
     function offsetExists(mixed $offset): bool
     {
@@ -192,7 +192,7 @@ class CudaArray implements \ArrayAccess
     {
     }
 
-    public function toHost(): HostArray
+    public function toHost(): ContiguosArray
     {
     }
     

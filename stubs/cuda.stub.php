@@ -4,7 +4,6 @@ namespace Cuda;
 
 use IteratorAggregate;
 
-
 #[\Attribute(Attribute::TARGET_PARAMETER)]
 abstract class ParamAttribute
 {
@@ -148,6 +147,16 @@ class ContiguosArray implements \ArrayAccess
     {
     }
 
+    public function get(array $idxs): mixed
+    {
+
+    }
+
+    public function at(int ...$idxs): mixed
+    {
+
+    }
+
     public function getNdims(): int
     {
     }
@@ -195,7 +204,7 @@ class CudaArray implements \ArrayAccess
     public function toHost(): ContiguosArray
     {
     }
-    
+
     public function getShape(): array
     {
     }

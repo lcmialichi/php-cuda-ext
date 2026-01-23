@@ -29,6 +29,7 @@ typedef struct {
     zend_long max_idx;
     zval current;
     void *current_data_ptr;
+    void *extra_data;
     size_t stride_bytes;
     dtype_t dtype;
     uint8_t is_1d;
@@ -52,5 +53,6 @@ ZEND_METHOD(ContiguousArray, getDtype);
 ZEND_METHOD(ContiguousArray, toArray);
 ZEND_METHOD(ContiguousArray, getElementSize);
 ZEND_METHOD(ContiguousArray, count);
+ZEND_METHOD(ContiguousArray, at);
 
 #endif

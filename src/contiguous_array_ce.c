@@ -7,6 +7,29 @@
 static zend_object_handlers contiguous_array_handlers;
 zend_class_entry *contiguous_array_ce;
 
+typedef void (*dtype_getter_t)(void *ptr, zval *rv);
+
+static zend_always_inline void get_f32(void *p, zval *rv) { ZVAL_DOUBLE(rv, (double)*(float *)p); }
+static zend_always_inline void get_f64(void *p, zval *rv) { ZVAL_DOUBLE(rv, *(double *)p); }
+static zend_always_inline void get_i32(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (int32_t *)p); }
+static zend_always_inline void get_i64(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (int64_t *)p); }
+static zend_always_inline void get_u8(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (uint8_t *)p); }
+static zend_always_inline void get_bool(void *p, zval *rv) { ZVAL_BOOL(rv, *(uint8_t *)p != 0); }
+
+static const dtype_getter_t dtype_getters[] = {
+    [DTYPE_FLOAT32] = get_f32,
+    [DTYPE_FLOAT64] = get_f64,
+    [DTYPE_INT32] = get_i32,
+    [DTYPE_INT64] = get_i64,
+    [DTYPE_UINT8] = get_u8,
+    [DTYPE_BOOL] = get_bool,
+};
+
+static zend_always_inline contiguous_array_object *contiguous_array_from_obj(zend_object *zobj)
+{
+    return (contiguous_array_object *)((char *)zobj - contiguous_array_handlers.offset);
+}
+
 #define PHP_CUDA_LOOP_TO_ARRAY(type, zval_func)  \
     do                                           \
     {                                            \
@@ -18,25 +41,10 @@ zend_class_entry *contiguous_array_ce;
         }                                        \
     } while (0)
 
-static zend_always_inline contiguous_array_object *contiguous_array_from_obj(zend_object *zobj)
-{
-    return (contiguous_array_object *)((char *)zobj - contiguous_array_handlers.offset);
-}
-
 size_t dtype_to_size(dtype_t dtype)
 {
     static const size_t sizes[] = {
-        [DTYPE_FLOAT32] = 4,
-        [DTYPE_FLOAT64] = 8,
-        [DTYPE_INT8] = 1,
-        [DTYPE_INT16] = 2,
-        [DTYPE_INT32] = 4,
-        [DTYPE_INT64] = 8,
-        [DTYPE_UINT8] = 1,
-        [DTYPE_UINT16] = 2,
-        [DTYPE_UINT32] = 4,
-        [DTYPE_UINT64] = 8,
-        [DTYPE_BOOL] = 1};
+        [DTYPE_FLOAT32] = 4, [DTYPE_FLOAT64] = 8, [DTYPE_INT8] = 1, [DTYPE_INT16] = 2, [DTYPE_INT32] = 4, [DTYPE_INT64] = 8, [DTYPE_UINT8] = 1, [DTYPE_UINT16] = 2, [DTYPE_UINT32] = 4, [DTYPE_UINT64] = 8, [DTYPE_BOOL] = 1};
     return (dtype < sizeof(sizes) / sizeof(size_t)) ? sizes[dtype] : 8;
 }
 
@@ -159,61 +167,94 @@ void *allocate_for_dtype(dtype_t dtype, size_t count)
     return ecalloc(count, size);
 }
 
-ZEND_METHOD(ContiguousArray, toArray)
+static void contiguous_array_to_php_array(contiguous_array_object *obj, zval *return_value)
 {
-    contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
-
     if (obj->ndims == 1)
     {
         array_init_size(return_value, obj->total_elements);
-        size_t count = obj->total_elements;
-        size_t stride = obj->strides[0] * obj->element_size;
-        void *data_ptr = obj->cached_data_ptr;
+        size_t stride_bytes = obj->strides[0] * obj->element_size;
+        char *ptr = obj->cached_data_ptr;
+        dtype_getter_t getter = (obj->dtype < sizeof(dtype_getters) / sizeof(dtype_getter_t)) ? dtype_getters[obj->dtype] : NULL;
 
-        switch (obj->dtype)
+        if (getter)
         {
-        case DTYPE_FLOAT32:
-            PHP_CUDA_LOOP_TO_ARRAY(float, add_next_index_double);
-            break;
-        case DTYPE_FLOAT64:
-            PHP_CUDA_LOOP_TO_ARRAY(double, add_next_index_double);
-            break;
-        case DTYPE_INT32:
-            PHP_CUDA_LOOP_TO_ARRAY(int32_t, add_next_index_long);
-            break;
-        case DTYPE_INT64:
-            PHP_CUDA_LOOP_TO_ARRAY(int64_t, add_next_index_long);
-            break;
-        case DTYPE_UINT8:
-            PHP_CUDA_LOOP_TO_ARRAY(uint8_t, add_next_index_long);
-            break;
-        default:
-            for (size_t i = 0; i < count; i++)
+            for (size_t i = 0; i < obj->total_elements; i++)
             {
-                zval element;
-                get_value((char *)data_ptr + (i * stride), &element, obj->dtype);
-                add_next_index_zval(return_value, &element);
+                zval val;
+                getter(ptr + (i * stride_bytes), &val);
+                add_next_index_zval(return_value, &val);
             }
         }
     }
     else
     {
         array_init_size(return_value, obj->shape[0]);
+        size_t stride_bytes = obj->strides[0] * obj->element_size;
+
         for (int i = 0; i < obj->shape[0]; i++)
         {
-            zval subarray, offset;
-            ZVAL_LONG(&offset, i);
-            contiguous_array_offset_get(Z_OBJ_P(getThis()), &offset, BP_VAR_R, &subarray);
+            zval slice_obj;
+            zend_object *zslice = contiguous_array_create_object(contiguous_array_ce);
+            contiguous_array_object *slice = contiguous_array_from_obj(zslice);
 
-            if (Z_TYPE(subarray) == IS_OBJECT)
-            {
-                zval nested_array;
-                zend_call_method_with_0_params(Z_OBJ(subarray), NULL, NULL, "toarray", &nested_array);
-                add_next_index_zval(return_value, &nested_array);
-                zval_ptr_dtor(&subarray);
-            }
+            obj->tensor->ref_count++;
+            slice->tensor = obj->tensor;
+            slice->ndims = obj->ndims - 1;
+            slice->shape = obj->shape + 1;
+            slice->strides = obj->strides + 1;
+            slice->dtype = obj->dtype;
+            slice->element_size = obj->element_size;
+            slice->cached_data_ptr = obj->cached_data_ptr + (i * stride_bytes);
+
+            size_t total = slice->shape[0];
+            for (int j = 1; j < slice->ndims; j++)
+                total *= slice->shape[j];
+            slice->total_elements = total;
+
+            zval nested_array;
+            contiguous_array_to_php_array(slice, &nested_array);
+            add_next_index_zval(return_value, &nested_array);
+
+            zend_object_release(zslice);
         }
     }
+}
+
+ZEND_METHOD(ContiguousArray, toArray)
+{
+    contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
+    contiguous_array_to_php_array(obj, return_value);
+}
+
+ZEND_METHOD(ContiguousArray, at)
+{
+    contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
+    uint32_t argc = ZEND_NUM_ARGS();
+
+    if (UNEXPECTED(argc != (uint32_t)obj->ndims)) {
+        zend_throw_error(NULL, "ContiguousArray: Expected %d indices, got %d", obj->ndims, argc);
+        return;
+    }
+
+    zend_long *indices = (zend_long *)alloca(sizeof(zend_long) * argc);
+    zval *args = (zval *)alloca(sizeof(zval) * argc);
+
+    if (zend_get_parameters_array_ex(argc, args) == FAILURE) {
+        return;
+    }
+
+    size_t final_offset = 0;
+    for (uint32_t i = 0; i < argc; i++) {
+        zend_long idx = zval_get_long(&args[i]);
+        
+        if (UNEXPECTED((zend_ulong)idx >= (zend_ulong)obj->shape[i])) {
+            zend_throw_error(NULL, "Index %ld out of bounds at dimension %d", idx, i);
+            return;
+        }
+        final_offset += idx * obj->strides[i];
+    }
+
+    dtype_getters[obj->dtype](obj->cached_data_ptr + (final_offset * obj->element_size), return_value);
 }
 
 ZEND_METHOD(ContiguousArray, get)
@@ -302,15 +343,15 @@ static int contiguous_array_iterator_valid(zend_object_iterator *iter)
     return (iterator->current_idx < iterator->max_idx) ? SUCCESS : FAILURE;
 }
 
-static zval *contiguous_array_iterator_get_current_data(zend_object_iterator *iter)
-{
+static zval *contiguous_array_iterator_get_current_data(zend_object_iterator *iter) {
     contiguous_array_iterator *iterator = (contiguous_array_iterator *)iter;
-    if (iterator->is_1d)
-    {
-        get_value(iterator->current_data_ptr, &iterator->current, iterator->dtype);
-    }
-    else
-    {
+    
+    if (iterator->is_1d) {
+        dtype_getter_t getter = (dtype_getter_t)iterator->extra_data;
+        if (getter) {
+            getter(iterator->current_data_ptr, &iterator->current);
+        }
+    } else {
         zval offset;
         ZVAL_LONG(&offset, iterator->current_idx);
         contiguous_array_offset_get(Z_OBJ(iterator->host_array), &offset, BP_VAR_R, &iterator->current);
@@ -339,8 +380,12 @@ static const zend_object_iterator_funcs contiguous_array_iterator_funcs = {
     contiguous_array_iterator_move_forward,
     NULL, NULL, NULL};
 
-static zend_object_iterator *contiguous_array_get_iterator(zend_class_entry *ce, zval *object, int by_ref)
-{
+static zend_object_iterator *contiguous_array_get_iterator(zend_class_entry *ce, zval *object, int by_ref) {
+    if (by_ref) {
+        zend_throw_error(NULL, "An iterator cannot be used with foreach by reference");
+        return NULL;
+    }
+
     contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(object));
     contiguous_array_iterator *iterator = emalloc(sizeof(contiguous_array_iterator));
     zend_iterator_init(&iterator->intern);
@@ -349,13 +394,14 @@ static zend_object_iterator *contiguous_array_get_iterator(zend_class_entry *ce,
     iterator->current_idx = 0;
     iterator->max_idx = obj->ndims > 0 ? obj->shape[0] : 0;
     ZVAL_UNDEF(&iterator->current);
-    iterator->dtype = obj->dtype;
+    
     iterator->is_1d = (obj->ndims == 1);
-    if (iterator->is_1d)
-    {
+    if (iterator->is_1d) {
         iterator->current_data_ptr = obj->cached_data_ptr;
         iterator->stride_bytes = obj->strides[0] * obj->element_size;
+        iterator->extra_data = (void*)((obj->dtype < sizeof(dtype_getters)/sizeof(dtype_getter_t)) ? dtype_getters[obj->dtype] : NULL);
     }
+
     iterator->intern.funcs = &contiguous_array_iterator_funcs;
     return &iterator->intern;
 }

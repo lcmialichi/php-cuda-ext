@@ -53,7 +53,7 @@ class CudaBenchmark
             $this->suiteReduction($dims);
             $this->suiteConcat($dims);
             $this->suiteComparison($dims);
-            $this->suiteToArray($dims);
+            $this->suiteTransform($dims);
             $this->suiteView($dims);
         }
 
@@ -206,13 +206,16 @@ class CudaBenchmark
 
     }
 
-    private function suiteToArray($tests)
+    private function suiteTransform($tests)
     {
         echo "\n[ GPU to CPU transfer ]\n";
 
         $ops = [
             'toArray' => function ($a) {
                 return $a->toArray();
+            },
+            'toHost' => function ($a) {
+                return $a->toHost();
             },
             '__construct' => function ($a) {
                 [$x, $y, $z] = $a->getShape();

@@ -3,18 +3,23 @@
 
 #include "php.h"
 #include "zend_interfaces.h"
-#include "tensor.h"
+#include "tensor.h" 
 
 extern zend_class_entry *contiguous_array_ce;
 
 typedef struct _contiguous_array_object {
-    zend_object std;
     tensor_t *tensor;
-    size_t offset;
+    char *cached_data_ptr;
     int *shape;
     size_t *strides;
+    size_t total_elements;
+    size_t element_size;
     int ndims;
+    dtype_t dtype;
+    size_t offset;
+    uint8_t is_contiguous;
     zend_bool read_only;
+    zend_object std;
 } contiguous_array_object;
 
 typedef struct {
@@ -23,9 +28,20 @@ typedef struct {
     zend_long current_idx;
     zend_long max_idx;
     zval current;
-    size_t *indices;
-    int iter_ndims;
+    void *current_data_ptr;
+    size_t stride_bytes;
+    dtype_t dtype;
+    uint8_t is_1d;
 } contiguous_array_iterator;
+
+int contiguous_array_init();
+zend_object *contiguous_array_create_object(zend_class_entry *ce);
+void contiguous_array_free_object(zend_object *object);
+zend_object *contiguous_array_from_tensor(tensor_t *tensor);
+
+size_t dtype_to_size(dtype_t dtype);
+const char *dtype_to_string(dtype_t dtype);
+void *allocate_for_dtype(dtype_t dtype, size_t count);
 
 ZEND_METHOD(ContiguousArray, __construct);
 ZEND_METHOD(ContiguousArray, get);
@@ -36,16 +52,5 @@ ZEND_METHOD(ContiguousArray, getDtype);
 ZEND_METHOD(ContiguousArray, toArray);
 ZEND_METHOD(ContiguousArray, getElementSize);
 ZEND_METHOD(ContiguousArray, count);
-
-int contiguous_array_init();
-zend_object *contiguous_array_create_object(zend_class_entry *ce);
-void contiguous_array_free_object(zend_object *object);
-zend_object *contiguous_array_from_tensor(tensor_t *tensor);
-
-size_t dtype_to_size(dtype_t dtype);
-const char *dtype_to_string(dtype_t dtype);
-void get_value_for_dtype(void *data, size_t index, zval *return_value, dtype_t dtype);
-void set_value_for_dtype(void *data, size_t index, zval *value, dtype_t dtype);
-void *allocate_for_dtype(dtype_t dtype, size_t count);
 
 #endif

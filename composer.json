@@ -1,0 +1,9 @@
+{
+    "name": "lcmialichi/php-cuda-ext",
+    "autoload": {
+        "psr-4": {
+            "Benchmarks\\": "benchmarks/"
+        }
+    },
+    "require": {}
+}

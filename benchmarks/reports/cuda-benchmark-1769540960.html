@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CUDA Benchmark Report - 2026-01-27 19:09:20</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>/* CUDA Benchmark Report - Compact Design */
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --success-color: #48bb78;
+    --warning-color: #ed8936;
+    --danger-color: #f56565;
+    --light-bg: #f7fafc;
+    --dark-bg: #2d3748;
+    --border-color: #e2e8f0;
+    --text-primary: #2d3748;
+    --text-secondary: #718096;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: #f5f7fa;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.report-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-content h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.header-info {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Navigation */
+.report-nav {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.nav-link {
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background: var(--light-bg);
+    color: var(--primary-color);
+}
+
+.nav-link.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Main Sections */
+.report-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.report-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Summary Table */
+.summary-table-container {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.summary-table-container h2 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.summary-table th {
+    background: var(--light-bg);
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.summary-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.summary-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.summary-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.time-value {
+    font-family: 'Monaco', 'Menlo', monospace;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.memory-value {
+    font-family: 'Monaco', 'Menlo', monospace;
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.ratio-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, #48bb78, #38a169);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-size: 0.8rem;
+}
+
+.status-ok {
+    background-color: var(--success-color);
+    color: white;
+}
+
+/* Comparison Section */
+.comparison-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.filter-controls label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.sort-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sort-btn {
+    padding: 0.5rem 1rem;
+    background: var(--light-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.sort-btn:hover {
+    background: #e2e8f0;
+    color: var(--primary-color);
+}
+
+.sort-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.comparison-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.comparison-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background: var(--light-bg);
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.type-tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.metric {
+    margin-bottom: 1rem;
+}
+
+.metric:last-child {
+    margin-bottom: 0;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.metric-value {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.time-metric .metric-value {
+    color: var(--primary-color);
+}
+
+.memory-metric .metric-value {
+    color: var(--success-color);
+}
+
+.progress-bar {
+    height: 6px;
+    background: #edf2f7;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    transition: width 0.3s ease;
+}
+
+.memory-metric .progress-fill {
+    background: linear-gradient(90deg, #48bb78, #38a169);
+}
+
+.metric-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+}
+
+.detail-item span:last-child {
+    font-family: 'Monaco', 'Menlo', monospace;
+    color: var(--text-primary);
+}
+
+.card-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.toggle-details-btn {
+    padding: 0.5rem 1rem;
+    background: var(--light-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.toggle-details-btn:hover {
+    background: #e2e8f0;
+    color: var(--primary-color);
+}
+
+/* Details Section */
+.details-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.benchmark-details {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.benchmark-details:last-child {
+    margin-bottom: 0;
+}
+
+.details-header {
+    background: var(--light-bg);
+    padding: 1rem 1.5rem;
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.details-header:hover {
+    background: #e2e8f0;
+}
+
+.benchmark-description {
+    padding: 0.75rem 1.5rem;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-color);
+    background: white;
+}
+
+.details-content {
+    padding: 0 1.5rem 1.5rem;
+}
+
+.result-details {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.result-details:last-child {
+    margin-bottom: 0;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.result-header h4 {
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.result-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+}
+
+.meta-item {
+    color: var(--text-secondary);
+}
+
+.metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #f0fff4;
+    border-radius: 4px;
+    border-left: 4px solid var(--success-color);
+}
+
+.metadata-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.metadata-item strong {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.metadata-item span {
+    font-family: 'Monaco', 'Menlo', monospace;
+    color: var(--text-primary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.stat-box {
+    padding: 1rem;
+    border-radius: 6px;
+    background: var(--light-bg);
+}
+
+.stat-box h5 {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-stats {
+    border-left: 4px solid var(--primary-color);
+}
+
+.memory-stats {
+    border-left: 4px solid var(--success-color);
+}
+
+.stat-values {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+}
+
+.stat-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.stat-number {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Footer */
+.report-footer {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.footer-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.footer-note {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.footer-note code {
+    background: var(--light-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', monospace;
+}
+
+/* Comparison Groups */
+.comparison-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.test-group {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    background: var(--light-bg);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.group-header:hover {
+    background: #e8f4ff;
+}
+
+.group-title h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.group-stats {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.stat-badge i {
+    color: var(--primary-color);
+}
+
+.toggle-group-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.toggle-group-btn.rotated {
+    transform: rotate(180deg);
+}
+
+.group-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.group-body.expanded {
+    max-height: 5000px; /* Valor grande o suficiente */
+}
+
+.metadata-group {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.metadata-group:last-child {
+    border-bottom: none;
+}
+
+.metadata-group-header {
+    margin-bottom: 1rem;
+}
+
+.metadata-group-header h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.metadata-content {
+    margin-bottom: 0.75rem;
+}
+
+.metadata-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.metadata-item {
+    background: #f0f7ff;
+    border: 1px solid #d1e3ff;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.metadata-item strong {
+    color: var(--primary-color);
+    margin-right: 0.25rem;
+}
+
+.no-metadata {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.metadata-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.metadata-stats span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.metadata-stats i {
+    color: var(--primary-color);
+}
+
+.runs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.run-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.run-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.run-number {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.run-type {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.run-body {
+    padding: 1rem;
+}
+
+.metric-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.metric-cell {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.metric-value {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.time-metric .metric-value {
+    color: var(--primary-color);
+}
+
+.memory-metric .metric-value {
+    color: var(--success-color);
+}
+
+.progress-bar {
+    height: 6px;
+    background: #edf2f7;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 3px;
+}
+
+.memory-metric .progress-fill {
+    background: linear-gradient(90deg, #48bb78, #38a169);
+}
+
+.run-details-toggle {
+    text-align: center;
+}
+
+.toggle-run-details-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.toggle-run-details-btn:hover {
+    background: #e2e8f0;
+    color: var(--primary-color);
+}
+
+.run-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.run-details.expanded {
+    max-height: 1000px;
+    margin-top: 1rem;
+}
+
+.run-details-content {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.detail-block {
+    padding: 0.75rem;
+    border-radius: 6px;
+}
+
+.detail-block h5 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-stats {
+    background: #f0f7ff;
+    border-left: 4px solid var(--primary-color);
+}
+
+.memory-stats {
+    background: #f0fff4;
+    border-left: 4px solid var(--success-color);
+}
+
+.run-info {
+    background: #fffaf0;
+    border-left: 4px solid var(--warning-color);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Sort Controls Update */
+.sort-controls select {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: white;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.sort-controls select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .group-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .metadata-items {
+        flex-direction: column;
+    }
+    
+    .metric-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .report-nav {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .nav-link {
+        justify-content: center;
+    }
+    
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-controls {
+        justify-content: center;
+    }
+    
+    .sort-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .comparison-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .metadata-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .report-nav,
+    .controls,
+    .card-footer,
+    .toggle-details-btn {
+        display: none;
+    }
+    
+    .report-section {
+        display: block !important;
+        page-break-inside: avoid;
+    }
+    
+    .comparison-card {
+        page-break-inside: avoid;
+    }
+    
+    body {
+        background: white;
+        padding: 0;
+    }
+}</style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="report-header">
+            <div class="header-content">
+                <h1><i class="fas fa-rocket"></i> CUDA Benchmark Report</h1>
+                <div class="header-info">
+                    <div class="info-item">
+                        <i class="far fa-clock"></i>
+                        <span>Generated: 2026-01-27 19:09:20</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-microchip"></i>
+                        <span>PHP CUDA Extension</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <nav class="report-nav">
+            <a href="#summary" class="nav-link active" data-section="summary">
+                <i class="fas fa-chart-bar"></i> Summary
+            </a>
+            <a href="#comparison" class="nav-link" data-section="comparison">
+                <i class="fas fa-balance-scale"></i> Comparison
+            </a>
+            <a href="#details" class="nav-link" data-section="details">
+                <i class="fas fa-list-alt"></i> Details
+            </a>
+        </nav>
+
+        <main class="report-main">
+            <section id="summary" class="report-section active">
+                <div class="summary-table-container"><h2><i class="fas fa-chart-bar"></i> Performance Summary</h2><div class="table-responsive"><table class="summary-table"><thead><tr><th>Benchmark</th><th>Tests</th><th>Avg Time (ms)</th><th>Avg Memory</th><th>Speed Ratio</th><th>Status</th></tr></thead><tbody><tr class="summary-row" data-benchmark="CudaArray Benchmark"><td>CudaArray Benchmark</td><td>18</td><td><span class="time-value">1.4981</span></td><td><span class="memory-value">0 B</span></td><td><span class="ratio-badge">0.67x</span></td><td><span class="status-badge status-ok">✓</span></td></tr></tbody></table></div></div>
+            </section>
+
+            <section id="comparison" class="report-section">
+                <div class="comparison-section"><h2><i class="fas fa-balance-scale"></i> Test Comparison (Grouped by Test Name)</h2><div class="controls"><div class="filter-controls"><label><input type="checkbox" class="filter-checkbox" data-type="time" checked> Show Time</label><label><input type="checkbox" class="filter-checkbox" data-type="memory" checked> Show Memory</label></div><div class="sort-controls"><select class="sort-select"><option value="name">Sort by Name</option><option value="time">Sort by Avg Time</option><option value="memory">Sort by Avg Memory</option><option value="runs">Sort by Number of Runs</option></select></div></div><div class="comparison-groups"><div class="test-group" data-name="CudaArray::zeros()" 
+                 data-time="2.0564329333333" data-memory="0" 
+                 data-runs="3"><div class="group-header"><div class="group-title"><h3>CudaArray::zeros()</h3><div class="group-stats"><span class="stat-badge"><i class="fas fa-play-circle"></i> 3 runs</span><span class="stat-badge"><i class="fas fa-clock"></i> 2.0564 ms avg</span><span class="stat-badge"><i class="fas fa-memory"></i> 0 B avg</span></div></div><button class="toggle-group-btn"><i class="fas fa-chevron-down"></i></button></div><div class="group-body"><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 16x16x16</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.0960 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.0960 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.3946874360808%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::zeros()-6385955da0605a6969a73111bec9a2f3-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::zeros()-6385955da0605a6969a73111bec9a2f3-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.0742</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1751</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.0960</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0.9599</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0277</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 64x64x64</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.0958 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.0958 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.3916958821427%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::zeros()-6d17654e77c163f8da361c8067d0ff21-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::zeros()-6d17654e77c163f8da361c8067d0ff21-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.0629</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1180</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.0958</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0.9579</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0177</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 512x512x512</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 5.9775 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">5.9775 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 86.848342860733%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::zeros()-3cf5880fd1d1cb195c0719effe72236a-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::zeros()-3cf5880fd1d1cb195c0719effe72236a-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">5.9122</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">6.0430</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">5.9775</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">59.7752</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0378</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div></div></div><div class="test-group" data-name="CudaArray::ones()" 
+                 data-time="2.3819115666667" data-memory="0" 
+                 data-runs="3"><div class="group-header"><div class="group-title"><h3>CudaArray::ones()</h3><div class="group-stats"><span class="stat-badge"><i class="fas fa-play-circle"></i> 3 runs</span><span class="stat-badge"><i class="fas fa-clock"></i> 2.3819 ms avg</span><span class="stat-badge"><i class="fas fa-memory"></i> 0 B avg</span></div></div><button class="toggle-group-btn"><i class="fas fa-chevron-down"></i></button></div><div class="group-body"><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 16x16x16</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1445 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1445 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 2.1000752232703%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::ones()-6385955da0605a6969a73111bec9a2f3-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::ones()-6385955da0605a6969a73111bec9a2f3-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1353</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1598</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1445</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.4454</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0070</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 64x64x64</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1185 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1185 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.721443874162%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::ones()-6d17654e77c163f8da361c8067d0ff21-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::ones()-6d17654e77c163f8da361c8067d0ff21-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1003</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1939</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1185</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.1848</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0265</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 512x512x512</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 6.8827 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">6.8827 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 100%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::ones()-3cf5880fd1d1cb195c0719effe72236a-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::ones()-3cf5880fd1d1cb195c0719effe72236a-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">5.9248</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">12.5123</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">6.8827</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">68.8271</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">2.0014</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div></div></div><div class="test-group" data-name="CudaArray::full()" 
+                 data-time="2.0737475333333" data-memory="0" 
+                 data-runs="3"><div class="group-header"><div class="group-title"><h3>CudaArray::full()</h3><div class="group-stats"><span class="stat-badge"><i class="fas fa-play-circle"></i> 3 runs</span><span class="stat-badge"><i class="fas fa-clock"></i> 2.0737 ms avg</span><span class="stat-badge"><i class="fas fa-memory"></i> 0 B avg</span></div></div><button class="toggle-group-btn"><i class="fas fa-chevron-down"></i></button></div><div class="group-body"><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 16x16x16</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.0962 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.0962 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.3970615007407%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::full()-6385955da0605a6969a73111bec9a2f3-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::full()-6385955da0605a6969a73111bec9a2f3-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.0888</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1131</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.0962</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0.9616</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0065</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 64x64x64</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1074 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1074 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.5599827777155%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::full()-6d17654e77c163f8da361c8067d0ff21-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::full()-6d17654e77c163f8da361c8067d0ff21-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.0955</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1407</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1074</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.0737</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0131</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 512x512x512</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 6.0177 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">6.0177 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 87.432381654983%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::full()-3cf5880fd1d1cb195c0719effe72236a-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::full()-3cf5880fd1d1cb195c0719effe72236a-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">5.9544</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">6.1918</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">6.0177</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">60.1772</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0694</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div></div></div><div class="test-group" data-name="CudaArray::rand()" 
+                 data-time="2.1239374" data-memory="0" 
+                 data-runs="3"><div class="group-header"><div class="group-title"><h3>CudaArray::rand()</h3><div class="group-stats"><span class="stat-badge"><i class="fas fa-play-circle"></i> 3 runs</span><span class="stat-badge"><i class="fas fa-clock"></i> 2.1239 ms avg</span><span class="stat-badge"><i class="fas fa-memory"></i> 0 B avg</span></div></div><button class="toggle-group-btn"><i class="fas fa-chevron-down"></i></button></div><div class="group-body"><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 16x16x16</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1424 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1424 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 2.0690002569627%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::rand()-6385955da0605a6969a73111bec9a2f3-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::rand()-6385955da0605a6969a73111bec9a2f3-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.0868</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.2573</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1424</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.4240</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0616</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 64x64x64</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1801 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1801 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 2.6161872910943%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::rand()-6d17654e77c163f8da361c8067d0ff21-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::rand()-6d17654e77c163f8da361c8067d0ff21-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.0872</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.9724</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1801</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.8006</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.2642</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 512x512x512</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 6.0493 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">6.0493 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 87.891888117452%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::rand()-3cf5880fd1d1cb195c0719effe72236a-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::rand()-3cf5880fd1d1cb195c0719effe72236a-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">5.9510</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">6.2753</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">6.0493</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">60.4934</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0921</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div></div></div><div class="test-group" data-name="CudaArray::concat()" 
+                 data-time="0.17628103333333" data-memory="0" 
+                 data-runs="6"><div class="group-header"><div class="group-title"><h3>CudaArray::concat()</h3><div class="group-stats"><span class="stat-badge"><i class="fas fa-play-circle"></i> 6 runs</span><span class="stat-badge"><i class="fas fa-clock"></i> 0.1763 ms avg</span><span class="stat-badge"><i class="fas fa-memory"></i> 0 B avg</span></div></div><button class="toggle-group-btn"><i class="fas fa-chevron-down"></i></button></div><div class="group-body"><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 16x16</div><div class="metadata-item"><strong>axis:</strong> 0</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1357 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1357 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.9719803415823%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::concat()-7535afe0d014f06b97aa0bf139f04fb2-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::concat()-7535afe0d014f06b97aa0bf139f04fb2-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1186</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1638</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1357</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.3573</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0116</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 64x64</div><div class="metadata-item"><strong>axis:</strong> 0</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1810 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1810 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 2.629269346295%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::concat()-296faed304b01f5068f529c342307d3d-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::concat()-296faed304b01f5068f529c342307d3d-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1269</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.5715</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1810</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.8097</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.1304</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 512x512</div><div class="metadata-item"><strong>axis:</strong> 0</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.2853 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.2853 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 4.1448277659677%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::concat()-bd73d33ebdefb7dbcb651d2e422a9139-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::concat()-bd73d33ebdefb7dbcb651d2e422a9139-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1734</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.5889</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.2853</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">2.8528</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.1105</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 16x16</div><div class="metadata-item"><strong>axis:</strong> 1</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1298 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1298 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.8861972781479%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::concat()-8dbb19714131a7c821f559dd88538112-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::concat()-8dbb19714131a7c821f559dd88538112-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1232</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1688</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1298</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.2982</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0135</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 64x64</div><div class="metadata-item"><strong>axis:</strong> 1</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1313 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1313 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 1.9073488285269%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::concat()-8a3da32c17d980422ac308e83b8b3909-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::concat()-8a3da32c17d980422ac308e83b8b3909-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1228</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.1637</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1313</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.3128</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0111</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div><div class="metadata-group"><div class="metadata-group-header"><h4>Configuration</h4><div class="metadata-content"><div class="metadata-items"><div class="metadata-item"><strong>shape:</strong> 512x512</div><div class="metadata-item"><strong>axis:</strong> 1</div></div></div><div class="metadata-stats"><span><i class="fas fa-running"></i> 1 runs</span><span><i class="fas fa-clock"></i> 0.1946 ms avg</span></div></div><div class="runs-container"><div class="run-card"><div class="run-header"><span class="run-number">Run 1</span><span class="run-type">CUDA</span></div><div class="run-body"><div class="metric-row"><div class="metric-cell"><div class="metric-label">Time</div><div class="metric-value">0.1946 ms</div><div class="progress-bar"><div class="progress-fill" style="width: 2.8276679249016%"></div></div></div><div class="metric-cell"><div class="metric-label">Memory</div><div class="metric-value">0 B</div><div class="progress-bar"><div class="progress-fill" style="width: 0%"></div></div></div></div><div class="run-details-toggle"><button class="toggle-run-details-btn" data-run="CudaArray::concat()-1a6ff626f56c5c805a821aacf89f8ca8-0"><i class="fas fa-chart-bar"></i> View Details</button></div><div class="run-details" id="CudaArray::concat()-1a6ff626f56c5c805a821aacf89f8ca8-0"><div class="run-details-content"><div class="details-grid"><div class="detail-block time-stats"><h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0.1509</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0.2562</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0.1946</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">1.9462</span></div><div class="stat-row"><span class="stat-label">Std Dev:</span><span class="stat-value">0.0314</span></div></div><div class="detail-block memory-stats"><h5><i class="fas fa-memory"></i> Memory Statistics</h5><div class="stat-row"><span class="stat-label">Min:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Max:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Avg:</span><span class="stat-value">0 B</span></div><div class="stat-row"><span class="stat-label">Total:</span><span class="stat-value">0 B</span></div></div><div class="detail-block run-info"><h5><i class="fas fa-info-circle"></i> Run Information</h5><div class="stat-row"><span class="stat-label">Run #:</span><span class="stat-value">1</span></div><div class="stat-row"><span class="stat-label">Iterations:</span><span class="stat-value">10</span></div><div class="stat-row"><span class="stat-label">Type:</span><span class="stat-value">CUDA</span></div></div></div></div></div></div></div></div></div></div></div></div></div>
+            </section>
+
+            <section id="details" class="report-section">
+                <div class="details-section"><h2><i class="fas fa-list-alt"></i> Detailed Results</h2><div class="benchmark-details"><h3 class="details-header"><i class="fas fa-caret-right"></i> CudaArray Benchmark</h3><p class="benchmark-description">testing description</p><div class="details-content"><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::zeros()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>16x16x16</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.0742</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1751</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.0960</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0.9599</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0277</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::zeros()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>64x64x64</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.0629</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1180</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.0958</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0.9579</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0177</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::zeros()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>512x512x512</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">5.9122</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">6.0430</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">5.9775</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">59.7752</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0378</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::ones()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>16x16x16</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1353</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1598</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1445</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.4454</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0070</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::ones()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>64x64x64</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1003</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1939</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1185</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.1848</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0265</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::ones()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>512x512x512</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">5.9248</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">12.5123</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">6.8827</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">68.8271</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">2.0014</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::full()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>16x16x16</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.0888</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1131</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.0962</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0.9616</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0065</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::full()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>64x64x64</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.0955</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1407</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1074</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.0737</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0131</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::full()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>512x512x512</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">5.9544</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">6.1918</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">6.0177</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">60.1772</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0694</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::rand()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>16x16x16</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.0868</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.2573</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1424</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.4240</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0616</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::rand()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>64x64x64</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.0872</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.9724</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1801</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.8006</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.2642</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::rand()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>512x512x512</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">5.9510</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">6.2753</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">6.0493</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">60.4934</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0921</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::concat()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>16x16</span></div><div class="metadata-item"><strong>axis:</strong><span>0</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1186</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1638</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1357</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.3573</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0116</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::concat()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>64x64</span></div><div class="metadata-item"><strong>axis:</strong><span>0</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1269</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.5715</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1810</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.8097</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.1304</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::concat()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>512x512</span></div><div class="metadata-item"><strong>axis:</strong><span>0</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1734</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.5889</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.2853</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">2.8528</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.1105</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::concat()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>16x16</span></div><div class="metadata-item"><strong>axis:</strong><span>1</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1232</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1688</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1298</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.2982</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0135</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::concat()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>64x64</span></div><div class="metadata-item"><strong>axis:</strong><span>1</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1228</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.1637</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1313</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.3128</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0111</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><div class="result-details">
+                <div class="result-header">
+                    <h4>CudaArray::concat()</h4>
+                    <div class="result-meta">
+                        <span class="meta-item">Type: CUDA</span>
+                        <span class="meta-item">Iterations: 10</span>
+                        <span class="meta-item">Runs: 10</span>
+                    </div>
+                </div>
+                <div class="metadata-grid"><div class="metadata-item"><strong>shape:</strong><span>512x512</span></div><div class="metadata-item"><strong>axis:</strong><span>1</span></div></div>
+                <div class="stats-grid">
+                    <div class="stat-box time-stats">
+                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0.1509</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0.2562</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0.1946</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">1.9462</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Std Dev:</span>
+                                <span class="stat-number">0.0314</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-box memory-stats">
+                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
+                        <div class="stat-values">
+                            <div class="stat-value">
+                                <span class="stat-label">Min:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Max:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Avg:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                            <div class="stat-value">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-number">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div></div></div></div>
+            </section>
+        </main>
+
+        <footer class="report-footer">
+            <div class="footer-content">
+                <p>
+                    <i class="fas fa-code"></i> Generated with PHP CUDA Benchmark System |
+                    <i class="fas fa-chart-line"></i> Performance Analytics
+                </p>
+                <p class="footer-note">
+                    Report ID: <code>cuda-benchmark-{{TIMESTAMP}}</code>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>// CUDA Benchmark Report - Interactive Features
+document.addEventListener('DOMContentLoaded', function () {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('.report-section');
+
+    // Adicione estas funções ao arquivo JavaScript existente:
+
+    // Toggle group expansion
+    document.addEventListener('click', function (e) {
+        // Toggle groups
+        if (e.target.closest('.toggle-group-btn') || e.target.closest('.group-header')) {
+            const btn = e.target.closest('.toggle-group-btn') ||
+                e.target.closest('.group-header').querySelector('.toggle-group-btn');
+            const groupBody = btn.closest('.test-group').querySelector('.group-body');
+            const icon = btn.querySelector('i');
+
+            groupBody.classList.toggle('expanded');
+            btn.classList.toggle('rotated');
+            icon.className = groupBody.classList.contains('expanded') ?
+                'fas fa-chevron-up' : 'fas fa-chevron-down';
+        }
+
+        // Toggle run details
+        if (e.target.closest('.toggle-run-details-btn')) {
+            const btn = e.target.closest('.toggle-run-details-btn');
+            const runId = btn.getAttribute('data-run');
+            const details = document.getElementById(runId);
+
+            details.classList.toggle('expanded');
+            btn.innerHTML = details.classList.contains('expanded') ?
+                '<i class="fas fa-chart-bar"></i> Hide Details' :
+                '<i class="fas fa-chart-bar"></i> View Details';
+        }
+    });
+
+    // Sort groups
+    document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('sort-select')) {
+            const sortBy = e.target.value;
+            sortTestGroups(sortBy);
+        }
+    });
+
+    function sortTestGroups(sortBy) {
+        const container = document.querySelector('.comparison-groups');
+        const groups = Array.from(container.querySelectorAll('.test-group'));
+
+        groups.sort((a, b) => {
+            let aValue, bValue;
+
+            switch (sortBy) {
+                case 'name':
+                    aValue = a.getAttribute('data-name').toLowerCase();
+                    bValue = b.getAttribute('data-name').toLowerCase();
+                    return aValue.localeCompare(bValue);
+
+                case 'time':
+                    aValue = parseFloat(a.getAttribute('data-time'));
+                    bValue = parseFloat(b.getAttribute('data-time'));
+                    return aValue - bValue;
+
+                case 'memory':
+                    aValue = parseFloat(a.getAttribute('data-memory'));
+                    bValue = parseFloat(b.getAttribute('data-memory'));
+                    return aValue - bValue;
+
+                case 'runs':
+                    aValue = parseInt(a.getAttribute('data-runs'));
+                    bValue = parseInt(b.getAttribute('data-runs'));
+                    return bValue - aValue; // Mais runs primeiro
+
+                default:
+                    return 0;
+            }
+        });
+
+        // Reorder groups
+        groups.forEach(group => container.appendChild(group));
+    }
+
+    // Expand all groups button (opcional, adicione se quiser)
+    document.addEventListener('DOMContentLoaded', function () {
+        // Adicione um botão para expandir/recolher todos os grupos
+        const controls = document.querySelector('.controls');
+        if (controls) {
+            const expandAllBtn = document.createElement('button');
+            expandAllBtn.className = 'expand-all-btn';
+            expandAllBtn.innerHTML = '<i class="fas fa-expand-alt"></i> Expand All';
+            expandAllBtn.style.marginLeft = '1rem';
+            controls.querySelector('.sort-controls').appendChild(expandAllBtn);
+
+            expandAllBtn.addEventListener('click', function () {
+                const groups = document.querySelectorAll('.test-group');
+                const allExpanded = Array.from(groups).every(group =>
+                    group.querySelector('.group-body').classList.contains('expanded'));
+
+                groups.forEach(group => {
+                    const body = group.querySelector('.group-body');
+                    const btn = group.querySelector('.toggle-group-btn');
+                    const icon = btn.querySelector('i');
+
+                    if (allExpanded) {
+                        body.classList.remove('expanded');
+                        btn.classList.remove('rotated');
+                        icon.className = 'fas fa-chevron-down';
+                    } else {
+                        body.classList.add('expanded');
+                        btn.classList.add('rotated');
+                        icon.className = 'fas fa-chevron-up';
+                    }
+                });
+
+                expandAllBtn.innerHTML = allExpanded ?
+                    '<i class="fas fa-expand-alt"></i> Expand All' :
+                    '<i class="fas fa-compress-alt"></i> Collapse All';
+            });
+        }
+    });
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            navLinks.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+
+            const targetId = this.getAttribute('href').substring(1);
+            sections.forEach(section => {
+                section.classList.remove('active');
+                if (section.id === targetId) {
+                    section.classList.add('active');
+                }
+            });
+
+            history.pushState(null, '', '#' + targetId);
+        });
+    });
+
+    const sortButtons = document.querySelectorAll('.sort-btn');
+    sortButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const sortType = this.getAttribute('data-sort');
+            sortComparisonCards(sortType);
+
+            sortButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+    filterCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            const type = this.getAttribute('data-type');
+            const isChecked = this.checked;
+
+            document.querySelectorAll(`.${type}-metric`).forEach(metric => {
+                metric.style.display = isChecked ? 'block' : 'none';
+            });
+        });
+    });
+
+    document.querySelectorAll('.toggle-details-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const card = this.closest('.comparison-card');
+            const details = card.querySelector('.metric-details');
+            details.style.display = details.style.display === 'none' ? 'grid' : 'none';
+            this.textContent = details.style.display === 'none' ? 'Show Details' : 'Hide Details';
+        });
+    });
+
+    document.querySelectorAll('.details-header').forEach(header => {
+        header.addEventListener('click', function () {
+            const content = this.nextElementSibling.nextElementSibling;
+            const icon = this.querySelector('i');
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.className = 'fas fa-caret-down';
+            } else {
+                content.style.display = 'none';
+                icon.className = 'fas fa-caret-right';
+            }
+        });
+    });
+
+    if (window.location.hash) {
+        const targetId = window.location.hash.substring(1);
+        const targetLink = document.querySelector(`.nav-link[href="#${targetId}"]`);
+        const targetSection = document.getElementById(targetId);
+
+        if (targetLink && targetSection) {
+            navLinks.forEach(l => l.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+
+            targetLink.classList.add('active');
+            targetSection.classList.add('active');
+        }
+    }
+
+    function sortComparisonCards(sortType) {
+        const container = document.querySelector('.comparison-grid');
+        const cards = Array.from(container.querySelectorAll('.comparison-card'));
+
+        cards.sort((a, b) => {
+            let aValue, bValue;
+
+            switch (sortType) {
+                case 'time':
+                    aValue = parseFloat(a.getAttribute('data-time'));
+                    bValue = parseFloat(b.getAttribute('data-time'));
+                    return aValue - bValue;
+
+                case 'memory':
+                    aValue = parseFloat(a.getAttribute('data-memory'));
+                    bValue = parseFloat(b.getAttribute('data-memory'));
+                    return aValue - bValue;
+
+                case 'name':
+                    aValue = a.querySelector('h3').textContent.toLowerCase();
+                    bValue = b.querySelector('h3').textContent.toLowerCase();
+                    return aValue.localeCompare(bValue);
+
+                default:
+                    return 0;
+            }
+        });
+
+        cards.forEach(card => container.appendChild(card));
+    }
+
+    document.querySelectorAll('.summary-row').forEach(row => {
+        const benchmarkName = row.getAttribute('data-benchmark');
+
+        row.addEventListener('mouseenter', function () {
+            this.style.backgroundColor = '#f0f7ff';
+        });
+
+        row.addEventListener('mouseleave', function () {
+            this.style.backgroundColor = '';
+        });
+    });
+});</script>
+</body>
+
+</html>

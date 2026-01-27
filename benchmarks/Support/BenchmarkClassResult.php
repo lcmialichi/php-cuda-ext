@@ -5,7 +5,7 @@ namespace Benchmarks\Support;
 use Benchmarks\Support\BenchmarkResult;
 use Benchmarks\Contracts\BenchmarkInterface;
 
-class BenchmarkClassResult
+class BenchmarkClassResult implements \JsonSerializable
 {
     /**
      * @param BenchmarkInterface $handler
@@ -27,5 +27,15 @@ class BenchmarkClassResult
     public function getResults(): array
     {
         return $this->results;
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return [
+            "class" => get_class($this),
+            "name" => $this->handler->name(),
+            "description" => $this->handler->description(),
+            "results" => $this->results
+        ];
     }
 }

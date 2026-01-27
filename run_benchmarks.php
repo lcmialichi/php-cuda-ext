@@ -15,6 +15,12 @@ $app = new BenchmarkApplication([
     new CudaArrayBenchmark()
 ]);
 
-$report = $app->run();
+$dir = __DIR__ . "/benchmarks/reports";
 
-var_dump($report);
+$report = $app->run();
+$jsonPath = $report->saveJSON($dir);
+$htmlPath = $report->saveHTML($dir);
+
+echo "JSON: {$jsonPath}\n";
+echo "HTML: {$htmlPath}\n";
+

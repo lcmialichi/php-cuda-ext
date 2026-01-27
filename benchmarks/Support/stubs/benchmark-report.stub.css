@@ -1,0 +1,221 @@
+  /* Benchmark Report Styles - No Grouping Version */
+  * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+  }
+
+  body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f7fa;
+      padding: 20px;
+  }
+
+  .container {
+      max-width: 1200px;
+      margin: 0 auto;
+  }
+
+  header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+  }
+
+  .generated-at {
+      opacity: 0.9;
+      font-size: 0.9rem;
+  }
+
+  .benchmark-class {
+      background: white;
+      border-radius: 10px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e1e5e9;
+  }
+
+  .benchmark-class h2 {
+      color: #2d3748;
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 0.5rem;
+  }
+
+  .benchmark-description {
+      color: #718096;
+      margin-bottom: 1.5rem;
+      font-size: 1rem;
+  }
+
+  .test-result {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #e2e8f0;
+      position: relative;
+  }
+
+  .test-result:last-child {
+      margin-bottom: 0;
+  }
+
+  .test-result h3 {
+      color: #4a5568;
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+  }
+
+  .type-badge {
+      background: #667eea;
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+  }
+
+  .test-info {
+      color: #718096;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      background: #edf2f7;
+      padding: 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+  }
+
+  .metadata {
+      background: #e6fffa;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: #234e52;
+      border-left: 4px solid #38b2ac;
+  }
+
+  .metadata strong {
+      color: #285e61;
+  }
+
+  .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+  }
+
+  .stat-column {
+      background: white;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+  }
+
+  .stat-column h4 {
+      color: #2d3748;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+  }
+
+  .stats ul {
+      list-style: none;
+  }
+
+  .stats li {
+      padding: 0.3rem 0;
+      color: #4a5568;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+  }
+
+  .stats li strong {
+      color: #2d3748;
+      font-weight: 600;
+  }
+
+  .executions {
+      margin-top: 1rem;
+  }
+
+  .executions h4 {
+      color: #4a5568;
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+  }
+
+  .execution-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+  }
+
+  .execution-table th {
+      background: #edf2f7;
+      color: #4a5568;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+  }
+
+  .execution-table td {
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      background: white;
+  }
+
+  .execution-table tr:nth-child(even) td {
+      background: #f7fafc;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+      .stats {
+          grid-template-columns: 1fr;
+      }
+
+      header h1 {
+          font-size: 2rem;
+      }
+
+      .benchmark-class h2 {
+          font-size: 1.5rem;
+      }
+
+      .execution-table {
+          font-size: 0.8rem;
+      }
+  }
+
+  /* Print styles */
+  @media print {
+      body {
+          background: white;
+          padding: 0;
+      }
+
+      .test-result {
+          break-inside: avoid;
+      }
+  }

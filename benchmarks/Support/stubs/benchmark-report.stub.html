@@ -11,24 +11,62 @@
 
 <body>
     <div class="container">
-        <header>
-            <h1><i class="fas fa-chart-line"></i> Benchmark Report</h1>
-            <p class="generated-at">
-                <i class="far fa-clock"></i> Generated at: {{GENERATED_AT}}
-            </p>
+        <header class="report-header">
+            <div class="header-content">
+                <h1><i class="fas fa-rocket"></i> CUDA Benchmark Report</h1>
+                <div class="header-info">
+                    <div class="info-item">
+                        <i class="far fa-clock"></i>
+                        <span>Generated: {{GENERATED_AT}}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-microchip"></i>
+                        <span>PHP CUDA Extension</span>
+                    </div>
+                </div>
+            </div>
         </header>
 
-        <main>
-            {{BENCHMARKS}}
+        <nav class="report-nav">
+            <a href="#summary" class="nav-link active" data-section="summary">
+                <i class="fas fa-chart-bar"></i> Summary
+            </a>
+            <a href="#comparison" class="nav-link" data-section="comparison">
+                <i class="fas fa-balance-scale"></i> Comparison
+            </a>
+            <a href="#details" class="nav-link" data-section="details">
+                <i class="fas fa-list-alt"></i> Details
+            </a>
+        </nav>
+
+        <main class="report-main">
+            <section id="summary" class="report-section active">
+                {{SUMMARY_SECTION}}
+            </section>
+
+            <section id="comparison" class="report-section">
+                {{COMPARISON_SECTION}}
+            </section>
+
+            <section id="details" class="report-section">
+                {{DETAILS_SECTION}}
+            </section>
         </main>
 
-        <footer style="text-align: center; margin-top: 3rem; padding: 2rem; color: #718096; font-size: 0.9rem;">
-            <p>
-                Generated with PHP Benchmark System |
-                <i class="fas fa-microchip"></i> CUDA Extension
-            </p>
+        <footer class="report-footer">
+            <div class="footer-content">
+                <p>
+                    <i class="fas fa-code"></i> Generated with PHP CUDA Benchmark System |
+                    <i class="fas fa-chart-line"></i> Performance Analytics
+                </p>
+                <p class="footer-note">
+                    Report ID: <code>cuda-benchmark-{{TIMESTAMP}}</code>
+                </p>
+            </div>
         </footer>
     </div>
+
+    <script>{{SCRIPTS}}</script>
 </body>
 
 </html>

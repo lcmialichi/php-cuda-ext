@@ -21,6 +21,10 @@ $report = $app->run();
 $jsonPath = $report->saveJSON($dir);
 $htmlPath = $report->saveHTML($dir);
 
-echo "JSON: {$jsonPath}\n";
-echo "HTML: {$htmlPath}\n";
+echo "┌──────────────────────────────────────────────────────────────────────────┐\n";
+echo "│                            BENCHMARK REPORTS                             │\n";
+echo "├──────────────────────────────────────────────────────────────────────────┤\n";
+echo "│ 📁 JSON:  " . str_pad($jsonPath, 62) . " │\n";
+echo "│ 🌐 HTML:  " . str_pad($htmlPath, 62) . " │\n";
+echo "└──────────────────────────────────────────────────────────────────────────┘\n";
 

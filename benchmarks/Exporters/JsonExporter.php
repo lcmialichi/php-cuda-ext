@@ -11,11 +11,11 @@ class JsonExporter implements ExporterInterface
     {
         $json = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-        $path = $dir . DIRECTORY_SEPARATOR . "cuda-benchmark-" . time() . ".json";
         if (!is_dir($dir)) {
-            mkdir(dirname($dir), 0755, true);
+            mkdir($dir, 0755, true);
         }
 
+        $path = $dir . DIRECTORY_SEPARATOR . "cuda-benchmark-" . time() . ".json";
         file_put_contents($path, $json);
 
         return $path;

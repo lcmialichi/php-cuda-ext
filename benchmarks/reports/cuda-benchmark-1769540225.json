@@ -1,0 +1,415 @@
+{
+    "generated_at": "2026-01-27 18:57:05",
+    "device": "NVIDIA GeForce MX570 A",
+    "benchmarks": [
+        {
+            "class": "Benchmarks\\Support\\BenchmarkClassResult",
+            "name": "CudaArray Benchmark",
+            "description": "testing description",
+            "results": [
+                {
+                    "name": "CudaArray::zeros()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.068832,
+                        "max": 0.0792,
+                        "avg": 0.07077530000000001,
+                        "total": 0.7077530000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::zeros()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.080523,
+                        "max": 0.125017,
+                        "avg": 0.09551950000000001,
+                        "total": 0.9551950000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::zeros()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.934527,
+                        "max": 9.418173,
+                        "avg": 6.4799893,
+                        "total": 64.799893
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ones()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.063108,
+                        "max": 0.08833,
+                        "avg": 0.06987649999999998,
+                        "total": 0.6987649999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ones()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.07067,
+                        "max": 0.176324,
+                        "avg": 0.0908945,
+                        "total": 0.908945
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ones()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.868286,
+                        "max": 6.056488,
+                        "avg": 5.968929999999999,
+                        "total": 59.689299999999996
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::full()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.065254,
+                        "max": 0.215801,
+                        "avg": 0.10738819999999998,
+                        "total": 1.0738819999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::full()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.109344,
+                        "max": 0.28363,
+                        "avg": 0.17740280000000003,
+                        "total": 1.7740280000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::full()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.907657,
+                        "max": 6.171836,
+                        "avg": 6.0321017,
+                        "total": 60.321017000000005
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::rand()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.092193,
+                        "max": 0.257098,
+                        "avg": 0.1795307,
+                        "total": 1.7953069999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::rand()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.095933,
+                        "max": 0.157808,
+                        "avg": 0.11427070000000002,
+                        "total": 1.1427070000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::rand()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.909001,
+                        "max": 6.886906,
+                        "avg": 6.0750841,
+                        "total": 60.750841
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16",
+                        "axis": "0"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.091847,
+                        "max": 0.145419,
+                        "avg": 0.11452199999999998,
+                        "total": 1.14522
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64",
+                        "axis": "0"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.099297,
+                        "max": 0.106127,
+                        "avg": 0.1015739,
+                        "total": 1.015739
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "axis": "0"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.149932,
+                        "max": 0.188611,
+                        "avg": 0.163099,
+                        "total": 1.63099
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16",
+                        "axis": "1"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.097344,
+                        "max": 0.107722,
+                        "avg": 0.10085549999999999,
+                        "total": 1.0085549999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64",
+                        "axis": "1"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.096633,
+                        "max": 0.230624,
+                        "avg": 0.1291077,
+                        "total": 1.291077
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "axis": "1"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.149231,
+                        "max": 0.345278,
+                        "avg": 0.18601079999999998,
+                        "total": 1.8601079999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                }
+            ]
+        }
+    ]
+}

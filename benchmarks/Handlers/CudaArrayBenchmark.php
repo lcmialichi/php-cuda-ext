@@ -18,6 +18,19 @@ class CudaArrayBenchmark extends Benchmark
             [
                 "run" => 3,
                 "warmup" => true,
+                "name" => "CudaArray::zeros()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayZeros",
+                "metadata" => [
+                    ["shape" => "16x16x16"],
+                    ["shape" => "64x64x64"],
+                    ["shape" => "512x512x512"],
+                ]
+            ],
+            [
+                "run" => 3,
+                "warmup" => true,
                 "name" => "CudaArray::ones()",
                 "iterations" => 10,
                 "type" => "CUDA",
@@ -89,6 +102,12 @@ class CudaArrayBenchmark extends Benchmark
         return "testing description";
     }
 
+    public function argsCudaArrayZeros(int $count): array
+    {
+        $size = pow(8, $count);
+        return [[$size, $size, $size]];
+    }
+
     public function argsCudaArrayOnes(int $count): array
     {
         $size = pow(8, $count);
@@ -124,6 +143,11 @@ class CudaArrayBenchmark extends Benchmark
     public function cudaArrayOnes(array $shape): void
     {
         CudaArray::ones($shape);
+    }
+
+    public function cudaArrayZeros(array $shape): void
+    {
+        CudaArray::zeros($shape);
     }
 
     public function cudaArrayFull(array $shape, int $value): void

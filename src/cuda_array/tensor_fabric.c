@@ -262,6 +262,78 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
     return tensor;
 }
 
+tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, dtype_t dtype)
+{
+    if (!tensor_init())
+        return NULL;
+
+    tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
+    if (!tensor)
+        return NULL;
+
+    size_t element_size;
+    if (dtype == DTYPE_FLOAT32)
+    {
+        element_size = sizeof(float);
+    }
+    else if (dtype == DTYPE_INT32)
+    {
+        element_size = sizeof(int);
+    }
+    else
+    {
+        efree(tensor);
+        zend_throw_error(NULL, "Unsupported data type for tensor creation");
+        return NULL;
+    }
+
+    tensor->dtype = dtype;
+    tensor->ndims = ndims;
+    tensor->shape = (int *)emalloc(ndims * sizeof(int));
+    memcpy(tensor->shape, shape, ndims * sizeof(int));
+
+    tensor->strides = (size_t *)emalloc(ndims * sizeof(size_t));
+
+    size_t stride = 1;
+    for (int i = ndims - 1; i >= 0; i--)
+    {
+        tensor->strides[i] = stride;
+        stride *= shape[i];
+    }
+
+    tensor->total_size = stride;
+    tensor->is_view = 0;
+    tensor->offset = 0;
+    tensor->slices = NULL;
+    tensor->num_slices = 0;
+    tensor->ref_count = 1;
+    tensor->d_shape = NULL;
+    tensor->d_strides = NULL;
+    tensor->element_size = element_size;
+    tensor->is_on_gpu = 0;
+
+    size_t required_bytes = tensor->total_size * element_size;
+    tensor->allocated_size = required_bytes;
+
+    tensor->data = emalloc(required_bytes);
+    if (!tensor->data)
+    {
+        efree(tensor->strides);
+        efree(tensor->shape);
+        efree(tensor);
+        zend_throw_error(NULL, "Failed to allocate Host memory for tensor.");
+        return NULL;
+    }
+    
+    if (data) {
+        memcpy(tensor->data, data, required_bytes);
+    } else {
+        memset(tensor->data, 0, required_bytes);
+    }
+
+    return tensor;
+}
+
 tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[])
 {
     return cuda_tensor_create(shape, ndims, data, DTYPE_FLOAT32);

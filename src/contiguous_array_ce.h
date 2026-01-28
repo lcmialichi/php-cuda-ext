@@ -55,5 +55,7 @@ ZEND_METHOD(ContiguousArray, toGpu);
 ZEND_METHOD(ContiguousArray, getElementSize);
 ZEND_METHOD(ContiguousArray, count);
 ZEND_METHOD(ContiguousArray, at);
+ZEND_METHOD(ContiguousArray, __unserialize);
+ZEND_METHOD(ContiguousArray, __serialize);
 
 #endif

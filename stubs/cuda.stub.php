@@ -144,6 +144,9 @@ class ContiguousArray implements \ArrayAccess
     public function count(): int {}
 
     public function getDtype(): string {}
+
+    public function __serialize(): array {}
+    public function __unserialize(array $data): void {}
 }
 
 /**

@@ -5,6 +5,7 @@
 #include <string.h>
 #include "tensor_fabric.h"
 #include "ca_struct.h"
+#include "zend_exceptions.h"
 
 static zend_object_handlers contiguous_array_handlers;
 zend_class_entry *contiguous_array_ce;
@@ -220,6 +221,239 @@ static void contiguous_array_to_php_array(contiguous_array_object *obj, zval *re
             zend_object_release(zslice);
         }
     }
+}
+
+ZEND_METHOD(ContiguousArray, __serialize)
+{
+    contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
+    array_init(return_value);
+    add_assoc_stringl(return_value, "__contiguous_array_v1", "1", 1);
+
+    add_assoc_long(return_value, "ndims", obj->ndims);
+    add_assoc_long(return_value, "dtype", obj->dtype);
+    add_assoc_long(return_value, "offset", obj->offset);
+    add_assoc_long(return_value, "total_elements", obj->total_elements);
+    add_assoc_long(return_value, "element_size", obj->element_size);
+    add_assoc_bool(return_value, "is_contiguous", obj->is_contiguous);
+
+    zval shape_array;
+    array_init(&shape_array);
+    for (int i = 0; i < obj->ndims; i++)
+    {
+        add_next_index_long(&shape_array, obj->shape[i]);
+    }
+    add_assoc_zval(return_value, "shape", &shape_array);
+
+    zval strides_array;
+    array_init(&strides_array);
+    for (int i = 0; i < obj->ndims; i++)
+    {
+        add_next_index_long(&strides_array, obj->strides[i]);
+    }
+    add_assoc_zval(return_value, "strides", &strides_array);
+
+    void *data_ptr = obj->tensor ? obj->tensor->data : obj->cached_data_ptr;
+    size_t data_size = obj->total_elements * obj->element_size;
+
+    if (data_ptr && data_size > 0)
+    {
+        add_assoc_stringl(return_value, "data", data_ptr, data_size);
+    }
+    else
+    {
+        add_assoc_stringl(return_value, "data", "", 0);
+    }
+}
+
+ZEND_METHOD(ContiguousArray, __unserialize)
+{
+    HashTable *data;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "h", &data) == FAILURE)
+    {
+        RETURN_NULL();
+    }
+
+    zval *version = zend_hash_str_find(data, "__contiguous_array_v1", sizeof("__contiguous_array_v1") - 1);
+    if (!version)
+    {
+        zend_throw_exception(NULL, "Invalid serialized data version", 0);
+        RETURN_NULL();
+    }
+
+    zval *tmp;
+    int ndims = 0;
+    dtype_t dtype = 0;
+    size_t total_elements = 0, element_size = 0;
+
+    if ((tmp = zend_hash_str_find(data, "ndims", sizeof("ndims") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
+    {
+        zend_throw_exception(NULL, "Missing or invalid ndims", 0);
+        RETURN_NULL();
+    }
+    ndims = Z_LVAL_P(tmp);
+
+    if ((tmp = zend_hash_str_find(data, "dtype", sizeof("dtype") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
+    {
+        zend_throw_exception(NULL, "Missing or invalid dtype", 0);
+        RETURN_NULL();
+    }
+    dtype = (dtype_t)Z_LVAL_P(tmp);
+
+    if ((tmp = zend_hash_str_find(data, "total_elements", sizeof("total_elements") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
+    {
+        zend_throw_exception(NULL, "Missing or invalid total_elements", 0);
+        RETURN_NULL();
+    }
+    total_elements = (size_t)Z_LVAL_P(tmp);
+
+    if ((tmp = zend_hash_str_find(data, "element_size", sizeof("element_size") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
+    {
+        zend_throw_exception(NULL, "Missing or invalid element_size", 0);
+        RETURN_NULL();
+    }
+    element_size = (size_t)Z_LVAL_P(tmp);
+
+    if (ndims <= 0 || total_elements == 0 || element_size == 0)
+    {
+        zend_throw_exception(NULL, "Invalid array dimensions or size", 0);
+        RETURN_NULL();
+    }
+
+    zval *shape_zv = zend_hash_str_find(data, "shape", sizeof("shape") - 1);
+    if (!shape_zv || Z_TYPE_P(shape_zv) != IS_ARRAY || (int)zend_hash_num_elements(Z_ARRVAL_P(shape_zv)) != ndims)
+    {
+        zend_throw_exception(NULL, "Missing or invalid shape", 0);
+        RETURN_NULL();
+    }
+
+    int *shape = safe_emalloc(ndims, sizeof(int), 0);
+    int i = 0;
+    zval *item;
+    size_t calculated_elements = 1;
+
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(shape_zv), item)
+    {
+        if (i >= ndims)
+            break;
+        shape[i] = Z_LVAL_P(item);
+        if (shape[i] <= 0)
+        {
+            efree(shape);
+            zend_throw_exception(NULL, "Invalid shape value", 0);
+            RETURN_NULL();
+        }
+        calculated_elements *= shape[i];
+        i++;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    if (calculated_elements != total_elements)
+    {
+        efree(shape);
+        zend_throw_exception(NULL, "Shape does not match total_elements", 0);
+        RETURN_NULL();
+    }
+
+    zval *strides_zv = zend_hash_str_find(data, "strides", sizeof("strides") - 1);
+    if (!strides_zv || Z_TYPE_P(strides_zv) != IS_ARRAY || (int)zend_hash_num_elements(Z_ARRVAL_P(strides_zv)) != ndims)
+    {
+        efree(shape);
+        zend_throw_exception(NULL, "Missing or invalid strides", 0);
+        RETURN_NULL();
+    }
+
+    size_t *strides = safe_emalloc(ndims, sizeof(size_t), 0);
+    i = 0;
+
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(strides_zv), item)
+    {
+        if (i >= ndims)
+            break;
+        strides[i] = (size_t)Z_LVAL_P(item);
+        i++;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    zval *data_zv = zend_hash_str_find(data, "data", sizeof("data") - 1);
+    if (!data_zv || Z_TYPE_P(data_zv) != IS_STRING)
+    {
+        efree(shape);
+        efree(strides);
+        zend_throw_exception(NULL, "Missing or invalid data", 0);
+        RETURN_NULL();
+    }
+
+    size_t expected_data_size = total_elements * element_size;
+    if (Z_STRLEN_P(data_zv) != expected_data_size)
+    {
+        efree(shape);
+        efree(strides);
+        zend_throw_exception(NULL, "Data size mismatch", 0);
+        RETURN_NULL();
+    }
+
+    void *array_data = safe_emalloc(total_elements, element_size, 0);
+    memcpy(array_data, Z_STRVAL_P(data_zv), total_elements * element_size);
+
+    contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
+    if (obj->tensor)
+    {
+        cuda_tensor_destroy(obj->tensor);
+        obj->tensor = NULL;
+    }
+
+    if (obj->tensor)
+    {
+        if (obj->tensor->data && obj->tensor->data != array_data)
+        {
+            efree(obj->tensor->data);
+        }
+        efree(obj->tensor);
+        obj->tensor = NULL;
+    }
+
+    if (obj->shape && obj->shape != obj->tensor->shape)
+    {
+        efree(obj->shape);
+    }
+
+    if (obj->strides && obj->strides != obj->tensor->strides)
+    {
+        efree(obj->strides);
+    }
+
+    if (obj->cached_data_ptr && obj->cached_data_ptr != obj->tensor->data)
+    {
+        efree(obj->cached_data_ptr);
+    }
+
+    tensor_t *tensor = cuda_tensor_create_on_host(shape, ndims, array_data, dtype);
+    efree(array_data);
+    
+    if (!tensor)
+    {
+        efree(shape);
+        efree(strides);
+        efree(array_data);
+        zend_throw_exception(NULL, "Failed to create tensor", 0);
+        RETURN_NULL();
+    }
+
+    obj->tensor = tensor;
+    obj->ndims = ndims;
+    obj->dtype = dtype;
+    obj->total_elements = total_elements;
+    obj->element_size = element_size;
+    obj->shape = tensor->shape;
+    obj->strides = tensor->strides;
+    obj->cached_data_ptr = (char *)tensor->data + (tensor->offset * element_size);
+    obj->offset = tensor->offset;
+    obj->is_contiguous = 1;
+    obj->read_only = 0;
+
+    efree(shape);
+    efree(strides);
 }
 
 ZEND_METHOD(ContiguousArray, toArray)
@@ -462,7 +696,6 @@ int contiguous_array_init()
     contiguous_array_ce->create_object = contiguous_array_create_object;
     contiguous_array_ce->get_iterator = contiguous_array_get_iterator;
     contiguous_array_ce->ce_flags |= ZEND_ACC_FINAL;
-    zend_class_implements(contiguous_array_ce, 1, zend_ce_aggregate);
 
     memcpy(&contiguous_array_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     contiguous_array_handlers.offset = XtOffsetOf(contiguous_array_object, std);

@@ -664,7 +664,7 @@ body {
 }
 
 .group-body.expanded {
-    max-height: 5000px; /* Valor grande o suficiente */
+    max-height: 10000px;
 }
 
 .metadata-group {

@@ -17,6 +17,8 @@ $app = new BenchmarkApplication([
 
 $dir = __DIR__ . "/benchmarks/reports";
 
+echo "Running PHP-CUDA-EXT Benchmarks...\n";
+
 $report = $app->run();
 $jsonPath = $report->saveJSON($dir);
 $htmlPath = $report->saveHTML($dir);

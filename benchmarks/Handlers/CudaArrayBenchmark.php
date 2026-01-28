@@ -17,7 +17,7 @@ class CudaArrayBenchmark extends Benchmark
     {
         return [
             [
-                "run" => 3,
+                "run" => 6,
                 "warmup" => true,
                 "name" => "CudaArray::zeros()",
                 "iterations" => 10,
@@ -26,11 +26,14 @@ class CudaArrayBenchmark extends Benchmark
                 "metadata" => [
                     ["shape" => "16x16x16"],
                     ["shape" => "64x64x64"],
-                    ["shape" => "512x512x512"],
+                    ["shape" => "128x128x128"],
+                    ["shape" => "256x256x256"],
+                    ["shape" => "1024x128x64"],
+                    ["shape" => "512x256x128"],
                 ]
             ],
             [
-                "run" => 3,
+                "run" => 6,
                 "warmup" => true,
                 "name" => "CudaArray::ones()",
                 "iterations" => 10,
@@ -39,11 +42,14 @@ class CudaArrayBenchmark extends Benchmark
                 "metadata" => [
                     ["shape" => "16x16x16"],
                     ["shape" => "64x64x64"],
-                    ["shape" => "512x512x512"],
+                    ["shape" => "128x128x128"],
+                    ["shape" => "256x256x256"],
+                    ["shape" => "1024x128x64"],
+                    ["shape" => "512x256x128"],
                 ]
             ],
             [
-                "run" => 3,
+                "run" => 6,
                 "warmup" => true,
                 "name" => "CudaArray::full()",
                 "iterations" => 10,
@@ -52,7 +58,10 @@ class CudaArrayBenchmark extends Benchmark
                 "metadata" => [
                     ["shape" => "16x16x16"],
                     ["shape" => "64x64x64"],
-                    ["shape" => "512x512x512"],
+                    ["shape" => "128x128x128"],
+                    ["shape" => "256x256x256"],
+                    ["shape" => "1024x128x64"],
+                    ["shape" => "512x256x128"],
                 ]
 
             ],
@@ -66,7 +75,10 @@ class CudaArrayBenchmark extends Benchmark
                 "metadata" => [
                     ["shape" => "16x16x16"],
                     ["shape" => "64x64x64"],
-                    ["shape" => "512x512x512"],
+                    ["shape" => "128x128x128"],
+                    ["shape" => "256x256x256"],
+                    ["shape" => "1024x128x64"],
+                    ["shape" => "512x256x128"],
                 ]
             ],
             [
@@ -322,15 +334,7 @@ class CudaArrayBenchmark extends Benchmark
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayNeg",
-                "metadata" => [
-                    ["shape" => " - 16x16x16", "type" => " - 3D"],
-                    ["shape" => " - 64x64x64", "type" => " - 3D"],
-                    ["shape" => " - 512x512x64", "type" => " - 3D"],
-                    ["shape" => " - 512x512x512", "type" => " - 3D"],
-                    ["shape" => " - 512x512", "type" => " - 2D"],
-                    ["shape" => " - 1024x512", "type" => " - 2D"],
-                    ["shape" => " - 1x180000", "type" => " - 2D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
             [
                 "run" => 7,
@@ -339,15 +343,7 @@ class CudaArrayBenchmark extends Benchmark
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayFloor",
-                "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D"],
-                    ["shape" => "64x64x64", "type" => "3D"],
-                    ["shape" => "512x512x64", "type" => "3D"],
-                    ["shape" => "512x512x512", "type" => "3D"],
-                    ["shape" => "512x512", "type" => "2D"],
-                    ["shape" => "1024x512", "type" => "2D"],
-                    ["shape" => "1x180000", "type" => " - 2D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
             [
                 "run" => 7,
@@ -356,15 +352,7 @@ class CudaArrayBenchmark extends Benchmark
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayCeil",
-                "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D"],
-                    ["shape" => "64x64x64", "type" => "3D"],
-                    ["shape" => "512x512x64", "type" => "3D"],
-                    ["shape" => "512x512x512", "type" => "3D"],
-                    ["shape" => "512x512", "type" => "2D"],
-                    ["shape" => "1024x512", "type" => "2D"],
-                    ["shape" => "1x180000", "type" => " - 2D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
             [
                 "run" => 7,
@@ -373,15 +361,7 @@ class CudaArrayBenchmark extends Benchmark
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayRound",
-                "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D"],
-                    ["shape" => "64x64x64", "type" => "3D"],
-                    ["shape" => "512x512x64", "type" => "3D"],
-                    ["shape" => "512x512x512", "type" => "3D"],
-                    ["shape" => "512x512", "type" => "2D"],
-                    ["shape" => "1024x512", "type" => "2D"],
-                    ["shape" => "1x180000", "type" => " - 2D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
             [
                 "run" => 8,
@@ -402,21 +382,111 @@ class CudaArrayBenchmark extends Benchmark
                 ]
             ],
             [
+                "run" => 16,
+                "warmup" => true,
+                "name" => "CudaArray::sum()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArraySum",
+                "metadata" => $this->reductionMetadata()
+            ],
+            [
+                "run" => 16,
+                "warmup" => true,
+                "name" => "CudaArray::min()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayMin",
+                "metadata" => $this->reductionMetadata()
+            ],
+            [
+                "run" => 16,
+                "warmup" => true,
+                "name" => "CudaArray::prod()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayProd",
+                "metadata" => $this->reductionMetadata()
+            ],
+            [
+                "run" => 16,
+                "warmup" => true,
+                "name" => "CudaArray::argMax()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayArgMax",
+                "metadata" => $this->reductionMetadata()
+            ],
+            [
+                "run" => 16,
+                "warmup" => true,
+                "name" => "CudaArray::argMin()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayArgMin",
+                "metadata" => $this->reductionMetadata()
+            ],
+            [
+                "run" => 7,
+                "warmup" => true,
+                "name" => "CudaArray::flatten()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayFlatten",
+                "metadata" => $this->unaryMetadata()
+            ],
+            [
+                "run" => 12,
+                "warmup" => true,
+                "name" => "CudaArray::transpose()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayTranspose",
+                "metadata" => [
+                    ["shape" => "16x16", "idxs" => "[1, 0]"],
+                    ["shape" => "32x64", "idxs" => "[1, 0]"],
+                    ["shape" => "64x32", "idxs" => "[1, 0]"],
+                    ["shape" => "128x128", "idxs" => "[1, 0]"],
+                    ["shape" => "8x16x32", "idxs" => "[0, 2, 1]"],
+                    ["shape" => "8x16x32", "idxs" => "[2, 1, 0]"],
+                    ["shape" => "8x16x32", "idxs" => "[1, 0, 2]"],
+                    ["shape" => "16x8x2", "idxs" => "[0, 2, 1]"],
+                    ["shape" => "4x8x16x32", "idxs" => "[0, 1, 3, 2]"],
+                    ["shape" => "4x8x16x32", "idxs" => "[3, 2, 1, 0]"],
+                    ["shape" => "4x8x16x32", "idxs" => "[1, 0, 2, 3]"],
+                    ["shape" => "4x8x16x32", "idxs" => "[0, 2, 1, 3]"],
+                ]
+            ],
+            [
+                "run" => 12,
+                "warmup" => true,
+                "name" => "CudaArray::reshape()",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayReshape",
+                "metadata" => [
+                    ["shape" => "4x4", "output-shape" => "16x1"],
+                    ["shape" => "4x4", "output-shape" => "1x16"],
+                    ["shape" => "8x8", "output-shape" => "4x16"],
+                    ["shape" => "8x8", "output-shape" => "16x4"],
+                    ["shape" => "12x12", "output-shape" => "3x4x12"],
+                    ["shape" => "12x12", "output-shape" => "4x3x12"],
+                    ["shape" => "24x6", "output-shape" => "8x3x6"],
+                    ["shape" => "6x24", "output-shape" => "2x3x24"],
+                    ["shape" => "3x4x5", "output-shape" => "12x5"],
+                    ["shape" => "3x4x5", "output-shape" => "3x20"],
+                    ["shape" => "2x6x8", "output-shape" => "12x8"],
+                    ["shape" => "2x6x8", "output-shape" => "2x48"],
+                ]
+            ],
+            [
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::toHost() [GPU -> ContiguousArray]",
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoHost",
-                "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D"],
-                    ["shape" => "64x64x64", "type" => "3D"],
-                    ["shape" => "1024x512x64", "type" => "3D"],
-                    ["shape" => "512x512", "type" => "2D"],
-                    ["shape" => "1024x512", "type" => "2D"],
-                    ["shape" => "1x180000", "type" => "2D"],
-                    ["shape" => "180000", "type" => "1D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
             [
                 "run" => 7,
@@ -425,15 +495,7 @@ class CudaArrayBenchmark extends Benchmark
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoArray",
-                "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D"],
-                    ["shape" => "64x64x64", "type" => "3D"],
-                    ["shape" => "1024x512x64", "type" => "3D"],
-                    ["shape" => "512x512", "type" => "2D"],
-                    ["shape" => "1024x512", "type" => "2D"],
-                    ["shape" => "1x180000", "type" => "2D"],
-                    ["shape" => "180000", "type" => "1D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
             [
                 "run" => 7,
@@ -442,16 +504,44 @@ class CudaArrayBenchmark extends Benchmark
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayConstructor",
-                "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D"],
-                    ["shape" => "64x64x64", "type" => "3D"],
-                    ["shape" => "1024x512x64", "type" => "3D"],
-                    ["shape" => "512x512", "type" => "2D"],
-                    ["shape" => "1024x512", "type" => "2D"],
-                    ["shape" => "1x180000", "type" => "2D"],
-                    ["shape" => "180000", "type" => "1D"],
-                ]
+                "metadata" => $this->unaryMetadata()
             ],
+        ];
+    }
+
+    private function reductionMetadata(): array
+    {
+        return [
+            ["shape" => "16x16x16", "type" => "3D", "axis" => "2"],
+            ["shape" => "64x64x64", "type" => "3D", "axis" => "2"],
+            ["shape" => "512x512x64", "type" => "3D", "axis" => "2"],
+            ["shape" => "1024x512x512", "type" => "3D", "axis" => "2"],
+            ["shape" => "16x16x16", "type" => "3D", "axis" => "1"],
+            ["shape" => "64x64x64", "type" => "3D", "axis" => "1"],
+            ["shape" => "512x512x64", "type" => "3D", "axis" => "1"],
+            ["shape" => "1024x512x512", "type" => "3D", "axis" => "1"],
+            ["shape" => "16x16x16", "type" => "3D", "axis" => "0"],
+            ["shape" => "64x64x64", "type" => "3D", "axis" => "0"],
+            ["shape" => "512x512x64", "type" => "3D", "axis" => "0"],
+            ["shape" => "1024x512x512", "type" => "3D", "axis" => "0"],
+            ["shape" => "16x16x16", "type" => "3D", "axis" => "-1"],
+            ["shape" => "64x64x64", "type" => "3D", "axis" => "-1"],
+            ["shape" => "512x512x64", "type" => "3D", "axis" => "-1"],
+            ["shape" => "1024x512x512", "type" => "3D", "axis" => "-1"],
+
+        ];
+    }
+
+    private function unaryMetadata(): array
+    {
+        return [
+            ["shape" => "16x16x16", "type" => "3D"],
+            ["shape" => "64x64x64", "type" => "3D"],
+            ["shape" => "512x512x64", "type" => "3D"],
+            ["shape" => "512x512x512", "type" => "3D"],
+            ["shape" => "512x512", "type" => "2D"],
+            ["shape" => "1024x512", "type" => "2D"],
+            ["shape" => "1x180000", "type" => "2D"],
         ];
     }
 
@@ -462,20 +552,38 @@ class CudaArrayBenchmark extends Benchmark
 
     public function args3DShape(int $count): array
     {
-        $size = pow(8, $count);
-        return [[$size, $size, $size]];
+        return  match ($count) {
+            1 => [[16, 16, 16]],
+            2 => [[64, 64, 64]],
+            3 => [[128, 128, 128]],
+            4 => [[256, 256, 256]],
+            5 => [[1024, 128, 64]],
+            6 => [[512, 256, 128]],
+        };
     }
 
     public function args3DAndValue(int $count): array
     {
-        $size = pow(8, $count);
-        return [[$size, $size, $size], $count * 2];
+        return  match ($count) {
+            1 => [[16, 16, 16], 10],
+            2 => [[64, 64, 64], 10],
+            3 => [[128, 128, 128], 10],
+            4 => [[256, 256, 256], 10],
+            5 => [[1024, 128, 64], 10],
+            6 => [[512, 256, 128], 10],
+        };
     }
 
     public function args3DAndRange(int $count): array
     {
-        $size = pow(8, $count);
-        return [[$size, $size, $size], -1, 1];
+        return  match ($count) {
+            1 => [[16, 16, 16], -1, 1],
+            2 => [[64, 64, 64],  -1, 1],
+            3 => [[128, 128, 128],  -1, 1],
+            4 => [[256, 256, 256],  -1, 1],
+            5 => [[1024, 128, 64],  -1, 1],
+            6 => [[512, 256, 128],  -1, 1],
+        };
     }
 
     public function argsCudaArrayConcatAxisZero(int $count): array
@@ -518,6 +626,64 @@ class CudaArrayBenchmark extends Benchmark
             5 => [CudaArray::rand([512, 512])],
             6 => [CudaArray::rand([1024, 512])],
             7 => [CudaArray::rand([1, 180000])],
+        };
+    }
+
+    public function argsReduction(int $count): array
+    {
+        return match ($count) {
+            1 => [CudaArray::rand([16, 16, 16]), 2],
+            2 => [CudaArray::rand([64, 64, 64]), 2],
+            3 => [CudaArray::rand([512, 512, 64]), 2],
+            4 => [CudaArray::rand([512, 512, 512]), 2],
+            5 => [CudaArray::rand([16, 16, 16]), 1],
+            6 => [CudaArray::rand([64, 64, 64]), 1],
+            7 => [CudaArray::rand([512, 512, 64]), 1],
+            8 => [CudaArray::rand([512, 512, 512]), 1],
+            9 => [CudaArray::rand([16, 16, 16]), 0],
+            10 => [CudaArray::rand([64, 64, 64]), 0],
+            11 => [CudaArray::rand([512, 512, 64]), 0],
+            12 => [CudaArray::rand([512, 512, 512]), 0],
+            13 => [CudaArray::rand([16, 16, 16]), null],
+            14 => [CudaArray::rand([64, 64, 64]), null],
+            15 => [CudaArray::rand([512, 512, 64]), null],
+            16 => [CudaArray::rand([512, 512, 512]), null],
+        };
+    }
+
+    public function argsTranspose(int $count): array
+    {
+        return match ($count) {
+            1 => [CudaArray::rand([16, 16]), [1, 0]],
+            2 => [CudaArray::rand([32, 64]), [1, 0]],
+            3 => [CudaArray::rand([64, 32]), [1, 0]],
+            4 => [CudaArray::rand([128, 128]), [1, 0]],
+            5 => [CudaArray::rand([8, 16, 32]), [0, 2, 1]],
+            6 => [CudaArray::rand([8, 16, 32]), [2, 1, 0]],
+            7 => [CudaArray::rand([8, 16, 32]), [1, 0, 2]],
+            8 => [CudaArray::rand([16, 8, 4]), [0, 2, 1]],
+            9 => [CudaArray::rand([4, 8, 16, 32]), [0, 1, 3, 2]],
+            10 => [CudaArray::rand([4, 8, 16, 32]), [3, 2, 1, 0]],
+            11 => [CudaArray::rand([4, 8, 16, 32]), [1, 0, 2, 3]],
+            12 => [CudaArray::rand([4, 8, 16, 32]), [0, 2, 1, 3]]
+        };
+    }
+
+    public function argsReshape(int $count): array
+    {
+        return match ($count) {
+            1 => [CudaArray::rand([4, 4]), [16, 1]],
+            2 => [CudaArray::rand([4, 4]), [1, 16]],
+            3 => [CudaArray::rand([8, 8]), [4, 16]],
+            4 => [CudaArray::rand([8, 8]), [16, 4]],
+            5 => [CudaArray::rand([12, 12]), [3, 4, 12]],
+            6 => [CudaArray::rand([12, 12]), [4, 3, 12]],
+            7 => [CudaArray::rand([24, 6]), [8, 3, 6]],
+            8 => [CudaArray::rand([6, 24]), [2, 3, 24]],
+            9 => [CudaArray::rand([3, 4, 5]), [12, 5]],
+            10 => [CudaArray::rand([3, 4, 5]), [3, 20]],
+            11 => [CudaArray::rand([2, 6, 8]), [12, 8]],
+            12 => [CudaArray::rand([2, 6, 8]), [2, 48]],
         };
     }
 
@@ -651,6 +817,24 @@ class CudaArrayBenchmark extends Benchmark
         $first->ne($second);
     }
 
+    #[InjectArgs("argsUnary")]
+    public function cudaArrayFlatten(CudaArray $tensor): void
+    {
+        $tensor->flatten();
+    }
+
+    #[InjectArgs("argsReshape")]
+    public function cudaArrayReshape(CudaArray $tensor, array $shape): void
+    {
+        $tensor->reshape($shape);
+    }
+
+    #[InjectArgs("argsTranspose")]
+    public function cudaArrayTranspose(CudaArray $tensor, array $idxs): void
+    {
+        $tensor->transpose($idxs);
+    }
+
     #[InjectArgs("argsArithmetic")]
     public function cudaArrayle(CudaArray $first, CudaArray|float $second): void
     {
@@ -709,5 +893,41 @@ class CudaArrayBenchmark extends Benchmark
     public function cudaArrayConstructor(array $phpArray): void
     {
         new CudaArray($phpArray);
+    }
+
+    #[InjectArgs("argsReduction")]
+    public function cudaArraySum(CudaArray $tensor, ?int $axis): void
+    {
+        $tensor->sum($axis);
+    }
+
+    #[InjectArgs("argsReduction")]
+    public function cudaArrayMax(CudaArray $tensor, ?int $axis): void
+    {
+        $tensor->max($axis);
+    }
+
+    #[InjectArgs("argsReduction")]
+    public function cudaArrayMin(CudaArray $tensor, ?int $axis): void
+    {
+        $tensor->min($axis);
+    }
+
+    #[InjectArgs("argsReduction")]
+    public function cudaArrayProd(CudaArray $tensor, ?int $axis): void
+    {
+        $tensor->prod($axis);
+    }
+
+    #[InjectArgs("argsReduction")]
+    public function cudaArrayArgMax(CudaArray $tensor, ?int $axis): void
+    {
+        $tensor->argMax($axis);
+    }
+
+    #[InjectArgs("argsReduction")]
+    public function cudaArrayArgMin(CudaArray $tensor, ?int $axis): void
+    {
+        $tensor->argMin($axis);
     }
 }

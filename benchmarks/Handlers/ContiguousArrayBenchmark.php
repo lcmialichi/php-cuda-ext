@@ -165,9 +165,8 @@ class ContiguousArrayBenchmark extends Benchmark
         return [
             ["shape" => "16x16x16", "type" => "3D"],
             ["shape" => "64x64x64", "type" => "3D"],
-            ["shape" => "512x512x64", "type" => "3D"],
+            ["shape" => "1024x512x32", "type" => "3D"],
             ["shape" => "512x512", "type" => "3D"],
-            ["shape" => "1024x512", "type" => "2D"],
             ["shape" => "1024x512", "type" => "2D"],
             ["shape" => "1x180000", "type" => "2D"],
             ["shape" => "180000", "type" => "1D"],

@@ -51,6 +51,7 @@ ZEND_METHOD(ContiguousArray, getNdims);
 ZEND_METHOD(ContiguousArray, getSize);
 ZEND_METHOD(ContiguousArray, getDtype);
 ZEND_METHOD(ContiguousArray, toArray);
+ZEND_METHOD(ContiguousArray, toGpu);
 ZEND_METHOD(ContiguousArray, getElementSize);
 ZEND_METHOD(ContiguousArray, count);
 ZEND_METHOD(ContiguousArray, at);

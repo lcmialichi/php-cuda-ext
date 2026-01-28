@@ -35,6 +35,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_contiguous_array_count, 0, 0, 0)
 ZEND_END_ARG_INFO();
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_contiguous_array_toGpu, 0, 0, 0)
+ZEND_END_ARG_INFO();
+
 static const zend_function_entry contiguous_array_methods[] = {
     ZEND_ME(ContiguousArray, __construct, arginfo_contiguous_array_construct, ZEND_ACC_PUBLIC)
     ZEND_ME(ContiguousArray, get, arginfo_contiguous_array_get, ZEND_ACC_PUBLIC)
@@ -46,6 +49,7 @@ static const zend_function_entry contiguous_array_methods[] = {
     ZEND_ME(ContiguousArray, getDtype, arginfo_contiguous_array_getDtype, ZEND_ACC_PUBLIC)
     ZEND_ME(ContiguousArray, getElementSize, arginfo_contiguous_array_getElementSize, ZEND_ACC_PUBLIC)
     ZEND_ME(ContiguousArray, count, arginfo_contiguous_array_count, ZEND_ACC_PUBLIC)
+    ZEND_ME(ContiguousArray, toGpu, arginfo_contiguous_array_toGpu, ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 

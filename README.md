@@ -291,6 +291,8 @@ Explore the [Examples README](./examples/README.md) for a technical overview of 
 ## 📊 Benchmarks
 ### Run built-in benchmarks:
 ```bash
+composer update
+
 php run_benchmarks.php
 ```
 

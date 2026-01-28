@@ -5,7 +5,6 @@ namespace Benchmarks\Exporters;
 use Benchmarks\Contracts\ExporterInterface;
 use Benchmarks\Support\BenchmarkReport;
 use Benchmarks\Support\BenchmarkClassResult;
-use Benchmarks\Support\BenchmarkResult;
 
 class HtmlExporter implements ExporterInterface
 {
@@ -54,7 +53,6 @@ class HtmlExporter implements ExporterInterface
 
         $summaryHtml = $this->generateSummaryTable($benchmarksData);
         $comparisonHtml = $this->generateComparisonTable($allResults);
-        $detailsHtml = $this->generateDetailsSections($benchmarksData);
 
         $html = str_replace(
             [
@@ -63,7 +61,6 @@ class HtmlExporter implements ExporterInterface
                 '{{GENERATED_AT}}',
                 '{{SUMMARY_SECTION}}',
                 '{{COMPARISON_SECTION}}',
-                '{{DETAILS_SECTION}}',
                 '{{STYLE}}',
                 '{{SCRIPTS}}'
             ],
@@ -73,7 +70,6 @@ class HtmlExporter implements ExporterInterface
                 date('Y-m-d H:i:s'),
                 $summaryHtml,
                 $comparisonHtml,
-                $detailsHtml,
                 $this->cssTemplate,
                 $this->jsTemplate
             ],
@@ -442,122 +438,6 @@ class HtmlExporter implements ExporterInterface
         $html .= '</div>';
 
         return $html;
-    }
-
-    private function generateDetailsSections(array $benchmarksData): string
-    {
-        $html = '<div class="details-section">';
-        $html .= '<h2><i class="fas fa-list-alt"></i> Detailed Results</h2>';
-
-        foreach ($benchmarksData as $benchmark) {
-            $html .= '<div class="benchmark-details">';
-            $html .= '<h3 class="details-header">';
-            $html .= '<i class="fas fa-caret-right"></i> ';
-            $html .= htmlspecialchars($benchmark['handler_name']);
-            $html .= '</h3>';
-            $html .= '<p class="benchmark-description">' . htmlspecialchars($benchmark['handler_description']) . '</p>';
-
-            $html .= '<div class="details-content">';
-            foreach ($benchmark['results'] as $result) {
-                $html .= $this->generateResultDetails($result);
-            }
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
-        return $html;
-    }
-
-    private function generateResultDetails(array $result): string
-    {
-        $metadataHtml = '';
-        if (!empty($result['metadata'])) {
-            $metadataHtml = '<div class="metadata-grid">';
-            foreach ($result['metadata'] as $key => $value) {
-                $metadataHtml .= '<div class="metadata-item">';
-                $metadataHtml .= '<strong>' . htmlspecialchars($key) . ':</strong>';
-                $metadataHtml .= '<span>' . htmlspecialchars($value) . '</span>';
-                $metadataHtml .= '</div>';
-            }
-            $metadataHtml .= '</div>';
-        }
-
-        return sprintf(
-            '<div class="result-details">
-                <div class="result-header">
-                    <h4>%s</h4>
-                    <div class="result-meta">
-                        <span class="meta-item">Type: %s</span>
-                        <span class="meta-item">Iterations: %d</span>
-                        <span class="meta-item">Runs: %d</span>
-                    </div>
-                </div>
-                %s
-                <div class="stats-grid">
-                    <div class="stat-box time-stats">
-                        <h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>
-                        <div class="stat-values">
-                            <div class="stat-value">
-                                <span class="stat-label">Min:</span>
-                                <span class="stat-number">%.4f</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Max:</span>
-                                <span class="stat-number">%.4f</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Avg:</span>
-                                <span class="stat-number">%.4f</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Total:</span>
-                                <span class="stat-number">%.4f</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Std Dev:</span>
-                                <span class="stat-number">%.4f</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="stat-box memory-stats">
-                        <h5><i class="fas fa-memory"></i> Memory Statistics</h5>
-                        <div class="stat-values">
-                            <div class="stat-value">
-                                <span class="stat-label">Min:</span>
-                                <span class="stat-number">%s</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Max:</span>
-                                <span class="stat-number">%s</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Avg:</span>
-                                <span class="stat-number">%s</span>
-                            </div>
-                            <div class="stat-value">
-                                <span class="stat-label">Total:</span>
-                                <span class="stat-number">%s</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>',
-            htmlspecialchars($result['name']),
-            htmlspecialchars($result['type']),
-            $result['iterations'],
-            $result['runs'],
-            $metadataHtml,
-            $result['stats']['time']['min'],
-            $result['stats']['time']['max'],
-            $result['stats']['time']['avg'],
-            $result['stats']['time']['total'],
-            $result['stats']['time']['std_dev'],
-            $result['stats']['memory']['min'],
-            $result['stats']['memory']['max'],
-            $result['stats']['memory']['avg'],
-            $result['stats']['memory']['total']
-        );
     }
 
     private function calculateStdDev(array $values): float

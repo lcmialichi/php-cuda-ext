@@ -3,11 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = document.querySelectorAll('.report-section');
 
-    // Adicione estas funções ao arquivo JavaScript existente:
-
-    // Toggle group expansion
     document.addEventListener('click', function (e) {
-        // Toggle groups
         if (e.target.closest('.toggle-group-btn') || e.target.closest('.group-header')) {
             const btn = e.target.closest('.toggle-group-btn') ||
                 e.target.closest('.group-header').querySelector('.toggle-group-btn');
@@ -20,7 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 'fas fa-chevron-up' : 'fas fa-chevron-down';
         }
 
-        // Toggle run details
         if (e.target.closest('.toggle-run-details-btn')) {
             const btn = e.target.closest('.toggle-run-details-btn');
             const runId = btn.getAttribute('data-run');
@@ -33,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Sort groups
     document.addEventListener('change', function (e) {
         if (e.target.classList.contains('sort-select')) {
             const sortBy = e.target.value;
@@ -74,13 +68,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Reorder groups
         groups.forEach(group => container.appendChild(group));
     }
 
-    // Expand all groups button (opcional, adicione se quiser)
     document.addEventListener('DOMContentLoaded', function () {
-        // Adicione um botão para expandir/recolher todos os grupos
         const controls = document.querySelector('.controls');
         if (controls) {
             const expandAllBtn = document.createElement('button');
@@ -144,18 +135,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             sortButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
-        });
-    });
-
-    const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
-    filterCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function () {
-            const type = this.getAttribute('data-type');
-            const isChecked = this.checked;
-
-            document.querySelectorAll(`.${type}-metric`).forEach(metric => {
-                metric.style.display = isChecked ? 'block' : 'none';
-            });
         });
     });
 

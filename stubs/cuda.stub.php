@@ -306,6 +306,10 @@ class CudaArray implements \ArrayAccess
     public function gt(float|CudaArray $other): CudaArray
     {
     }
+    
+    public function ge(float|CudaArray $other): CudaArray
+    {
+    }
 
     public function lt(float|CudaArray $other): CudaArray
     {

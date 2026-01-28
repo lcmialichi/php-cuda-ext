@@ -291,8 +291,7 @@ Explore the [Examples README](./examples/README.md) for a technical overview of 
 ## 📊 Benchmarks
 ### Run built-in benchmarks:
 ```bash
-php benchmarks/cuda_array.php
-php benchmarks/kernels.php
+php run_benchmarks.php
 ```
 
 ## Use Cases

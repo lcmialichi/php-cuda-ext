@@ -16,7 +16,7 @@ abstract class Benchmark implements BenchmarkInterface
         bool $warmup = false,
         array $metadata = []
     ): BenchmarkResult {
-        if($warmup === true){
+        if ($warmup === true) {
             $this->warmup($exec, $args);
         }
 
@@ -29,6 +29,8 @@ abstract class Benchmark implements BenchmarkInterface
             $times[] = $time;
             $memoryUsages[] = $mem;
         }
+
+        unset($args);
 
         return new BenchmarkResult(
             name: $name,

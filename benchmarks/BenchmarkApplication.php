@@ -4,6 +4,7 @@ namespace Benchmarks;
 
 use Benchmarks\Support\BenchmarkReport;
 use Benchmarks\Contracts\BenchmarkInterface;
+use Benchmarks\Support\Attr\InjectArgs;
 use Benchmarks\Support\BenchmarkClassResult;
 
 class BenchmarkApplication
@@ -36,18 +37,11 @@ class BenchmarkApplication
       }
 
       $runCount = $config["run"] ?? 1;
-      $argHandler = "args" . ucfirst($handler);
-
       for ($i = 0; $i < $runCount; $i++) {
-        $args  = [];
         $metadata = [];
 
         if (isset($config["metadata"])) {
           $metadata = $config["metadata"][$i] ?? [];
-        }
-
-        if (method_exists($benchmark, $argHandler)) {
-          $args = call_user_func([$benchmark, $argHandler], ($i + 1));
         }
 
         $result[] = $benchmark->run(
@@ -55,7 +49,7 @@ class BenchmarkApplication
           exec: [$benchmark, $config["handler"]],
           type: $config["type"] ?? "",
           iterations: $config["iterations"] ?? 10,
-          args: $args,
+          args: $this->getArgs($benchmark, $handler, ($i + 1)),
           warmup: $config["warmup"] ?? false,
           metadata: $metadata,
         );
@@ -63,5 +57,17 @@ class BenchmarkApplication
     }
 
     return new BenchmarkClassResult($benchmark, $result);
+  }
+
+  private function getArgs(BenchmarkInterface $class, string $handler, int $run): array
+  {
+    $reflection = new \ReflectionMethod($class, $handler);
+    $attrs = $reflection->getAttributes(InjectArgs::class);
+
+    if (empty($attrs)) {
+      return [];
+    }
+
+    return call_user_func([$class, $attrs[0]->newInstance()->getMethod()], $run);
   }
 }

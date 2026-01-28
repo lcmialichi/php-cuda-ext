@@ -1,0 +1,3773 @@
+{
+    "generated_at": "2026-01-28 13:15:26",
+    "device": "NVIDIA GeForce MX570 A",
+    "benchmarks": [
+        {
+            "class": "Benchmarks\\Support\\BenchmarkClassResult",
+            "name": "CudaArray Benchmark",
+            "description": "CudaArray methods Benchmark",
+            "results": [
+                {
+                    "name": "CudaArray::zeros()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.045176,
+                        "max": 0.070683,
+                        "avg": 0.051957500000000004,
+                        "total": 0.519575
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::zeros()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.082292,
+                        "max": 0.122377,
+                        "avg": 0.0974465,
+                        "total": 0.974465
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::zeros()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.861697,
+                        "max": 6.245929,
+                        "avg": 6.055655500000001,
+                        "total": 60.55655500000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ones()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.080405,
+                        "max": 0.326239,
+                        "avg": 0.20932979999999995,
+                        "total": 2.0932979999999994
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ones()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.097637,
+                        "max": 0.100977,
+                        "avg": 0.09885849999999999,
+                        "total": 0.9885849999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ones()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.92061,
+                        "max": 6.155233,
+                        "avg": 6.0128485,
+                        "total": 60.128485
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::full()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.073156,
+                        "max": 0.169407,
+                        "avg": 0.14926860000000003,
+                        "total": 1.4926860000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::full()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.086352,
+                        "max": 0.088792,
+                        "avg": 0.0879797,
+                        "total": 0.8797969999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::full()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 5.902765,
+                        "max": 6.129721,
+                        "avg": 6.047350200000001,
+                        "total": 60.47350200000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::rand()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.221908,
+                        "max": 0.668241,
+                        "avg": 0.2683246,
+                        "total": 2.683246
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::rand()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.326473,
+                        "max": 0.801878,
+                        "avg": 0.38950350000000006,
+                        "total": 3.8950350000000005
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::rand()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 18.068117,
+                        "max": 19.379929,
+                        "avg": 18.3577977,
+                        "total": 183.577977
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16",
+                        "axis": "0"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.078762,
+                        "max": 0.135565,
+                        "avg": 0.1042777,
+                        "total": 1.042777
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64",
+                        "axis": "0"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.074304,
+                        "max": 0.105867,
+                        "avg": 0.0839172,
+                        "total": 0.839172
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "axis": "0"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.129685,
+                        "max": 0.214238,
+                        "avg": 0.1862596,
+                        "total": 1.862596
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16",
+                        "axis": "1"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.071352,
+                        "max": 0.085611,
+                        "avg": 0.07411330000000001,
+                        "total": 0.741133
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64",
+                        "axis": "1"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.070366,
+                        "max": 0.090159,
+                        "avg": 0.0750544,
+                        "total": 0.750544
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::concat()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "axis": "1"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.118164,
+                        "max": 0.165017,
+                        "avg": 0.13570739999999998,
+                        "total": 1.357074
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 + 16x16x16",
+                        "type": "3D Tensor + 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.073524,
+                        "max": 0.229045,
+                        "avg": 0.11690399999999998,
+                        "total": 1.1690399999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 + 64x64x64",
+                        "type": "3D Tensor + 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.147586,
+                        "max": 0.152736,
+                        "avg": 0.1492091,
+                        "total": 1.492091
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 + 512x512x64",
+                        "type": "3D Tensor + 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.3095,
+                        "max": 2.598937,
+                        "avg": 2.4688200999999994,
+                        "total": 24.688200999999996
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 + float",
+                        "type": "3D Tensor + Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.137835,
+                        "max": 0.196775,
+                        "avg": 0.15900770000000003,
+                        "total": 1.5900770000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 + float",
+                        "type": "3D Tensor + Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.16776,
+                        "max": 0.273363,
+                        "avg": 0.1861581,
+                        "total": 1.861581
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 + float",
+                        "type": "3D Tensor + Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.483366,
+                        "max": 12.822188,
+                        "avg": 12.6802915,
+                        "total": 126.80291499999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 + 512x64",
+                        "type": "2D Tensor + 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.118719,
+                        "max": 0.51597,
+                        "avg": 0.2007825,
+                        "total": 2.007825
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 + 1024x512",
+                        "type": "2D Tensor + 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.20528,
+                        "max": 0.350157,
+                        "avg": 0.2642508,
+                        "total": 2.642508
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 + 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.158623,
+                        "max": 0.162423,
+                        "avg": 0.16111899999999998,
+                        "total": 1.61119
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::add()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 + 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.245204,
+                        "max": 0.281352,
+                        "avg": 0.2581801,
+                        "total": 2.5818010000000005
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 - 16x16x16",
+                        "type": "3D Tensor - 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.098326,
+                        "max": 0.102414,
+                        "avg": 0.0997124,
+                        "total": 0.997124
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 - 64x64x64",
+                        "type": "3D Tensor - 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.143473,
+                        "max": 0.18351,
+                        "avg": 0.15489619999999998,
+                        "total": 1.548962
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 - 512x512x64",
+                        "type": "3D Tensor - 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.304948,
+                        "max": 2.508924,
+                        "avg": 2.3962757,
+                        "total": 23.962757
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 - float",
+                        "type": "3D Tensor - Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.140322,
+                        "max": 0.168291,
+                        "avg": 0.14828449999999999,
+                        "total": 1.4828449999999997
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 - float",
+                        "type": "3D Tensor - Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.157103,
+                        "max": 0.1931,
+                        "avg": 0.17820759999999997,
+                        "total": 1.7820759999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 - float",
+                        "type": "3D Tensor - Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.115083,
+                        "max": 13.411398,
+                        "avg": 12.5851069,
+                        "total": 125.851069
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 - 512x64",
+                        "type": "2D Tensor - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.074096,
+                        "max": 0.171755,
+                        "avg": 0.0892031,
+                        "total": 0.8920309999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 - 1024x512",
+                        "type": "2D Tensor - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.146153,
+                        "max": 0.150298,
+                        "avg": 0.14926570000000003,
+                        "total": 1.4926570000000003
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 - 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.122336,
+                        "max": 0.125095,
+                        "avg": 0.12397910000000001,
+                        "total": 1.239791
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::subtract()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 - 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.211464,
+                        "max": 0.263408,
+                        "avg": 0.2190677,
+                        "total": 2.190677
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 * 16x16x16",
+                        "type": "3D Tensor * 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.069983,
+                        "max": 0.090702,
+                        "avg": 0.0738899,
+                        "total": 0.738899
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 * 64x64x64",
+                        "type": "3D Tensor * 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.110421,
+                        "max": 0.115195,
+                        "avg": 0.1141108,
+                        "total": 1.141108
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 * 512x512x64",
+                        "type": "3D Tensor * 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.307839,
+                        "max": 2.484008,
+                        "avg": 2.3842913999999995,
+                        "total": 23.842913999999997
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 * float",
+                        "type": "3D Tensor * Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.095293,
+                        "max": 0.100822,
+                        "avg": 0.09668579999999999,
+                        "total": 0.9668579999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 * float",
+                        "type": "3D Tensor * Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.124741,
+                        "max": 0.129244,
+                        "avg": 0.1261358,
+                        "total": 1.261358
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 * float",
+                        "type": "3D Tensor * Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.394938,
+                        "max": 13.070038,
+                        "avg": 12.5928732,
+                        "total": 125.928732
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 * 512x64",
+                        "type": "2D Tensor * 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.07347,
+                        "max": 0.354318,
+                        "avg": 0.13163249999999999,
+                        "total": 1.316325
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 * 1024x512",
+                        "type": "2D Tensor * 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.188023,
+                        "max": 0.21226,
+                        "avg": 0.19754319999999997,
+                        "total": 1.9754319999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 * 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.122803,
+                        "max": 0.52879,
+                        "avg": 0.1698767,
+                        "total": 1.698767
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::multiply()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 * 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.2136,
+                        "max": 0.218228,
+                        "avg": 0.2161969,
+                        "total": 2.161969
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 \/ 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.098603,
+                        "max": 0.106052,
+                        "avg": 0.10040959999999999,
+                        "total": 1.0040959999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 \/ 64x64x64",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.136041,
+                        "max": 0.301649,
+                        "avg": 0.1847201,
+                        "total": 1.8472009999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 \/ 512x512x64",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.38458,
+                        "max": 2.637033,
+                        "avg": 2.4971305999999993,
+                        "total": 24.971305999999995
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 \/ float",
+                        "type": "3D Tensor \/ Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.130671,
+                        "max": 0.318806,
+                        "avg": 0.17794020000000002,
+                        "total": 1.7794020000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 \/ float",
+                        "type": "3D Tensor \/ Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.172244,
+                        "max": 0.174099,
+                        "avg": 0.1728572,
+                        "total": 1.728572
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 \/ float",
+                        "type": "3D Tensor \/ Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.581391,
+                        "max": 13.762915,
+                        "avg": 13.2293013,
+                        "total": 132.293013
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 \/ 512x64",
+                        "type": "2D Tensor \/ 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.080378,
+                        "max": 0.173236,
+                        "avg": 0.1064088,
+                        "total": 1.064088
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 \/ 1024x512",
+                        "type": "2D Tensor \/ 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.1464,
+                        "max": 0.149973,
+                        "avg": 0.14833190000000002,
+                        "total": 1.4833190000000003
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 \/ 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.120407,
+                        "max": 0.144693,
+                        "avg": 0.12487649999999999,
+                        "total": 1.248765
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::divide()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 \/ 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.219326,
+                        "max": 0.221293,
+                        "avg": 0.22038319999999997,
+                        "total": 2.203832
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 ** 16x16x16",
+                        "type": "3D Tensor ** 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.074933,
+                        "max": 0.08112,
+                        "avg": 0.07600509999999999,
+                        "total": 0.7600509999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 ** 64x64x64",
+                        "type": "3D Tensor ** 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.108748,
+                        "max": 0.111713,
+                        "avg": 0.10989849999999998,
+                        "total": 1.0989849999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 ** 512x512x64",
+                        "type": "3D Tensor ** 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.373532,
+                        "max": 2.565091,
+                        "avg": 2.4653606,
+                        "total": 24.653606
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 ** float",
+                        "type": "3D Tensor ** Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.1608,
+                        "max": 0.178133,
+                        "avg": 0.1661451,
+                        "total": 1.661451
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 ** float",
+                        "type": "3D Tensor ** Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.187906,
+                        "max": 0.363515,
+                        "avg": 0.2527528,
+                        "total": 2.527528
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 ** float",
+                        "type": "3D Tensor ** Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 17.631863,
+                        "max": 19.432777,
+                        "avg": 18.3370426,
+                        "total": 183.370426
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 ** 512x64",
+                        "type": "2D Tensor ** 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.077647,
+                        "max": 0.18427,
+                        "avg": 0.10305800000000001,
+                        "total": 1.03058
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 ** 1024x512",
+                        "type": "2D Tensor ** 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.144995,
+                        "max": 0.513668,
+                        "avg": 0.20915109999999998,
+                        "total": 2.0915109999999997
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 ** 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.127686,
+                        "max": 0.134824,
+                        "avg": 0.1298726,
+                        "total": 1.298726
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::power()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 ** 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.258009,
+                        "max": 0.267102,
+                        "avg": 0.2606777,
+                        "total": 2.606777
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 > 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.07299,
+                        "max": 0.37014,
+                        "avg": 0.1420768,
+                        "total": 1.420768
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 > 64x64x64",
+                        "type": "3D Tensor > 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.124139,
+                        "max": 0.175473,
+                        "avg": 0.1567013,
+                        "total": 1.567013
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 > 512x512x64",
+                        "type": "3D Tensor > 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.355766,
+                        "max": 2.581721,
+                        "avg": 2.4560002000000005,
+                        "total": 24.560002000000004
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 > float",
+                        "type": "3D Tensor > Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.150571,
+                        "max": 0.178693,
+                        "avg": 0.15731259999999997,
+                        "total": 1.5731259999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 > float",
+                        "type": "3D Tensor > Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.179303,
+                        "max": 0.188694,
+                        "avg": 0.1814884,
+                        "total": 1.814884
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 > float",
+                        "type": "3D Tensor > Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.200219,
+                        "max": 12.713803,
+                        "avg": 12.4666685,
+                        "total": 124.666685
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 > 512x64",
+                        "type": "2D Tensor > 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.080973,
+                        "max": 0.094273,
+                        "avg": 0.0876718,
+                        "total": 0.8767179999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 > 1024x512",
+                        "type": "2D Tensor > 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.144153,
+                        "max": 0.157157,
+                        "avg": 0.1489991,
+                        "total": 1.489991
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 > 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.119036,
+                        "max": 0.177303,
+                        "avg": 0.1292293,
+                        "total": 1.292293
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::gt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 > 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.215012,
+                        "max": 0.217001,
+                        "avg": 0.2157674,
+                        "total": 2.157674
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 < 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.072419,
+                        "max": 0.075833,
+                        "avg": 0.07448990000000001,
+                        "total": 0.7448990000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 < 64x64x64",
+                        "type": "3D Tensor < 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.110396,
+                        "max": 0.114136,
+                        "avg": 0.1113182,
+                        "total": 1.1131820000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 < 512x512x64",
+                        "type": "3D Tensor < 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.315081,
+                        "max": 2.479736,
+                        "avg": 2.3701108,
+                        "total": 23.701108
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 < float",
+                        "type": "3D Tensor < Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.103073,
+                        "max": 0.272934,
+                        "avg": 0.13061080000000003,
+                        "total": 1.3061080000000003
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 < float",
+                        "type": "3D Tensor < Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.117277,
+                        "max": 0.204429,
+                        "avg": 0.1282214,
+                        "total": 1.2822140000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 < float",
+                        "type": "3D Tensor < Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.301273,
+                        "max": 12.61272,
+                        "avg": 12.3989724,
+                        "total": 123.989724
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 < 512x64",
+                        "type": "2D Tensor < 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.081053,
+                        "max": 0.091051,
+                        "avg": 0.08455280000000001,
+                        "total": 0.8455280000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 < 1024x512",
+                        "type": "2D Tensor < 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.146823,
+                        "max": 0.233641,
+                        "avg": 0.20246219999999998,
+                        "total": 2.024622
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 < 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.119635,
+                        "max": 0.480595,
+                        "avg": 0.15984589999999999,
+                        "total": 1.5984589999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::lt()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 < 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.212657,
+                        "max": 0.295763,
+                        "avg": 0.224506,
+                        "total": 2.24506
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 == 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.070428,
+                        "max": 0.077526,
+                        "avg": 0.07278930000000002,
+                        "total": 0.7278930000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 == 64x64x64",
+                        "type": "3D Tensor == 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.110558,
+                        "max": 0.115247,
+                        "avg": 0.1123288,
+                        "total": 1.123288
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 == 512x512x64",
+                        "type": "3D Tensor == 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.326138,
+                        "max": 2.538035,
+                        "avg": 2.4203561000000002,
+                        "total": 24.203561
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 == float",
+                        "type": "3D Tensor == Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.199308,
+                        "max": 0.225577,
+                        "avg": 0.2067495,
+                        "total": 2.067495
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 == float",
+                        "type": "3D Tensor == Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.134941,
+                        "max": 0.423987,
+                        "avg": 0.23488539999999997,
+                        "total": 2.3488539999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 == float",
+                        "type": "3D Tensor == Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.154151,
+                        "max": 12.6252,
+                        "avg": 12.3784087,
+                        "total": 123.784087
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 == 512x64",
+                        "type": "2D Tensor == 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.08964,
+                        "max": 0.277445,
+                        "avg": 0.1523088,
+                        "total": 1.523088
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 == 1024x512",
+                        "type": "2D Tensor == 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.145397,
+                        "max": 0.157749,
+                        "avg": 0.1504773,
+                        "total": 1.5047730000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 == 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.121927,
+                        "max": 0.124565,
+                        "avg": 0.12352800000000001,
+                        "total": 1.2352800000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::eq()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 == 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.212161,
+                        "max": 0.29957,
+                        "avg": 0.2238511,
+                        "total": 2.238511
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 != 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.067808,
+                        "max": 0.091257,
+                        "avg": 0.0734724,
+                        "total": 0.7347239999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 != 64x64x64",
+                        "type": "3D Tensor != 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.110998,
+                        "max": 0.160913,
+                        "avg": 0.11846939999999999,
+                        "total": 1.184694
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 != 512x512x64",
+                        "type": "3D Tensor != 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.333896,
+                        "max": 2.552699,
+                        "avg": 2.4539224,
+                        "total": 24.539224
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 != float",
+                        "type": "3D Tensor != Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.101264,
+                        "max": 0.200667,
+                        "avg": 0.11715990000000001,
+                        "total": 1.171599
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 != float",
+                        "type": "3D Tensor != Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.1198,
+                        "max": 0.167552,
+                        "avg": 0.1268183,
+                        "total": 1.2681829999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 != float",
+                        "type": "3D Tensor != Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.148843,
+                        "max": 13.242896,
+                        "avg": 12.6893973,
+                        "total": 126.89397299999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 != 512x64",
+                        "type": "2D Tensor != 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.074804,
+                        "max": 0.268153,
+                        "avg": 0.1273169,
+                        "total": 1.2731690000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 != 1024x512",
+                        "type": "2D Tensor != 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.14774,
+                        "max": 0.15242,
+                        "avg": 0.14925420000000003,
+                        "total": 1.4925420000000003
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 != 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.120133,
+                        "max": 0.130345,
+                        "avg": 0.12343199999999999,
+                        "total": 1.2343199999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ne()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 != 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.21662,
+                        "max": 0.44397,
+                        "avg": 0.24676070000000005,
+                        "total": 2.4676070000000005
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 <= 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.074824,
+                        "max": 0.076828,
+                        "avg": 0.0760788,
+                        "total": 0.760788
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 <= 64x64x64",
+                        "type": "3D Tensor <= 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.111777,
+                        "max": 0.116748,
+                        "avg": 0.11339329999999999,
+                        "total": 1.1339329999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 <= 512x512x64",
+                        "type": "3D Tensor <= 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.321029,
+                        "max": 2.553757,
+                        "avg": 2.4212748,
+                        "total": 24.212747999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 <= float",
+                        "type": "3D Tensor <= Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.100255,
+                        "max": 0.207793,
+                        "avg": 0.1276307,
+                        "total": 1.276307
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 <= float",
+                        "type": "3D Tensor <= Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.120852,
+                        "max": 0.133906,
+                        "avg": 0.1250268,
+                        "total": 1.250268
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 <= float",
+                        "type": "3D Tensor <= Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.20451,
+                        "max": 12.797405,
+                        "avg": 12.5950868,
+                        "total": 125.950868
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 <= 512x64",
+                        "type": "2D Tensor <= 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.105543,
+                        "max": 0.139398,
+                        "avg": 0.12279259999999999,
+                        "total": 1.2279259999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 <= 1024x512",
+                        "type": "2D Tensor <= 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.184802,
+                        "max": 0.189672,
+                        "avg": 0.18747589999999997,
+                        "total": 1.8747589999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 <= 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.149283,
+                        "max": 0.190224,
+                        "avg": 0.16158650000000002,
+                        "total": 1.6158650000000003
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::le()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 <= 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.258576,
+                        "max": 0.273671,
+                        "avg": 0.26135450000000005,
+                        "total": 2.6135450000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 >= 16x16x16",
+                        "type": "3D Tensor \/ 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.115658,
+                        "max": 0.127957,
+                        "avg": 0.11793780000000001,
+                        "total": 1.179378
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 >= 64x64x64",
+                        "type": "3D Tensor >= 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.150649,
+                        "max": 0.438163,
+                        "avg": 0.19222670000000003,
+                        "total": 1.9222670000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64 >= 512x512x64",
+                        "type": "3D Tensor >= 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.360195,
+                        "max": 2.588704,
+                        "avg": 2.4305358000000004,
+                        "total": 24.305358000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16 >= float",
+                        "type": "3D Tensor >= Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.094725,
+                        "max": 0.109485,
+                        "avg": 0.09704470000000001,
+                        "total": 0.9704470000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64 >= float",
+                        "type": "3D Tensor >= Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.118478,
+                        "max": 0.205442,
+                        "avg": 0.13142939999999997,
+                        "total": 1.3142939999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512 >= float",
+                        "type": "3D Tensor >= Scalar"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.198303,
+                        "max": 12.694017,
+                        "avg": 12.43018,
+                        "total": 124.3018
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x64 >= 512x64",
+                        "type": "2D Tensor >= 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.097177,
+                        "max": 0.20416,
+                        "avg": 0.1435181,
+                        "total": 1.435181
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 >= 1024x512",
+                        "type": "2D Tensor >= 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.162432,
+                        "max": 0.290199,
+                        "avg": 0.21938960000000002,
+                        "total": 2.193896
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512 >= 1x512",
+                        "type": "2D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.130675,
+                        "max": 0.299538,
+                        "avg": 0.1809482,
+                        "total": 1.809482
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ge()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x3x512 >= 1x3x512",
+                        "type": "3D Broadcast"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.215073,
+                        "max": 0.222639,
+                        "avg": 0.218653,
+                        "total": 2.18653
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 16x16x16",
+                        "type": " - 3D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.097946,
+                        "max": 0.918405,
+                        "avg": 0.2119317,
+                        "total": 2.119317
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 64x64x64",
+                        "type": " - 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.125802,
+                        "max": 0.248719,
+                        "avg": 0.14925119999999997,
+                        "total": 1.4925119999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 512x512x64",
+                        "type": " - 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.71435,
+                        "max": 1.991162,
+                        "avg": 1.8802386000000002,
+                        "total": 18.802386000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 512x512x512",
+                        "type": " - 3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.385777,
+                        "max": 13.052373,
+                        "avg": 12.6903572,
+                        "total": 126.903572
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 512x512",
+                        "type": " - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.163258,
+                        "max": 0.182039,
+                        "avg": 0.17294510000000002,
+                        "total": 1.729451
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 1024x512",
+                        "type": " - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.165934,
+                        "max": 0.199525,
+                        "avg": 0.1920009,
+                        "total": 1.920009
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::neg()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " - 1x180000",
+                        "type": " - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.157582,
+                        "max": 0.168942,
+                        "avg": 0.16523819999999997,
+                        "total": 1.6523819999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16",
+                        "type": "3D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.219808,
+                        "max": 0.358967,
+                        "avg": 0.23777480000000004,
+                        "total": 2.3777480000000004
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.231376,
+                        "max": 0.418327,
+                        "avg": 0.2607368,
+                        "total": 2.607368
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.735476,
+                        "max": 1.854259,
+                        "avg": 1.766836,
+                        "total": 17.66836
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.00813,
+                        "max": 12.445881,
+                        "avg": 12.259922999999999,
+                        "total": 122.59922999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "type": "2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.228207,
+                        "max": 0.259491,
+                        "avg": 0.2466626,
+                        "total": 2.466626
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512",
+                        "type": "2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.164914,
+                        "max": 0.168702,
+                        "avg": 0.16714610000000002,
+                        "total": 1.671461
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::floor()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1x180000",
+                        "type": " - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.21328,
+                        "max": 0.229573,
+                        "avg": 0.21682420000000002,
+                        "total": 2.1682420000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16",
+                        "type": "3D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.155392,
+                        "max": 0.197712,
+                        "avg": 0.174677,
+                        "total": 1.74677
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.196601,
+                        "max": 0.232283,
+                        "avg": 0.20777389999999998,
+                        "total": 2.077739
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.681951,
+                        "max": 1.984529,
+                        "avg": 1.90153,
+                        "total": 19.0153
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 12.080746,
+                        "max": 12.696707,
+                        "avg": 12.2351468,
+                        "total": 122.35146800000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "type": "2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.204889,
+                        "max": 0.363739,
+                        "avg": 0.2385867,
+                        "total": 2.385867
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512",
+                        "type": "2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.228613,
+                        "max": 0.280818,
+                        "avg": 0.2435272,
+                        "total": 2.435272
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::ceil()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1x180000",
+                        "type": " - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.21766,
+                        "max": 0.384656,
+                        "avg": 0.25168170000000006,
+                        "total": 2.5168170000000005
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16",
+                        "type": "3D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.192884,
+                        "max": 0.205082,
+                        "avg": 0.19750659999999998,
+                        "total": 1.9750659999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.219881,
+                        "max": 0.245421,
+                        "avg": 0.2242722,
+                        "total": 2.242722
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x64",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.662779,
+                        "max": 2.009197,
+                        "avg": 1.8190122000000002,
+                        "total": 18.190122000000002
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512x512",
+                        "type": "3D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 11.989816,
+                        "max": 12.854905,
+                        "avg": 12.279749599999999,
+                        "total": 122.797496
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "type": "2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.143367,
+                        "max": 0.30903,
+                        "avg": 0.2300879,
+                        "total": 2.300879
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512",
+                        "type": "2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.169031,
+                        "max": 0.179745,
+                        "avg": 0.170926,
+                        "total": 1.70926
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::round()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1x180000",
+                        "type": " - 2D Tesor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.134846,
+                        "max": 0.140708,
+                        "avg": 0.13638489999999998,
+                        "total": 1.3638489999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16 x 16x16",
+                        "type": " 2D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.044397,
+                        "max": 0.046238,
+                        "avg": 0.0448784,
+                        "total": 0.448784
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 128x128 x 128x128",
+                        "type": " 2D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.059773,
+                        "max": 0.067224,
+                        "avg": 0.061675,
+                        "total": 0.61675
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 32x256x256 x 32x256x256",
+                        "type": " 3D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 3.62161,
+                        "max": 3.985869,
+                        "avg": 3.7395533999999997,
+                        "total": 37.395534
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 1x512x512 x 64x512x512",
+                        "type": " 3D Tensor (broadcast)"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 51.670165,
+                        "max": 53.042199,
+                        "avg": 52.23860559999999,
+                        "total": 522.3860559999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 1024x768 x 768x512",
+                        "type": " 2D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.463628,
+                        "max": 2.701638,
+                        "avg": 2.5933465,
+                        "total": 25.933465
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 64x1024x512 x 64x512x256",
+                        "type": " 3D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 50.326532,
+                        "max": 51.221385,
+                        "avg": 50.6470602,
+                        "total": 506.470602
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 1x1000000 x 1000000x1",
+                        "type": " 2D Tensor (extreme)"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 40.598034,
+                        "max": 41.959892,
+                        "avg": 40.868801000000005,
+                        "total": 408.68801
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::matmul()",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": " 8x64x256x256 x 8x64x256x256",
+                        "type": " 4D Tensor"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 58.706034,
+                        "max": 61.247795,
+                        "avg": 59.1307625,
+                        "total": 591.307625
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                }
+            ]
+        }
+    ]
+}

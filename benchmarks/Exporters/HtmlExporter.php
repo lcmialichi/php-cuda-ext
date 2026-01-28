@@ -59,6 +59,7 @@ class HtmlExporter implements ExporterInterface
         $html = str_replace(
             [
                 '{{TITLE}}',
+                '{{DEVICE}}',
                 '{{GENERATED_AT}}',
                 '{{SUMMARY_SECTION}}',
                 '{{COMPARISON_SECTION}}',
@@ -68,6 +69,7 @@ class HtmlExporter implements ExporterInterface
             ],
             [
                 'CUDA Benchmark Report - ' . date('Y-m-d H:i:s'),
+                $report->getDevice(),
                 date('Y-m-d H:i:s'),
                 $summaryHtml,
                 $comparisonHtml,
@@ -207,10 +209,6 @@ class HtmlExporter implements ExporterInterface
         $html = '<div class="comparison-section">';
         $html .= '<h2><i class="fas fa-balance-scale"></i> Test Comparison (Grouped by Test Name)</h2>';
         $html .= '<div class="controls">';
-        $html .= '<div class="filter-controls">';
-        $html .= '<label><input type="checkbox" class="filter-checkbox" data-type="time" checked> Show Time</label>';
-        $html .= '<label><input type="checkbox" class="filter-checkbox" data-type="memory" checked> Show Memory</label>';
-        $html .= '</div>';
         $html .= '<div class="sort-controls">';
         $html .= '<select class="sort-select">';
         $html .= '<option value="name">Sort by Name</option>';
@@ -261,12 +259,14 @@ class HtmlExporter implements ExporterInterface
             $html .= '</div>';
 
             $html .= '<div class="group-body">';
+            $currentRun = 0;
 
             foreach ($metadataGroups as $metadataHash => $group) {
                 $metadataHtml = $this->formatMetadataForComparison($group['metadata']);
                 $groupResultCount = count($group['results']);
                 $groupAvgTime = 0;
                 $groupAvgMemory = 0;
+                $currentRun++;
 
                 foreach ($group['results'] as $result) {
                     $groupAvgTime += $result['stats']['time']['avg'];
@@ -296,7 +296,7 @@ class HtmlExporter implements ExporterInterface
 
                     $html .= '<div class="run-card">';
                     $html .= '<div class="run-header">';
-                    $html .= '<span class="run-number">Run ' . ($index + 1) . '</span>';
+                    $html .= '<span class="run-number">Run ' . $currentRun . '</span>';
                     $html .= '<span class="run-type">' . htmlspecialchars($result['type']) . '</span>';
                     $html .= '</div>';
 

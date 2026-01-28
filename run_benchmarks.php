@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/vendor/autoload.php";
 
-use Benchmarks\Handlers\CudaArrayBenchmark;
 use Benchmarks\BenchmarkApplication;
+use Benchmarks\Handlers\CudaArrayBenchmark;
+use Benchmarks\Handlers\ContiguousArrayBenchmark;
 
 if (!extension_loaded('cuda')) {
     die(" CUDA extension not loaded. Please compile and install the extension first.\n");
 }
 
 $app = new BenchmarkApplication([
-    new CudaArrayBenchmark()
+    new CudaArrayBenchmark(),
+    new ContiguousArrayBenchmark()
 ]);
 
 $dir = __DIR__ . "/benchmarks/reports";

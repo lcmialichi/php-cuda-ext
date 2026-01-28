@@ -13,9 +13,8 @@ class BenchmarkApplication
 
   public function run(): BenchmarkReport
   {
+    $classResults = [];
     foreach ($this->benchmarks as $benchmark) {
-
-      $classResults = [];
       if (!$benchmark instanceof BenchmarkInterface) {
         throw new \Exception($benchmark::class . " must implement BenchmarkInterface");
       }

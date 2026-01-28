@@ -2,6 +2,7 @@
 
 namespace Cuda;
 
+use Countable;
 use IteratorAggregate;
 
 #[\Attribute(Attribute::TARGET_PARAMETER)]
@@ -117,7 +118,7 @@ class CompiledModule
 
 class Kernel {}
 
-class ContiguousArray implements \ArrayAccess
+class ContiguousArray implements \ArrayAccess, Countable
 {
     public function toGpu(): CudaArray {}
 
@@ -128,6 +129,8 @@ class ContiguousArray implements \ArrayAccess
     function offsetSet(mixed $offset, mixed $value): void {}
 
     function offsetUnset(mixed $offset): void {}
+
+    function getElementSize(): int {}
 
     public function get(array $idxs): mixed {}
 
@@ -144,6 +147,8 @@ class ContiguousArray implements \ArrayAccess
     public function count(): int {}
 
     public function getDtype(): string {}
+
+    public function count(): int {}
 
     public function __serialize(): array {}
     public function __unserialize(array $data): void {}

@@ -3,3 +3,4 @@ cuda_build/**
 .vscode
 serialized_module.cudas
 /vendor/
+/benchmark/reports

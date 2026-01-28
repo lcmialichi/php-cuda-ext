@@ -48,7 +48,6 @@ abstract class Benchmark implements BenchmarkInterface
         $timeS = hrtime(true);
 
         $exec(...$args);
-
         $timeE = hrtime(true);
         $memoryE = memory_get_usage(true);
 

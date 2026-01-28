@@ -1,5 +1,5 @@
 {
-    "generated_at": "2026-01-28 13:15:26",
+    "generated_at": "2026-01-28 15:10:56",
     "device": "NVIDIA GeForce MX570 A",
     "benchmarks": [
         {
@@ -16,10 +16,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.045176,
-                        "max": 0.070683,
-                        "avg": 0.051957500000000004,
-                        "total": 0.519575
+                        "min": 0.073882,
+                        "max": 0.110813,
+                        "avg": 0.093697,
+                        "total": 0.9369700000000001
                     },
                     "memory": {
                         "format": "B",
@@ -38,10 +38,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.082292,
-                        "max": 0.122377,
-                        "avg": 0.0974465,
-                        "total": 0.974465
+                        "min": 0.087689,
+                        "max": 0.139721,
+                        "avg": 0.1132677,
+                        "total": 1.132677
                     },
                     "memory": {
                         "format": "B",
@@ -60,10 +60,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 5.861697,
-                        "max": 6.245929,
-                        "avg": 6.055655500000001,
-                        "total": 60.55655500000001
+                        "min": 5.946386,
+                        "max": 6.147678,
+                        "avg": 6.0377889,
+                        "total": 60.377888999999996
                     },
                     "memory": {
                         "format": "B",
@@ -82,10 +82,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.080405,
-                        "max": 0.326239,
-                        "avg": 0.20932979999999995,
-                        "total": 2.0932979999999994
+                        "min": 0.081282,
+                        "max": 0.095444,
+                        "avg": 0.0856793,
+                        "total": 0.856793
                     },
                     "memory": {
                         "format": "B",
@@ -104,10 +104,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.097637,
-                        "max": 0.100977,
-                        "avg": 0.09885849999999999,
-                        "total": 0.9885849999999999
+                        "min": 0.090597,
+                        "max": 0.135816,
+                        "avg": 0.1191004,
+                        "total": 1.191004
                     },
                     "memory": {
                         "format": "B",
@@ -126,10 +126,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 5.92061,
-                        "max": 6.155233,
-                        "avg": 6.0128485,
-                        "total": 60.128485
+                        "min": 5.910473,
+                        "max": 6.252932,
+                        "avg": 6.0756874000000005,
+                        "total": 60.756874
                     },
                     "memory": {
                         "format": "B",
@@ -148,10 +148,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.073156,
-                        "max": 0.169407,
-                        "avg": 0.14926860000000003,
-                        "total": 1.4926860000000002
+                        "min": 0.096096,
+                        "max": 0.107005,
+                        "avg": 0.0996773,
+                        "total": 0.9967729999999999
                     },
                     "memory": {
                         "format": "B",
@@ -170,10 +170,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.086352,
-                        "max": 0.088792,
-                        "avg": 0.0879797,
-                        "total": 0.8797969999999999
+                        "min": 0.098182,
+                        "max": 0.116597,
+                        "avg": 0.10106270000000002,
+                        "total": 1.0106270000000002
                     },
                     "memory": {
                         "format": "B",
@@ -192,10 +192,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 5.902765,
-                        "max": 6.129721,
-                        "avg": 6.047350200000001,
-                        "total": 60.47350200000001
+                        "min": 5.907475,
+                        "max": 7.11054,
+                        "avg": 6.1407186000000005,
+                        "total": 61.407186
                     },
                     "memory": {
                         "format": "B",
@@ -214,10 +214,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.221908,
-                        "max": 0.668241,
-                        "avg": 0.2683246,
-                        "total": 2.683246
+                        "min": 0.331433,
+                        "max": 1.130075,
+                        "avg": 0.4729253,
+                        "total": 4.729253
                     },
                     "memory": {
                         "format": "B",
@@ -236,10 +236,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.326473,
-                        "max": 0.801878,
-                        "avg": 0.38950350000000006,
-                        "total": 3.8950350000000005
+                        "min": 0.445607,
+                        "max": 1.082727,
+                        "avg": 0.5433790000000001,
+                        "total": 5.43379
                     },
                     "memory": {
                         "format": "B",
@@ -258,10 +258,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 18.068117,
-                        "max": 19.379929,
-                        "avg": 18.3577977,
-                        "total": 183.577977
+                        "min": 18.394003,
+                        "max": 19.398262,
+                        "avg": 18.715852499999997,
+                        "total": 187.15852499999997
                     },
                     "memory": {
                         "format": "B",
@@ -281,10 +281,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.078762,
-                        "max": 0.135565,
-                        "avg": 0.1042777,
-                        "total": 1.042777
+                        "min": 0.124471,
+                        "max": 0.354195,
+                        "avg": 0.2769963,
+                        "total": 2.7699629999999997
                     },
                     "memory": {
                         "format": "B",
@@ -304,10 +304,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.074304,
-                        "max": 0.105867,
-                        "avg": 0.0839172,
-                        "total": 0.839172
+                        "min": 0.15449,
+                        "max": 0.167665,
+                        "avg": 0.16117620000000002,
+                        "total": 1.6117620000000001
                     },
                     "memory": {
                         "format": "B",
@@ -327,10 +327,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.129685,
-                        "max": 0.214238,
-                        "avg": 0.1862596,
-                        "total": 1.862596
+                        "min": 0.223869,
+                        "max": 0.425509,
+                        "avg": 0.2607201,
+                        "total": 2.6072010000000003
                     },
                     "memory": {
                         "format": "B",
@@ -350,10 +350,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.071352,
-                        "max": 0.085611,
-                        "avg": 0.07411330000000001,
-                        "total": 0.741133
+                        "min": 0.131854,
+                        "max": 0.183124,
+                        "avg": 0.1561547,
+                        "total": 1.561547
                     },
                     "memory": {
                         "format": "B",
@@ -373,10 +373,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.070366,
-                        "max": 0.090159,
-                        "avg": 0.0750544,
-                        "total": 0.750544
+                        "min": 0.162284,
+                        "max": 0.194855,
+                        "avg": 0.17033650000000003,
+                        "total": 1.7033650000000002
                     },
                     "memory": {
                         "format": "B",
@@ -396,10 +396,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.118164,
-                        "max": 0.165017,
-                        "avg": 0.13570739999999998,
-                        "total": 1.357074
+                        "min": 0.200596,
+                        "max": 0.260743,
+                        "avg": 0.2131995,
+                        "total": 2.131995
                     },
                     "memory": {
                         "format": "B",
@@ -415,14 +415,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 + 16x16x16",
-                        "type": "3D Tensor + 3D Tesor"
+                        "type": "3D + 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.073524,
-                        "max": 0.229045,
-                        "avg": 0.11690399999999998,
-                        "total": 1.1690399999999999
+                        "min": 0.163429,
+                        "max": 0.674448,
+                        "avg": 0.2864609,
+                        "total": 2.864609
                     },
                     "memory": {
                         "format": "B",
@@ -438,14 +438,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 + 64x64x64",
-                        "type": "3D Tensor + 3D Tesor"
+                        "type": "3D + 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.147586,
-                        "max": 0.152736,
-                        "avg": 0.1492091,
-                        "total": 1.492091
+                        "min": 0.195137,
+                        "max": 0.37347,
+                        "avg": 0.23943260000000005,
+                        "total": 2.3943260000000004
                     },
                     "memory": {
                         "format": "B",
@@ -461,14 +461,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 + 512x512x64",
-                        "type": "3D Tensor + 3D Tesor"
+                        "type": "3D + 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.3095,
-                        "max": 2.598937,
-                        "avg": 2.4688200999999994,
-                        "total": 24.688200999999996
+                        "min": 2.318433,
+                        "max": 2.625588,
+                        "avg": 2.4774797000000004,
+                        "total": 24.774797000000003
                     },
                     "memory": {
                         "format": "B",
@@ -484,14 +484,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 + float",
-                        "type": "3D Tensor + Scalar"
+                        "type": "3D + Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.137835,
-                        "max": 0.196775,
-                        "avg": 0.15900770000000003,
-                        "total": 1.5900770000000002
+                        "min": 0.234516,
+                        "max": 0.28446,
+                        "avg": 0.258383,
+                        "total": 2.58383
                     },
                     "memory": {
                         "format": "B",
@@ -507,14 +507,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 + float",
-                        "type": "3D Tensor + Scalar"
+                        "type": "3D + Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.16776,
-                        "max": 0.273363,
-                        "avg": 0.1861581,
-                        "total": 1.861581
+                        "min": 0.248657,
+                        "max": 0.296393,
+                        "avg": 0.2676642,
+                        "total": 2.676642
                     },
                     "memory": {
                         "format": "B",
@@ -530,14 +530,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 + float",
-                        "type": "3D Tensor + Scalar"
+                        "type": "3D + Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.483366,
-                        "max": 12.822188,
-                        "avg": 12.6802915,
-                        "total": 126.80291499999998
+                        "min": 22.954465,
+                        "max": 25.926002,
+                        "avg": 24.291371599999998,
+                        "total": 242.913716
                     },
                     "memory": {
                         "format": "B",
@@ -553,14 +553,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 + 512x64",
-                        "type": "2D Tensor + 2D Tesor"
+                        "type": "2D + 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.118719,
-                        "max": 0.51597,
-                        "avg": 0.2007825,
-                        "total": 2.007825
+                        "min": 0.12734,
+                        "max": 0.250725,
+                        "avg": 0.16774719999999999,
+                        "total": 1.6774719999999999
                     },
                     "memory": {
                         "format": "B",
@@ -576,14 +576,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 + 1024x512",
-                        "type": "2D Tensor + 2D Tesor"
+                        "type": "2D + 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.20528,
-                        "max": 0.350157,
-                        "avg": 0.2642508,
-                        "total": 2.642508
+                        "min": 0.208879,
+                        "max": 0.279995,
+                        "avg": 0.2316508,
+                        "total": 2.316508
                     },
                     "memory": {
                         "format": "B",
@@ -603,10 +603,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.158623,
-                        "max": 0.162423,
-                        "avg": 0.16111899999999998,
-                        "total": 1.61119
+                        "min": 0.188485,
+                        "max": 0.603776,
+                        "avg": 0.3061051,
+                        "total": 3.061051
                     },
                     "memory": {
                         "format": "B",
@@ -626,10 +626,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.245204,
-                        "max": 0.281352,
-                        "avg": 0.2581801,
-                        "total": 2.5818010000000005
+                        "min": 0.332245,
+                        "max": 0.46395,
+                        "avg": 0.3870915,
+                        "total": 3.8709149999999997
                     },
                     "memory": {
                         "format": "B",
@@ -645,14 +645,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 - 16x16x16",
-                        "type": "3D Tensor - 3D Tesor"
+                        "type": "3D - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.098326,
-                        "max": 0.102414,
-                        "avg": 0.0997124,
-                        "total": 0.997124
+                        "min": 0.089105,
+                        "max": 0.217551,
+                        "avg": 0.1453337,
+                        "total": 1.453337
                     },
                     "memory": {
                         "format": "B",
@@ -668,14 +668,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 - 64x64x64",
-                        "type": "3D Tensor - 3D Tesor"
+                        "type": "3D - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.143473,
-                        "max": 0.18351,
-                        "avg": 0.15489619999999998,
-                        "total": 1.548962
+                        "min": 0.165706,
+                        "max": 3.300278,
+                        "avg": 0.5249283,
+                        "total": 5.249283
                     },
                     "memory": {
                         "format": "B",
@@ -691,14 +691,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 - 512x512x64",
-                        "type": "3D Tensor - 3D Tesor"
+                        "type": "3D - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.304948,
-                        "max": 2.508924,
-                        "avg": 2.3962757,
-                        "total": 23.962757
+                        "min": 2.411054,
+                        "max": 2.820961,
+                        "avg": 2.5489402999999995,
+                        "total": 25.489402999999996
                     },
                     "memory": {
                         "format": "B",
@@ -714,14 +714,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 - float",
-                        "type": "3D Tensor - Scalar"
+                        "type": "3D - Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.140322,
-                        "max": 0.168291,
-                        "avg": 0.14828449999999999,
-                        "total": 1.4828449999999997
+                        "min": 0.165824,
+                        "max": 0.454426,
+                        "avg": 0.2714914,
+                        "total": 2.714914
                     },
                     "memory": {
                         "format": "B",
@@ -737,14 +737,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 - float",
-                        "type": "3D Tensor - Scalar"
+                        "type": "3D - Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.157103,
-                        "max": 0.1931,
-                        "avg": 0.17820759999999997,
-                        "total": 1.7820759999999998
+                        "min": 0.163122,
+                        "max": 0.42086,
+                        "avg": 0.27770079999999997,
+                        "total": 2.777008
                     },
                     "memory": {
                         "format": "B",
@@ -760,14 +760,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 - float",
-                        "type": "3D Tensor - Scalar"
+                        "type": "3D - Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.115083,
-                        "max": 13.411398,
-                        "avg": 12.5851069,
-                        "total": 125.851069
+                        "min": 22.805196,
+                        "max": 36.488853,
+                        "avg": 26.065381300000002,
+                        "total": 260.653813
                     },
                     "memory": {
                         "format": "B",
@@ -783,14 +783,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 - 512x64",
-                        "type": "2D Tensor - 2D Tesor"
+                        "type": "2D - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.074096,
-                        "max": 0.171755,
-                        "avg": 0.0892031,
-                        "total": 0.8920309999999999
+                        "min": 0.146904,
+                        "max": 0.628687,
+                        "avg": 0.2770522,
+                        "total": 2.770522
                     },
                     "memory": {
                         "format": "B",
@@ -806,14 +806,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 - 1024x512",
-                        "type": "2D Tensor - 2D Tesor"
+                        "type": "2D - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.146153,
-                        "max": 0.150298,
-                        "avg": 0.14926570000000003,
-                        "total": 1.4926570000000003
+                        "min": 0.198346,
+                        "max": 0.241705,
+                        "avg": 0.21053090000000002,
+                        "total": 2.105309
                     },
                     "memory": {
                         "format": "B",
@@ -833,10 +833,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.122336,
-                        "max": 0.125095,
-                        "avg": 0.12397910000000001,
-                        "total": 1.239791
+                        "min": 0.216592,
+                        "max": 0.416473,
+                        "avg": 0.3014814,
+                        "total": 3.014814
                     },
                     "memory": {
                         "format": "B",
@@ -856,10 +856,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.211464,
-                        "max": 0.263408,
-                        "avg": 0.2190677,
-                        "total": 2.190677
+                        "min": 0.37782,
+                        "max": 0.643993,
+                        "avg": 0.4627587,
+                        "total": 4.627587
                     },
                     "memory": {
                         "format": "B",
@@ -875,14 +875,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 * 16x16x16",
-                        "type": "3D Tensor * 3D Tesor"
+                        "type": "3D * 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.069983,
-                        "max": 0.090702,
-                        "avg": 0.0738899,
-                        "total": 0.738899
+                        "min": 0.120145,
+                        "max": 0.303164,
+                        "avg": 0.1774339,
+                        "total": 1.774339
                     },
                     "memory": {
                         "format": "B",
@@ -898,14 +898,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 * 64x64x64",
-                        "type": "3D Tensor * 3D Tesor"
+                        "type": "3D * 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.110421,
-                        "max": 0.115195,
-                        "avg": 0.1141108,
-                        "total": 1.141108
+                        "min": 0.125697,
+                        "max": 0.289714,
+                        "avg": 0.1850495,
+                        "total": 1.850495
                     },
                     "memory": {
                         "format": "B",
@@ -921,14 +921,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 * 512x512x64",
-                        "type": "3D Tensor * 3D Tesor"
+                        "type": "3D * 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.307839,
-                        "max": 2.484008,
-                        "avg": 2.3842913999999995,
-                        "total": 23.842913999999997
+                        "min": 2.417747,
+                        "max": 2.793445,
+                        "avg": 2.5132374000000004,
+                        "total": 25.132374000000002
                     },
                     "memory": {
                         "format": "B",
@@ -944,14 +944,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 * float",
-                        "type": "3D Tensor * Scalar"
+                        "type": "3D * Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.095293,
-                        "max": 0.100822,
-                        "avg": 0.09668579999999999,
-                        "total": 0.9668579999999999
+                        "min": 0.202018,
+                        "max": 0.220273,
+                        "avg": 0.208805,
+                        "total": 2.08805
                     },
                     "memory": {
                         "format": "B",
@@ -967,14 +967,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 * float",
-                        "type": "3D Tensor * Scalar"
+                        "type": "3D * Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.124741,
-                        "max": 0.129244,
-                        "avg": 0.1261358,
-                        "total": 1.261358
+                        "min": 0.159782,
+                        "max": 0.598095,
+                        "avg": 0.24082789999999998,
+                        "total": 2.408279
                     },
                     "memory": {
                         "format": "B",
@@ -990,14 +990,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 * float",
-                        "type": "3D Tensor * Scalar"
+                        "type": "3D * Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.394938,
-                        "max": 13.070038,
-                        "avg": 12.5928732,
-                        "total": 125.928732
+                        "min": 23.486668,
+                        "max": 24.651622,
+                        "avg": 23.8406881,
+                        "total": 238.406881
                     },
                     "memory": {
                         "format": "B",
@@ -1013,14 +1013,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 * 512x64",
-                        "type": "2D Tensor * 2D Tesor"
+                        "type": "2D * 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.07347,
-                        "max": 0.354318,
-                        "avg": 0.13163249999999999,
-                        "total": 1.316325
+                        "min": 0.286512,
+                        "max": 0.738752,
+                        "avg": 0.43843449999999995,
+                        "total": 4.384345
                     },
                     "memory": {
                         "format": "B",
@@ -1036,14 +1036,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 * 1024x512",
-                        "type": "2D Tensor * 2D Tesor"
+                        "type": "2D * 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.188023,
-                        "max": 0.21226,
-                        "avg": 0.19754319999999997,
-                        "total": 1.9754319999999999
+                        "min": 0.355896,
+                        "max": 0.501864,
+                        "avg": 0.4098279999999999,
+                        "total": 4.098279999999999
                     },
                     "memory": {
                         "format": "B",
@@ -1063,10 +1063,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.122803,
-                        "max": 0.52879,
-                        "avg": 0.1698767,
-                        "total": 1.698767
+                        "min": 0.261101,
+                        "max": 0.637212,
+                        "avg": 0.4529716,
+                        "total": 4.529716
                     },
                     "memory": {
                         "format": "B",
@@ -1086,10 +1086,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.2136,
-                        "max": 0.218228,
-                        "avg": 0.2161969,
-                        "total": 2.161969
+                        "min": 0.328317,
+                        "max": 0.456477,
+                        "avg": 0.3607831,
+                        "total": 3.607831
                     },
                     "memory": {
                         "format": "B",
@@ -1105,14 +1105,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 \/ 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D \/ 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.098603,
-                        "max": 0.106052,
-                        "avg": 0.10040959999999999,
-                        "total": 1.0040959999999999
+                        "min": 0.157793,
+                        "max": 0.259098,
+                        "avg": 0.1754775,
+                        "total": 1.7547750000000002
                     },
                     "memory": {
                         "format": "B",
@@ -1128,14 +1128,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 \/ 64x64x64",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D \/ 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.136041,
-                        "max": 0.301649,
-                        "avg": 0.1847201,
-                        "total": 1.8472009999999999
+                        "min": 0.253876,
+                        "max": 0.504492,
+                        "avg": 0.4260616,
+                        "total": 4.260616
                     },
                     "memory": {
                         "format": "B",
@@ -1151,14 +1151,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 \/ 512x512x64",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D \/ 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.38458,
-                        "max": 2.637033,
-                        "avg": 2.4971305999999993,
-                        "total": 24.971305999999995
+                        "min": 2.382321,
+                        "max": 3.822787,
+                        "avg": 2.7841083,
+                        "total": 27.841083
                     },
                     "memory": {
                         "format": "B",
@@ -1174,14 +1174,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 \/ float",
-                        "type": "3D Tensor \/ Scalar"
+                        "type": "3D \/ Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.130671,
-                        "max": 0.318806,
-                        "avg": 0.17794020000000002,
-                        "total": 1.7794020000000002
+                        "min": 0.165854,
+                        "max": 0.239486,
+                        "avg": 0.21530449999999995,
+                        "total": 2.1530449999999997
                     },
                     "memory": {
                         "format": "B",
@@ -1197,14 +1197,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 \/ float",
-                        "type": "3D Tensor \/ Scalar"
+                        "type": "3D \/ Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.172244,
-                        "max": 0.174099,
-                        "avg": 0.1728572,
-                        "total": 1.728572
+                        "min": 0.187583,
+                        "max": 0.529015,
+                        "avg": 0.2902672,
+                        "total": 2.902672
                     },
                     "memory": {
                         "format": "B",
@@ -1220,14 +1220,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 \/ float",
-                        "type": "3D Tensor \/ Scalar"
+                        "type": "3D \/ Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.581391,
-                        "max": 13.762915,
-                        "avg": 13.2293013,
-                        "total": 132.293013
+                        "min": 24.886479,
+                        "max": 27.794026,
+                        "avg": 25.894645600000008,
+                        "total": 258.94645600000007
                     },
                     "memory": {
                         "format": "B",
@@ -1243,14 +1243,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 \/ 512x64",
-                        "type": "2D Tensor \/ 2D Tesor"
+                        "type": "2D \/ 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.080378,
-                        "max": 0.173236,
-                        "avg": 0.1064088,
-                        "total": 1.064088
+                        "min": 0.25488,
+                        "max": 0.44093,
+                        "avg": 0.3158108,
+                        "total": 3.158108
                     },
                     "memory": {
                         "format": "B",
@@ -1266,14 +1266,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 \/ 1024x512",
-                        "type": "2D Tensor \/ 2D Tesor"
+                        "type": "2D \/ 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.1464,
-                        "max": 0.149973,
-                        "avg": 0.14833190000000002,
-                        "total": 1.4833190000000003
+                        "min": 0.188421,
+                        "max": 0.297142,
+                        "avg": 0.26762720000000007,
+                        "total": 2.6762720000000004
                     },
                     "memory": {
                         "format": "B",
@@ -1293,10 +1293,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.120407,
-                        "max": 0.144693,
-                        "avg": 0.12487649999999999,
-                        "total": 1.248765
+                        "min": 0.196141,
+                        "max": 0.476752,
+                        "avg": 0.23837039999999998,
+                        "total": 2.383704
                     },
                     "memory": {
                         "format": "B",
@@ -1316,10 +1316,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.219326,
-                        "max": 0.221293,
-                        "avg": 0.22038319999999997,
-                        "total": 2.203832
+                        "min": 0.450188,
+                        "max": 0.64319,
+                        "avg": 0.5388142,
+                        "total": 5.388142
                     },
                     "memory": {
                         "format": "B",
@@ -1335,14 +1335,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 ** 16x16x16",
-                        "type": "3D Tensor ** 3D Tesor"
+                        "type": "3D ** 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.074933,
-                        "max": 0.08112,
-                        "avg": 0.07600509999999999,
-                        "total": 0.7600509999999999
+                        "min": 0.110996,
+                        "max": 0.124227,
+                        "avg": 0.115704,
+                        "total": 1.15704
                     },
                     "memory": {
                         "format": "B",
@@ -1358,14 +1358,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 ** 64x64x64",
-                        "type": "3D Tensor ** 3D Tesor"
+                        "type": "3D ** 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.108748,
-                        "max": 0.111713,
-                        "avg": 0.10989849999999998,
-                        "total": 1.0989849999999999
+                        "min": 0.155531,
+                        "max": 0.171051,
+                        "avg": 0.1614984,
+                        "total": 1.614984
                     },
                     "memory": {
                         "format": "B",
@@ -1381,14 +1381,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 ** 512x512x64",
-                        "type": "3D Tensor ** 3D Tesor"
+                        "type": "3D ** 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.373532,
-                        "max": 2.565091,
-                        "avg": 2.4653606,
-                        "total": 24.653606
+                        "min": 2.405462,
+                        "max": 4.834802,
+                        "avg": 3.2831343000000004,
+                        "total": 32.831343000000004
                     },
                     "memory": {
                         "format": "B",
@@ -1404,14 +1404,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 ** float",
-                        "type": "3D Tensor ** Scalar"
+                        "type": "3D ** Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.1608,
-                        "max": 0.178133,
-                        "avg": 0.1661451,
-                        "total": 1.661451
+                        "min": 0.228284,
+                        "max": 0.272347,
+                        "avg": 0.24884299999999998,
+                        "total": 2.4884299999999997
                     },
                     "memory": {
                         "format": "B",
@@ -1427,14 +1427,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 ** float",
-                        "type": "3D Tensor ** Scalar"
+                        "type": "3D ** Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.187906,
-                        "max": 0.363515,
-                        "avg": 0.2527528,
-                        "total": 2.527528
+                        "min": 0.226556,
+                        "max": 0.417235,
+                        "avg": 0.28380679999999997,
+                        "total": 2.838068
                     },
                     "memory": {
                         "format": "B",
@@ -1450,14 +1450,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 ** float",
-                        "type": "3D Tensor ** Scalar"
+                        "type": "3D ** Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 17.631863,
-                        "max": 19.432777,
-                        "avg": 18.3370426,
-                        "total": 183.370426
+                        "min": 33.542549,
+                        "max": 42.391201,
+                        "avg": 35.8505369,
+                        "total": 358.50536900000003
                     },
                     "memory": {
                         "format": "B",
@@ -1473,14 +1473,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 ** 512x64",
-                        "type": "2D Tensor ** 2D Tesor"
+                        "type": "2D ** 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.077647,
-                        "max": 0.18427,
-                        "avg": 0.10305800000000001,
-                        "total": 1.03058
+                        "min": 0.150816,
+                        "max": 0.171133,
+                        "avg": 0.1589424,
+                        "total": 1.5894240000000002
                     },
                     "memory": {
                         "format": "B",
@@ -1496,14 +1496,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 ** 1024x512",
-                        "type": "2D Tensor ** 2D Tesor"
+                        "type": "2D ** 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.144995,
-                        "max": 0.513668,
-                        "avg": 0.20915109999999998,
-                        "total": 2.0915109999999997
+                        "min": 0.217382,
+                        "max": 0.228107,
+                        "avg": 0.2241657,
+                        "total": 2.241657
                     },
                     "memory": {
                         "format": "B",
@@ -1523,10 +1523,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.127686,
-                        "max": 0.134824,
-                        "avg": 0.1298726,
-                        "total": 1.298726
+                        "min": 0.219732,
+                        "max": 1.034459,
+                        "avg": 0.3430421999999999,
+                        "total": 3.430421999999999
                     },
                     "memory": {
                         "format": "B",
@@ -1546,10 +1546,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.258009,
-                        "max": 0.267102,
-                        "avg": 0.2606777,
-                        "total": 2.606777
+                        "min": 0.37524,
+                        "max": 0.388429,
+                        "avg": 0.38074120000000006,
+                        "total": 3.8074120000000007
                     },
                     "memory": {
                         "format": "B",
@@ -1565,14 +1565,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 > 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D > 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.07299,
-                        "max": 0.37014,
-                        "avg": 0.1420768,
-                        "total": 1.420768
+                        "min": 0.112933,
+                        "max": 0.125336,
+                        "avg": 0.11753759999999999,
+                        "total": 1.175376
                     },
                     "memory": {
                         "format": "B",
@@ -1588,14 +1588,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 > 64x64x64",
-                        "type": "3D Tensor > 3D Tesor"
+                        "type": "3D > 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.124139,
-                        "max": 0.175473,
-                        "avg": 0.1567013,
-                        "total": 1.567013
+                        "min": 0.204823,
+                        "max": 0.945983,
+                        "avg": 0.33994019999999997,
+                        "total": 3.399402
                     },
                     "memory": {
                         "format": "B",
@@ -1611,14 +1611,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 > 512x512x64",
-                        "type": "3D Tensor > 3D Tesor"
+                        "type": "3D > 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.355766,
-                        "max": 2.581721,
-                        "avg": 2.4560002000000005,
-                        "total": 24.560002000000004
+                        "min": 2.359952,
+                        "max": 3.694172,
+                        "avg": 2.5975901,
+                        "total": 25.975901
                     },
                     "memory": {
                         "format": "B",
@@ -1634,14 +1634,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 > float",
-                        "type": "3D Tensor > Scalar"
+                        "type": "3D > Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.150571,
-                        "max": 0.178693,
-                        "avg": 0.15731259999999997,
-                        "total": 1.5731259999999998
+                        "min": 0.253316,
+                        "max": 0.377904,
+                        "avg": 0.2998189,
+                        "total": 2.998189
                     },
                     "memory": {
                         "format": "B",
@@ -1657,14 +1657,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 > float",
-                        "type": "3D Tensor > Scalar"
+                        "type": "3D > Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.179303,
-                        "max": 0.188694,
-                        "avg": 0.1814884,
-                        "total": 1.814884
+                        "min": 0.202848,
+                        "max": 0.375815,
+                        "avg": 0.28966520000000007,
+                        "total": 2.8966520000000004
                     },
                     "memory": {
                         "format": "B",
@@ -1680,14 +1680,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 > float",
-                        "type": "3D Tensor > Scalar"
+                        "type": "3D > Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.200219,
-                        "max": 12.713803,
-                        "avg": 12.4666685,
-                        "total": 124.666685
+                        "min": 21.959288,
+                        "max": 26.845228,
+                        "avg": 22.775427399999998,
+                        "total": 227.75427399999998
                     },
                     "memory": {
                         "format": "B",
@@ -1703,14 +1703,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 > 512x64",
-                        "type": "2D Tensor > 2D Tesor"
+                        "type": "2D > 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.080973,
-                        "max": 0.094273,
-                        "avg": 0.0876718,
-                        "total": 0.8767179999999999
+                        "min": 0.119982,
+                        "max": 0.135366,
+                        "avg": 0.1263004,
+                        "total": 1.263004
                     },
                     "memory": {
                         "format": "B",
@@ -1726,14 +1726,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 > 1024x512",
-                        "type": "2D Tensor > 2D Tesor"
+                        "type": "2D > 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.144153,
-                        "max": 0.157157,
-                        "avg": 0.1489991,
-                        "total": 1.489991
+                        "min": 0.153831,
+                        "max": 0.231493,
+                        "avg": 0.20055839999999997,
+                        "total": 2.005584
                     },
                     "memory": {
                         "format": "B",
@@ -1753,10 +1753,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.119036,
-                        "max": 0.177303,
-                        "avg": 0.1292293,
-                        "total": 1.292293
+                        "min": 0.199105,
+                        "max": 0.220785,
+                        "avg": 0.20862039999999998,
+                        "total": 2.086204
                     },
                     "memory": {
                         "format": "B",
@@ -1776,10 +1776,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.215012,
-                        "max": 0.217001,
-                        "avg": 0.2157674,
-                        "total": 2.157674
+                        "min": 0.380549,
+                        "max": 0.509173,
+                        "avg": 0.4185929,
+                        "total": 4.185929
                     },
                     "memory": {
                         "format": "B",
@@ -1795,14 +1795,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 < 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D < 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.072419,
-                        "max": 0.075833,
-                        "avg": 0.07448990000000001,
-                        "total": 0.7448990000000001
+                        "min": 0.107665,
+                        "max": 0.124494,
+                        "avg": 0.11333950000000001,
+                        "total": 1.1333950000000002
                     },
                     "memory": {
                         "format": "B",
@@ -1818,14 +1818,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 < 64x64x64",
-                        "type": "3D Tensor < 3D Tesor"
+                        "type": "3D < 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.110396,
-                        "max": 0.114136,
-                        "avg": 0.1113182,
-                        "total": 1.1131820000000001
+                        "min": 0.145235,
+                        "max": 0.163854,
+                        "avg": 0.15795679999999998,
+                        "total": 1.5795679999999999
                     },
                     "memory": {
                         "format": "B",
@@ -1841,14 +1841,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 < 512x512x64",
-                        "type": "3D Tensor < 3D Tesor"
+                        "type": "3D < 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.315081,
-                        "max": 2.479736,
-                        "avg": 2.3701108,
-                        "total": 23.701108
+                        "min": 2.349713,
+                        "max": 2.510779,
+                        "avg": 2.4466181,
+                        "total": 24.466181
                     },
                     "memory": {
                         "format": "B",
@@ -1864,14 +1864,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 < float",
-                        "type": "3D Tensor < Scalar"
+                        "type": "3D < Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.103073,
-                        "max": 0.272934,
-                        "avg": 0.13061080000000003,
-                        "total": 1.3061080000000003
+                        "min": 0.2047,
+                        "max": 0.284784,
+                        "avg": 0.2356401,
+                        "total": 2.356401
                     },
                     "memory": {
                         "format": "B",
@@ -1887,14 +1887,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 < float",
-                        "type": "3D Tensor < Scalar"
+                        "type": "3D < Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.117277,
-                        "max": 0.204429,
-                        "avg": 0.1282214,
-                        "total": 1.2822140000000002
+                        "min": 0.200279,
+                        "max": 0.380804,
+                        "avg": 0.23499979999999998,
+                        "total": 2.349998
                     },
                     "memory": {
                         "format": "B",
@@ -1910,14 +1910,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 < float",
-                        "type": "3D Tensor < Scalar"
+                        "type": "3D < Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.301273,
-                        "max": 12.61272,
-                        "avg": 12.3989724,
-                        "total": 123.989724
+                        "min": 21.435386,
+                        "max": 22.789468,
+                        "avg": 22.1017235,
+                        "total": 221.01723499999997
                     },
                     "memory": {
                         "format": "B",
@@ -1933,14 +1933,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 < 512x64",
-                        "type": "2D Tensor < 2D Tesor"
+                        "type": "2D < 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.081053,
-                        "max": 0.091051,
-                        "avg": 0.08455280000000001,
-                        "total": 0.8455280000000001
+                        "min": 0.176175,
+                        "max": 0.356651,
+                        "avg": 0.2559116,
+                        "total": 2.5591160000000004
                     },
                     "memory": {
                         "format": "B",
@@ -1956,14 +1956,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 < 1024x512",
-                        "type": "2D Tensor < 2D Tesor"
+                        "type": "2D < 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.146823,
-                        "max": 0.233641,
-                        "avg": 0.20246219999999998,
-                        "total": 2.024622
+                        "min": 0.205322,
+                        "max": 0.293131,
+                        "avg": 0.21924380000000002,
+                        "total": 2.192438
                     },
                     "memory": {
                         "format": "B",
@@ -1983,10 +1983,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.119635,
-                        "max": 0.480595,
-                        "avg": 0.15984589999999999,
-                        "total": 1.5984589999999999
+                        "min": 0.187011,
+                        "max": 0.885139,
+                        "avg": 0.2613433,
+                        "total": 2.613433
                     },
                     "memory": {
                         "format": "B",
@@ -2006,10 +2006,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.212657,
-                        "max": 0.295763,
-                        "avg": 0.224506,
-                        "total": 2.24506
+                        "min": 0.306845,
+                        "max": 0.368373,
+                        "avg": 0.33335,
+                        "total": 3.3335
                     },
                     "memory": {
                         "format": "B",
@@ -2025,14 +2025,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 == 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D == 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.070428,
-                        "max": 0.077526,
-                        "avg": 0.07278930000000002,
-                        "total": 0.7278930000000001
+                        "min": 0.192857,
+                        "max": 0.401929,
+                        "avg": 0.23873469999999997,
+                        "total": 2.3873469999999997
                     },
                     "memory": {
                         "format": "B",
@@ -2048,14 +2048,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 == 64x64x64",
-                        "type": "3D Tensor == 3D Tesor"
+                        "type": "3D == 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.110558,
-                        "max": 0.115247,
-                        "avg": 0.1123288,
-                        "total": 1.123288
+                        "min": 0.166828,
+                        "max": 0.25928,
+                        "avg": 0.1837764,
+                        "total": 1.837764
                     },
                     "memory": {
                         "format": "B",
@@ -2071,14 +2071,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 == 512x512x64",
-                        "type": "3D Tensor == 3D Tesor"
+                        "type": "3D == 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.326138,
-                        "max": 2.538035,
-                        "avg": 2.4203561000000002,
-                        "total": 24.203561
+                        "min": 2.350067,
+                        "max": 2.905923,
+                        "avg": 2.4855949999999996,
+                        "total": 24.855949999999996
                     },
                     "memory": {
                         "format": "B",
@@ -2094,14 +2094,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 == float",
-                        "type": "3D Tensor == Scalar"
+                        "type": "3D == Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.199308,
-                        "max": 0.225577,
-                        "avg": 0.2067495,
-                        "total": 2.067495
+                        "min": 0.117158,
+                        "max": 0.254192,
+                        "avg": 0.1435737,
+                        "total": 1.435737
                     },
                     "memory": {
                         "format": "B",
@@ -2117,14 +2117,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 == float",
-                        "type": "3D Tensor == Scalar"
+                        "type": "3D == Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.134941,
-                        "max": 0.423987,
-                        "avg": 0.23488539999999997,
-                        "total": 2.3488539999999998
+                        "min": 0.218276,
+                        "max": 7.43336,
+                        "avg": 1.1520109,
+                        "total": 11.520109000000001
                     },
                     "memory": {
                         "format": "B",
@@ -2140,14 +2140,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 == float",
-                        "type": "3D Tensor == Scalar"
+                        "type": "3D == Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.154151,
-                        "max": 12.6252,
-                        "avg": 12.3784087,
-                        "total": 123.784087
+                        "min": 21.158368,
+                        "max": 28.783396,
+                        "avg": 23.823457799999996,
+                        "total": 238.23457799999997
                     },
                     "memory": {
                         "format": "B",
@@ -2163,14 +2163,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 == 512x64",
-                        "type": "2D Tensor == 2D Tesor"
+                        "type": "2D == 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.08964,
-                        "max": 0.277445,
-                        "avg": 0.1523088,
-                        "total": 1.523088
+                        "min": 0.133639,
+                        "max": 0.160825,
+                        "avg": 0.1423322,
+                        "total": 1.423322
                     },
                     "memory": {
                         "format": "B",
@@ -2186,14 +2186,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 == 1024x512",
-                        "type": "2D Tensor == 2D Tesor"
+                        "type": "2D == 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.145397,
-                        "max": 0.157749,
-                        "avg": 0.1504773,
-                        "total": 1.5047730000000001
+                        "min": 0.203864,
+                        "max": 0.220917,
+                        "avg": 0.20973550000000002,
+                        "total": 2.0973550000000003
                     },
                     "memory": {
                         "format": "B",
@@ -2213,10 +2213,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.121927,
-                        "max": 0.124565,
-                        "avg": 0.12352800000000001,
-                        "total": 1.2352800000000002
+                        "min": 0.179423,
+                        "max": 0.204548,
+                        "avg": 0.1849688,
+                        "total": 1.849688
                     },
                     "memory": {
                         "format": "B",
@@ -2236,10 +2236,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.212161,
-                        "max": 0.29957,
-                        "avg": 0.2238511,
-                        "total": 2.238511
+                        "min": 0.33257,
+                        "max": 0.478828,
+                        "avg": 0.37111039999999995,
+                        "total": 3.7111039999999997
                     },
                     "memory": {
                         "format": "B",
@@ -2255,14 +2255,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 != 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D != 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.067808,
-                        "max": 0.091257,
-                        "avg": 0.0734724,
-                        "total": 0.7347239999999999
+                        "min": 0.122004,
+                        "max": 0.139762,
+                        "avg": 0.1298806,
+                        "total": 1.2988060000000001
                     },
                     "memory": {
                         "format": "B",
@@ -2278,14 +2278,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 != 64x64x64",
-                        "type": "3D Tensor != 3D Tesor"
+                        "type": "3D != 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.110998,
-                        "max": 0.160913,
-                        "avg": 0.11846939999999999,
-                        "total": 1.184694
+                        "min": 0.231797,
+                        "max": 0.343886,
+                        "avg": 0.268722,
+                        "total": 2.68722
                     },
                     "memory": {
                         "format": "B",
@@ -2301,14 +2301,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 != 512x512x64",
-                        "type": "3D Tensor != 3D Tesor"
+                        "type": "3D != 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.333896,
-                        "max": 2.552699,
-                        "avg": 2.4539224,
-                        "total": 24.539224
+                        "min": 2.43438,
+                        "max": 3.023012,
+                        "avg": 2.5998842,
+                        "total": 25.998842
                     },
                     "memory": {
                         "format": "B",
@@ -2324,14 +2324,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 != float",
-                        "type": "3D Tensor != Scalar"
+                        "type": "3D != Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.101264,
-                        "max": 0.200667,
-                        "avg": 0.11715990000000001,
-                        "total": 1.171599
+                        "min": 0.173679,
+                        "max": 0.321271,
+                        "avg": 0.20686290000000002,
+                        "total": 2.068629
                     },
                     "memory": {
                         "format": "B",
@@ -2347,14 +2347,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 != float",
-                        "type": "3D Tensor != Scalar"
+                        "type": "3D != Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.1198,
-                        "max": 0.167552,
-                        "avg": 0.1268183,
-                        "total": 1.2681829999999998
+                        "min": 0.20078,
+                        "max": 0.232436,
+                        "avg": 0.21393420000000002,
+                        "total": 2.139342
                     },
                     "memory": {
                         "format": "B",
@@ -2370,14 +2370,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 != float",
-                        "type": "3D Tensor != Scalar"
+                        "type": "3D != Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.148843,
-                        "max": 13.242896,
-                        "avg": 12.6893973,
-                        "total": 126.89397299999999
+                        "min": 17.289026,
+                        "max": 26.875084,
+                        "avg": 21.880250800000002,
+                        "total": 218.80250800000002
                     },
                     "memory": {
                         "format": "B",
@@ -2393,14 +2393,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 != 512x64",
-                        "type": "2D Tensor != 2D Tesor"
+                        "type": "2D != 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.074804,
-                        "max": 0.268153,
-                        "avg": 0.1273169,
-                        "total": 1.2731690000000002
+                        "min": 0.087744,
+                        "max": 0.171724,
+                        "avg": 0.1278185,
+                        "total": 1.2781850000000001
                     },
                     "memory": {
                         "format": "B",
@@ -2416,14 +2416,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 != 1024x512",
-                        "type": "2D Tensor != 2D Tesor"
+                        "type": "2D != 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.14774,
-                        "max": 0.15242,
-                        "avg": 0.14925420000000003,
-                        "total": 1.4925420000000003
+                        "min": 0.168057,
+                        "max": 0.34004,
+                        "avg": 0.2304255,
+                        "total": 2.304255
                     },
                     "memory": {
                         "format": "B",
@@ -2443,10 +2443,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.120133,
-                        "max": 0.130345,
-                        "avg": 0.12343199999999999,
-                        "total": 1.2343199999999999
+                        "min": 0.196521,
+                        "max": 0.883917,
+                        "avg": 0.4097367,
+                        "total": 4.097367
                     },
                     "memory": {
                         "format": "B",
@@ -2466,10 +2466,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.21662,
-                        "max": 0.44397,
-                        "avg": 0.24676070000000005,
-                        "total": 2.4676070000000005
+                        "min": 0.334968,
+                        "max": 0.596549,
+                        "avg": 0.3996802,
+                        "total": 3.9968019999999997
                     },
                     "memory": {
                         "format": "B",
@@ -2485,14 +2485,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 <= 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D <= 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.074824,
-                        "max": 0.076828,
-                        "avg": 0.0760788,
-                        "total": 0.760788
+                        "min": 0.080036,
+                        "max": 0.314204,
+                        "avg": 0.1660363,
+                        "total": 1.660363
                     },
                     "memory": {
                         "format": "B",
@@ -2508,14 +2508,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 <= 64x64x64",
-                        "type": "3D Tensor <= 3D Tesor"
+                        "type": "3D <= 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.111777,
-                        "max": 0.116748,
-                        "avg": 0.11339329999999999,
-                        "total": 1.1339329999999999
+                        "min": 0.193113,
+                        "max": 1.715944,
+                        "avg": 0.43545930000000005,
+                        "total": 4.354593
                     },
                     "memory": {
                         "format": "B",
@@ -2531,14 +2531,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 <= 512x512x64",
-                        "type": "3D Tensor <= 3D Tesor"
+                        "type": "3D <= 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.321029,
-                        "max": 2.553757,
-                        "avg": 2.4212748,
-                        "total": 24.212747999999998
+                        "min": 2.394402,
+                        "max": 2.980988,
+                        "avg": 2.5438664999999996,
+                        "total": 25.438664999999997
                     },
                     "memory": {
                         "format": "B",
@@ -2554,14 +2554,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 <= float",
-                        "type": "3D Tensor <= Scalar"
+                        "type": "3D <= Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.100255,
-                        "max": 0.207793,
-                        "avg": 0.1276307,
-                        "total": 1.276307
+                        "min": 0.139176,
+                        "max": 0.229484,
+                        "avg": 0.1840516,
+                        "total": 1.840516
                     },
                     "memory": {
                         "format": "B",
@@ -2577,14 +2577,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 <= float",
-                        "type": "3D Tensor <= Scalar"
+                        "type": "3D <= Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.120852,
-                        "max": 0.133906,
-                        "avg": 0.1250268,
-                        "total": 1.250268
+                        "min": 0.161463,
+                        "max": 0.273588,
+                        "avg": 0.2098623,
+                        "total": 2.098623
                     },
                     "memory": {
                         "format": "B",
@@ -2600,14 +2600,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 <= float",
-                        "type": "3D Tensor <= Scalar"
+                        "type": "3D <= Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.20451,
-                        "max": 12.797405,
-                        "avg": 12.5950868,
-                        "total": 125.950868
+                        "min": 21.535901,
+                        "max": 23.408762,
+                        "avg": 22.2616913,
+                        "total": 222.61691299999998
                     },
                     "memory": {
                         "format": "B",
@@ -2623,14 +2623,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 <= 512x64",
-                        "type": "2D Tensor <= 2D Tesor"
+                        "type": "2D <= 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.105543,
-                        "max": 0.139398,
-                        "avg": 0.12279259999999999,
-                        "total": 1.2279259999999999
+                        "min": 0.144264,
+                        "max": 0.223644,
+                        "avg": 0.170678,
+                        "total": 1.70678
                     },
                     "memory": {
                         "format": "B",
@@ -2646,14 +2646,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 <= 1024x512",
-                        "type": "2D Tensor <= 2D Tesor"
+                        "type": "2D <= 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.184802,
-                        "max": 0.189672,
-                        "avg": 0.18747589999999997,
-                        "total": 1.8747589999999998
+                        "min": 0.202399,
+                        "max": 1.031836,
+                        "avg": 0.338267,
+                        "total": 3.3826699999999996
                     },
                     "memory": {
                         "format": "B",
@@ -2673,10 +2673,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.149283,
-                        "max": 0.190224,
-                        "avg": 0.16158650000000002,
-                        "total": 1.6158650000000003
+                        "min": 0.151732,
+                        "max": 0.322659,
+                        "avg": 0.21891080000000002,
+                        "total": 2.189108
                     },
                     "memory": {
                         "format": "B",
@@ -2696,10 +2696,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.258576,
-                        "max": 0.273671,
-                        "avg": 0.26135450000000005,
-                        "total": 2.6135450000000002
+                        "min": 0.289516,
+                        "max": 0.382305,
+                        "avg": 0.3216869,
+                        "total": 3.216869
                     },
                     "memory": {
                         "format": "B",
@@ -2715,14 +2715,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 >= 16x16x16",
-                        "type": "3D Tensor \/ 3D Tesor"
+                        "type": "3D >= 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.115658,
-                        "max": 0.127957,
-                        "avg": 0.11793780000000001,
-                        "total": 1.179378
+                        "min": 0.093796,
+                        "max": 0.220188,
+                        "avg": 0.1458875,
+                        "total": 1.458875
                     },
                     "memory": {
                         "format": "B",
@@ -2738,14 +2738,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 >= 64x64x64",
-                        "type": "3D Tensor >= 3D Tesor"
+                        "type": "3D >= 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.150649,
-                        "max": 0.438163,
-                        "avg": 0.19222670000000003,
-                        "total": 1.9222670000000002
+                        "min": 0.150369,
+                        "max": 0.25465,
+                        "avg": 0.1730529,
+                        "total": 1.730529
                     },
                     "memory": {
                         "format": "B",
@@ -2761,14 +2761,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64 >= 512x512x64",
-                        "type": "3D Tensor >= 3D Tesor"
+                        "type": "3D >= 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.360195,
-                        "max": 2.588704,
-                        "avg": 2.4305358000000004,
-                        "total": 24.305358000000002
+                        "min": 2.35324,
+                        "max": 2.463394,
+                        "avg": 2.4016537,
+                        "total": 24.016537
                     },
                     "memory": {
                         "format": "B",
@@ -2784,14 +2784,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16 >= float",
-                        "type": "3D Tensor >= Scalar"
+                        "type": "3D >= Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.094725,
-                        "max": 0.109485,
-                        "avg": 0.09704470000000001,
-                        "total": 0.9704470000000001
+                        "min": 0.154034,
+                        "max": 0.170557,
+                        "avg": 0.15840499999999996,
+                        "total": 1.5840499999999997
                     },
                     "memory": {
                         "format": "B",
@@ -2807,14 +2807,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64 >= float",
-                        "type": "3D Tensor >= Scalar"
+                        "type": "3D >= Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.118478,
-                        "max": 0.205442,
-                        "avg": 0.13142939999999997,
-                        "total": 1.3142939999999999
+                        "min": 0.175724,
+                        "max": 0.187833,
+                        "avg": 0.1806471,
+                        "total": 1.806471
                     },
                     "memory": {
                         "format": "B",
@@ -2830,14 +2830,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512 >= float",
-                        "type": "3D Tensor >= Scalar"
+                        "type": "3D >= Scalar"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.198303,
-                        "max": 12.694017,
-                        "avg": 12.43018,
-                        "total": 124.3018
+                        "min": 21.32642,
+                        "max": 26.379969,
+                        "avg": 23.8178608,
+                        "total": 238.178608
                     },
                     "memory": {
                         "format": "B",
@@ -2853,14 +2853,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x64 >= 512x64",
-                        "type": "2D Tensor >= 2D Tesor"
+                        "type": "2D >= 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.097177,
-                        "max": 0.20416,
-                        "avg": 0.1435181,
-                        "total": 1.435181
+                        "min": 0.127752,
+                        "max": 0.902628,
+                        "avg": 0.23138640000000005,
+                        "total": 2.3138640000000006
                     },
                     "memory": {
                         "format": "B",
@@ -2876,14 +2876,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512 >= 1024x512",
-                        "type": "2D Tensor >= 2D Tesor"
+                        "type": "2D >= 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.162432,
-                        "max": 0.290199,
-                        "avg": 0.21938960000000002,
-                        "total": 2.193896
+                        "min": 0.18263,
+                        "max": 0.861157,
+                        "avg": 0.35412800000000005,
+                        "total": 3.5412800000000004
                     },
                     "memory": {
                         "format": "B",
@@ -2903,10 +2903,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.130675,
-                        "max": 0.299538,
-                        "avg": 0.1809482,
-                        "total": 1.809482
+                        "min": 0.173195,
+                        "max": 0.255285,
+                        "avg": 0.2085267,
+                        "total": 2.085267
                     },
                     "memory": {
                         "format": "B",
@@ -2926,10 +2926,10 @@
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.215073,
-                        "max": 0.222639,
-                        "avg": 0.218653,
-                        "total": 2.18653
+                        "min": 0.30845,
+                        "max": 0.582718,
+                        "avg": 0.3926997,
+                        "total": 3.926997
                     },
                     "memory": {
                         "format": "B",
@@ -2945,14 +2945,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 16x16x16",
-                        "type": " - 3D Tensor"
+                        "type": " - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.097946,
-                        "max": 0.918405,
-                        "avg": 0.2119317,
-                        "total": 2.119317
+                        "min": 0.164319,
+                        "max": 0.555819,
+                        "avg": 0.27846760000000004,
+                        "total": 2.784676
                     },
                     "memory": {
                         "format": "B",
@@ -2968,14 +2968,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 64x64x64",
-                        "type": " - 3D Tesor"
+                        "type": " - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.125802,
-                        "max": 0.248719,
-                        "avg": 0.14925119999999997,
-                        "total": 1.4925119999999998
+                        "min": 0.205307,
+                        "max": 0.483732,
+                        "avg": 0.3229216,
+                        "total": 3.2292159999999996
                     },
                     "memory": {
                         "format": "B",
@@ -2991,14 +2991,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 512x512x64",
-                        "type": " - 3D Tesor"
+                        "type": " - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 1.71435,
-                        "max": 1.991162,
-                        "avg": 1.8802386000000002,
-                        "total": 18.802386000000002
+                        "min": 1.752723,
+                        "max": 2.098959,
+                        "avg": 1.9197156000000004,
+                        "total": 19.197156000000003
                     },
                     "memory": {
                         "format": "B",
@@ -3014,14 +3014,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 512x512x512",
-                        "type": " - 3D Tesor"
+                        "type": " - 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.385777,
-                        "max": 13.052373,
-                        "avg": 12.6903572,
-                        "total": 126.903572
+                        "min": 23.227789,
+                        "max": 30.820467,
+                        "avg": 25.2002984,
+                        "total": 252.002984
                     },
                     "memory": {
                         "format": "B",
@@ -3037,14 +3037,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 512x512",
-                        "type": " - 2D Tesor"
+                        "type": " - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.163258,
-                        "max": 0.182039,
-                        "avg": 0.17294510000000002,
-                        "total": 1.729451
+                        "min": 0.166729,
+                        "max": 0.470651,
+                        "avg": 0.2578435,
+                        "total": 2.578435
                     },
                     "memory": {
                         "format": "B",
@@ -3060,14 +3060,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 1024x512",
-                        "type": " - 2D Tesor"
+                        "type": " - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.165934,
-                        "max": 0.199525,
-                        "avg": 0.1920009,
-                        "total": 1.920009
+                        "min": 0.239134,
+                        "max": 0.255189,
+                        "avg": 0.24677260000000004,
+                        "total": 2.4677260000000003
                     },
                     "memory": {
                         "format": "B",
@@ -3083,14 +3083,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " - 1x180000",
-                        "type": " - 2D Tesor"
+                        "type": " - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.157582,
-                        "max": 0.168942,
-                        "avg": 0.16523819999999997,
-                        "total": 1.6523819999999998
+                        "min": 0.181156,
+                        "max": 0.467877,
+                        "avg": 0.2602418,
+                        "total": 2.602418
                     },
                     "memory": {
                         "format": "B",
@@ -3106,14 +3106,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16",
-                        "type": "3D Tensor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.219808,
-                        "max": 0.358967,
-                        "avg": 0.23777480000000004,
-                        "total": 2.3777480000000004
+                        "min": 0.190157,
+                        "max": 0.198588,
+                        "avg": 0.1932443,
+                        "total": 1.9324430000000001
                     },
                     "memory": {
                         "format": "B",
@@ -3129,14 +3129,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.231376,
-                        "max": 0.418327,
-                        "avg": 0.2607368,
-                        "total": 2.607368
+                        "min": 0.221448,
+                        "max": 0.284218,
+                        "avg": 0.23277739999999997,
+                        "total": 2.327774
                     },
                     "memory": {
                         "format": "B",
@@ -3152,14 +3152,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 1.735476,
-                        "max": 1.854259,
-                        "avg": 1.766836,
-                        "total": 17.66836
+                        "min": 1.750318,
+                        "max": 1.990965,
+                        "avg": 1.8590105000000001,
+                        "total": 18.590105
                     },
                     "memory": {
                         "format": "B",
@@ -3175,14 +3175,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.00813,
-                        "max": 12.445881,
-                        "avg": 12.259922999999999,
-                        "total": 122.59922999999999
+                        "min": 19.28526,
+                        "max": 23.493945,
+                        "avg": 20.6220497,
+                        "total": 206.22049700000002
                     },
                     "memory": {
                         "format": "B",
@@ -3198,14 +3198,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512",
-                        "type": "2D Tesor"
+                        "type": "2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.228207,
-                        "max": 0.259491,
-                        "avg": 0.2466626,
-                        "total": 2.466626
+                        "min": 0.229118,
+                        "max": 0.681208,
+                        "avg": 0.3561823,
+                        "total": 3.561823
                     },
                     "memory": {
                         "format": "B",
@@ -3221,14 +3221,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512",
-                        "type": "2D Tesor"
+                        "type": "2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.164914,
-                        "max": 0.168702,
-                        "avg": 0.16714610000000002,
-                        "total": 1.671461
+                        "min": 0.326785,
+                        "max": 0.364412,
+                        "avg": 0.3506405,
+                        "total": 3.506405
                     },
                     "memory": {
                         "format": "B",
@@ -3244,14 +3244,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1x180000",
-                        "type": " - 2D Tesor"
+                        "type": " - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.21328,
-                        "max": 0.229573,
-                        "avg": 0.21682420000000002,
-                        "total": 2.1682420000000002
+                        "min": 0.280026,
+                        "max": 0.451387,
+                        "avg": 0.34567659999999995,
+                        "total": 3.4567659999999996
                     },
                     "memory": {
                         "format": "B",
@@ -3267,14 +3267,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16",
-                        "type": "3D Tensor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.155392,
-                        "max": 0.197712,
-                        "avg": 0.174677,
-                        "total": 1.74677
+                        "min": 0.269195,
+                        "max": 0.330582,
+                        "avg": 0.29046000000000005,
+                        "total": 2.9046000000000003
                     },
                     "memory": {
                         "format": "B",
@@ -3290,14 +3290,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.196601,
-                        "max": 0.232283,
-                        "avg": 0.20777389999999998,
-                        "total": 2.077739
+                        "min": 0.176129,
+                        "max": 0.489104,
+                        "avg": 0.3290397,
+                        "total": 3.290397
                     },
                     "memory": {
                         "format": "B",
@@ -3313,14 +3313,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 1.681951,
-                        "max": 1.984529,
-                        "avg": 1.90153,
-                        "total": 19.0153
+                        "min": 1.800391,
+                        "max": 2.896338,
+                        "avg": 2.0674103000000006,
+                        "total": 20.674103000000006
                     },
                     "memory": {
                         "format": "B",
@@ -3336,14 +3336,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 12.080746,
-                        "max": 12.696707,
-                        "avg": 12.2351468,
-                        "total": 122.35146800000001
+                        "min": 19.58618,
+                        "max": 25.027161,
+                        "avg": 21.4039122,
+                        "total": 214.039122
                     },
                     "memory": {
                         "format": "B",
@@ -3359,14 +3359,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512",
-                        "type": "2D Tesor"
+                        "type": "2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.204889,
-                        "max": 0.363739,
-                        "avg": 0.2385867,
-                        "total": 2.385867
+                        "min": 0.294955,
+                        "max": 0.400139,
+                        "avg": 0.3348195,
+                        "total": 3.348195
                     },
                     "memory": {
                         "format": "B",
@@ -3382,14 +3382,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512",
-                        "type": "2D Tesor"
+                        "type": "2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.228613,
-                        "max": 0.280818,
-                        "avg": 0.2435272,
-                        "total": 2.435272
+                        "min": 0.316808,
+                        "max": 0.599641,
+                        "avg": 0.3712498000000001,
+                        "total": 3.7124980000000005
                     },
                     "memory": {
                         "format": "B",
@@ -3405,14 +3405,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1x180000",
-                        "type": " - 2D Tesor"
+                        "type": " - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.21766,
-                        "max": 0.384656,
-                        "avg": 0.25168170000000006,
-                        "total": 2.5168170000000005
+                        "min": 0.215122,
+                        "max": 0.701641,
+                        "avg": 0.2800595,
+                        "total": 2.800595
                     },
                     "memory": {
                         "format": "B",
@@ -3428,14 +3428,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16x16",
-                        "type": "3D Tensor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.192884,
-                        "max": 0.205082,
-                        "avg": 0.19750659999999998,
-                        "total": 1.9750659999999998
+                        "min": 0.141897,
+                        "max": 0.335646,
+                        "avg": 0.2072352,
+                        "total": 2.072352
                     },
                     "memory": {
                         "format": "B",
@@ -3451,14 +3451,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "64x64x64",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.219881,
-                        "max": 0.245421,
-                        "avg": 0.2242722,
-                        "total": 2.242722
+                        "min": 0.205325,
+                        "max": 0.272307,
+                        "avg": 0.22344940000000002,
+                        "total": 2.234494
                     },
                     "memory": {
                         "format": "B",
@@ -3474,14 +3474,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x64",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 1.662779,
-                        "max": 2.009197,
-                        "avg": 1.8190122000000002,
-                        "total": 18.190122000000002
+                        "min": 1.729545,
+                        "max": 2.343484,
+                        "avg": 1.860053,
+                        "total": 18.60053
                     },
                     "memory": {
                         "format": "B",
@@ -3497,14 +3497,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512x512",
-                        "type": "3D Tesor"
+                        "type": "3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 11.989816,
-                        "max": 12.854905,
-                        "avg": 12.279749599999999,
-                        "total": 122.797496
+                        "min": 19.691893,
+                        "max": 20.761075,
+                        "avg": 19.8893216,
+                        "total": 198.893216
                     },
                     "memory": {
                         "format": "B",
@@ -3520,14 +3520,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "512x512",
-                        "type": "2D Tesor"
+                        "type": "2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.143367,
-                        "max": 0.30903,
-                        "avg": 0.2300879,
-                        "total": 2.300879
+                        "min": 0.254483,
+                        "max": 0.318202,
+                        "avg": 0.2778791,
+                        "total": 2.778791
                     },
                     "memory": {
                         "format": "B",
@@ -3543,14 +3543,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1024x512",
-                        "type": "2D Tesor"
+                        "type": "2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.169031,
-                        "max": 0.179745,
-                        "avg": 0.170926,
-                        "total": 1.70926
+                        "min": 0.239062,
+                        "max": 0.957617,
+                        "avg": 0.34217590000000003,
+                        "total": 3.421759
                     },
                     "memory": {
                         "format": "B",
@@ -3566,14 +3566,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "1x180000",
-                        "type": " - 2D Tesor"
+                        "type": " - 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.134846,
-                        "max": 0.140708,
-                        "avg": 0.13638489999999998,
-                        "total": 1.3638489999999999
+                        "min": 0.195997,
+                        "max": 0.329332,
+                        "avg": 0.2149547,
+                        "total": 2.149547
                     },
                     "memory": {
                         "format": "B",
@@ -3589,14 +3589,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": "16x16 x 16x16",
-                        "type": " 2D Tensor"
+                        "type": " 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.044397,
-                        "max": 0.046238,
-                        "avg": 0.0448784,
-                        "total": 0.448784
+                        "min": 0.069193,
+                        "max": 0.081963,
+                        "avg": 0.0761049,
+                        "total": 0.7610490000000001
                     },
                     "memory": {
                         "format": "B",
@@ -3612,14 +3612,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 128x128 x 128x128",
-                        "type": " 2D Tensor"
+                        "type": " 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 0.059773,
-                        "max": 0.067224,
-                        "avg": 0.061675,
-                        "total": 0.61675
+                        "min": 0.093407,
+                        "max": 0.100911,
+                        "avg": 0.0961343,
+                        "total": 0.9613430000000001
                     },
                     "memory": {
                         "format": "B",
@@ -3635,14 +3635,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 32x256x256 x 32x256x256",
-                        "type": " 3D Tensor"
+                        "type": " 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 3.62161,
-                        "max": 3.985869,
-                        "avg": 3.7395533999999997,
-                        "total": 37.395534
+                        "min": 4.430432,
+                        "max": 4.772141,
+                        "avg": 4.6002174,
+                        "total": 46.002174
                     },
                     "memory": {
                         "format": "B",
@@ -3658,14 +3658,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 1x512x512 x 64x512x512",
-                        "type": " 3D Tensor (broadcast)"
+                        "type": " 3D (broadcast)"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 51.670165,
-                        "max": 53.042199,
-                        "avg": 52.23860559999999,
-                        "total": 522.3860559999999
+                        "min": 67.355579,
+                        "max": 73.018018,
+                        "avg": 68.8827175,
+                        "total": 688.827175
                     },
                     "memory": {
                         "format": "B",
@@ -3681,14 +3681,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 1024x768 x 768x512",
-                        "type": " 2D Tensor"
+                        "type": " 2D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 2.463628,
-                        "max": 2.701638,
-                        "avg": 2.5933465,
-                        "total": 25.933465
+                        "min": 3.339736,
+                        "max": 5.878448,
+                        "avg": 3.9031256,
+                        "total": 39.031256
                     },
                     "memory": {
                         "format": "B",
@@ -3704,14 +3704,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 64x1024x512 x 64x512x256",
-                        "type": " 3D Tensor"
+                        "type": " 3D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 50.326532,
-                        "max": 51.221385,
-                        "avg": 50.6470602,
-                        "total": 506.470602
+                        "min": 62.132586,
+                        "max": 69.223413,
+                        "avg": 63.1325537,
+                        "total": 631.325537
                     },
                     "memory": {
                         "format": "B",
@@ -3727,14 +3727,14 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 1x1000000 x 1000000x1",
-                        "type": " 2D Tensor (extreme)"
+                        "type": " 2D (extreme)"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 40.598034,
-                        "max": 41.959892,
-                        "avg": 40.868801000000005,
-                        "total": 408.68801
+                        "min": 40.731561,
+                        "max": 41.189047,
+                        "avg": 40.850768800000004,
+                        "total": 408.50768800000003
                     },
                     "memory": {
                         "format": "B",
@@ -3750,14 +3750,497 @@
                     "iterations": 10,
                     "metadata": {
                         "shape": " 8x64x256x256 x 8x64x256x256",
-                        "type": " 4D Tensor"
+                        "type": " 4D"
                     },
                     "time": {
                         "format": "MS",
-                        "min": 58.706034,
-                        "max": 61.247795,
-                        "avg": 59.1307625,
-                        "total": 591.307625
+                        "min": 72.744342,
+                        "max": 80.4925,
+                        "avg": 74.7554575,
+                        "total": 747.554575
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.11461,
+                        "max": 0.141186,
+                        "avg": 0.12957350000000004,
+                        "total": 1.2957350000000003
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.264217,
+                        "max": 6.784412,
+                        "avg": 2.1507048,
+                        "total": 21.507048
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 2097152,
+                        "max": 2097152,
+                        "avg": 2097152,
+                        "total": 20971520
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512x64",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 101.337409,
+                        "max": 149.392079,
+                        "avg": 126.23590300000001,
+                        "total": 1262.35903
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 134217728,
+                        "max": 134217728,
+                        "avg": 134217728,
+                        "total": 1342177280
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.076159,
+                        "max": 1.578418,
+                        "avg": 1.2756760999999999,
+                        "total": 12.756761
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 2097152,
+                        "max": 2097152,
+                        "avg": 2097152,
+                        "total": 20971520
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.857902,
+                        "max": 3.375411,
+                        "avg": 2.2649526,
+                        "total": 22.649526
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 2097152,
+                        "max": 2097152,
+                        "avg": 2097152,
+                        "total": 20971520
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1x180000",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.705879,
+                        "max": 1.161829,
+                        "avg": 0.7920406,
+                        "total": 7.920406
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toHost() [GPU -> ContiguousArray]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "180000",
+                        "type": "1D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.705683,
+                        "max": 0.829625,
+                        "avg": 0.7646081999999998,
+                        "total": 7.646081999999999
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 0.086277,
+                        "max": 0.100371,
+                        "avg": 0.09168660000000001,
+                        "total": 0.9168660000000001
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.849368,
+                        "max": 3.337882,
+                        "avg": 2.3913423,
+                        "total": 23.913422999999998
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 2097152,
+                        "avg": 209715.2,
+                        "total": 2097152
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512x64",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 593.222985,
+                        "max": 947.345526,
+                        "avg": 726.2929188,
+                        "total": 7262.929188
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 706740224,
+                        "max": 708837376,
+                        "avg": 706949939.2,
+                        "total": 7069499392
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.437206,
+                        "max": 1.986392,
+                        "avg": 1.6807387999999999,
+                        "total": 16.807388
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 4.116385,
+                        "max": 5.530223,
+                        "avg": 4.7062889,
+                        "total": 47.062889
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1x180000",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 3.151912,
+                        "max": 4.226688,
+                        "avg": 3.7270500999999996,
+                        "total": 37.270500999999996
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::toArray() [GPU -> PHP Array]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "180000",
+                        "type": "1D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.980386,
+                        "max": 4.399039,
+                        "avg": 3.4273987,
+                        "total": 34.273987
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "16x16x16",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 1.922843,
+                        "max": 2.181395,
+                        "avg": 2.0387439,
+                        "total": 20.387439
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "64x64x64",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.811779,
+                        "max": 10.241261,
+                        "avg": 4.1423435,
+                        "total": 41.423435
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512x64",
+                        "type": "3D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 192.731991,
+                        "max": 288.757767,
+                        "avg": 251.4445239,
+                        "total": 2514.445239
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "512x512",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 2.466059,
+                        "max": 3.249183,
+                        "avg": 2.7746309,
+                        "total": 27.746309
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1024x512",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 3.623289,
+                        "max": 4.253035,
+                        "avg": 4.001119399999999,
+                        "total": 40.011193999999996
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "1x180000",
+                        "type": "2D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 3.133173,
+                        "max": 4.509426,
+                        "avg": 3.7647114000000004,
+                        "total": 37.647114
+                    },
+                    "memory": {
+                        "format": "B",
+                        "min": 0,
+                        "max": 0,
+                        "avg": 0,
+                        "total": 0
+                    }
+                },
+                {
+                    "name": "CudaArray::__construct() [PHP Array -> GPU]",
+                    "type": "CUDA",
+                    "iterations": 10,
+                    "metadata": {
+                        "shape": "180000",
+                        "type": "1D"
+                    },
+                    "time": {
+                        "format": "MS",
+                        "min": 3.003802,
+                        "max": 3.768504,
+                        "avg": 3.321201,
+                        "total": 33.21201
                     },
                     "memory": {
                         "format": "B",

@@ -103,14 +103,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayAdd",
                 "metadata" => [
-                    ["shape" => "16x16x16 + 16x16x16", "type" => "3D Tensor + 3D Tesor"],
-                    ["shape" => "64x64x64 + 64x64x64", "type" => "3D Tensor + 3D Tesor"],
-                    ["shape" => "512x512x64 + 512x512x64", "type" => "3D Tensor + 3D Tesor"],
-                    ["shape" => "16x16x16 + float", "type" => "3D Tensor + Scalar"],
-                    ["shape" => "64x64x64 + float", "type" => "3D Tensor + Scalar"],
-                    ["shape" => "512x512x512 + float", "type" => "3D Tensor + Scalar"],
-                    ["shape" => "512x64 + 512x64", "type" => "2D Tensor + 2D Tesor"],
-                    ["shape" => "1024x512 + 1024x512", "type" => "2D Tensor + 2D Tesor"],
+                    ["shape" => "16x16x16 + 16x16x16", "type" => "3D + 3D"],
+                    ["shape" => "64x64x64 + 64x64x64", "type" => "3D + 3D"],
+                    ["shape" => "512x512x64 + 512x512x64", "type" => "3D + 3D"],
+                    ["shape" => "16x16x16 + float", "type" => "3D + Scalar"],
+                    ["shape" => "64x64x64 + float", "type" => "3D + Scalar"],
+                    ["shape" => "512x512x512 + float", "type" => "3D + Scalar"],
+                    ["shape" => "512x64 + 512x64", "type" => "2D + 2D"],
+                    ["shape" => "1024x512 + 1024x512", "type" => "2D + 2D"],
                     ["shape" => "1024x512 + 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 + 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -123,14 +123,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArraySubtract",
                 "metadata" => [
-                    ["shape" => "16x16x16 - 16x16x16", "type" => "3D Tensor - 3D Tesor"],
-                    ["shape" => "64x64x64 - 64x64x64", "type" => "3D Tensor - 3D Tesor"],
-                    ["shape" => "512x512x64 - 512x512x64", "type" => "3D Tensor - 3D Tesor"],
-                    ["shape" => "16x16x16 - float", "type" => "3D Tensor - Scalar"],
-                    ["shape" => "64x64x64 - float", "type" => "3D Tensor - Scalar"],
-                    ["shape" => "512x512x512 - float", "type" => "3D Tensor - Scalar"],
-                    ["shape" => "512x64 - 512x64", "type" => "2D Tensor - 2D Tesor"],
-                    ["shape" => "1024x512 - 1024x512", "type" => "2D Tensor - 2D Tesor"],
+                    ["shape" => "16x16x16 - 16x16x16", "type" => "3D - 3D"],
+                    ["shape" => "64x64x64 - 64x64x64", "type" => "3D - 3D"],
+                    ["shape" => "512x512x64 - 512x512x64", "type" => "3D - 3D"],
+                    ["shape" => "16x16x16 - float", "type" => "3D - Scalar"],
+                    ["shape" => "64x64x64 - float", "type" => "3D - Scalar"],
+                    ["shape" => "512x512x512 - float", "type" => "3D - Scalar"],
+                    ["shape" => "512x64 - 512x64", "type" => "2D - 2D"],
+                    ["shape" => "1024x512 - 1024x512", "type" => "2D - 2D"],
                     ["shape" => "1024x512 - 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 - 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -143,14 +143,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayMultiply",
                 "metadata" => [
-                    ["shape" => "16x16x16 * 16x16x16", "type" => "3D Tensor * 3D Tesor"],
-                    ["shape" => "64x64x64 * 64x64x64", "type" => "3D Tensor * 3D Tesor"],
-                    ["shape" => "512x512x64 * 512x512x64", "type" => "3D Tensor * 3D Tesor"],
-                    ["shape" => "16x16x16 * float", "type" => "3D Tensor * Scalar"],
-                    ["shape" => "64x64x64 * float", "type" => "3D Tensor * Scalar"],
-                    ["shape" => "512x512x512 * float", "type" => "3D Tensor * Scalar"],
-                    ["shape" => "512x64 * 512x64", "type" => "2D Tensor * 2D Tesor"],
-                    ["shape" => "1024x512 * 1024x512", "type" => "2D Tensor * 2D Tesor"],
+                    ["shape" => "16x16x16 * 16x16x16", "type" => "3D * 3D"],
+                    ["shape" => "64x64x64 * 64x64x64", "type" => "3D * 3D"],
+                    ["shape" => "512x512x64 * 512x512x64", "type" => "3D * 3D"],
+                    ["shape" => "16x16x16 * float", "type" => "3D * Scalar"],
+                    ["shape" => "64x64x64 * float", "type" => "3D * Scalar"],
+                    ["shape" => "512x512x512 * float", "type" => "3D * Scalar"],
+                    ["shape" => "512x64 * 512x64", "type" => "2D * 2D"],
+                    ["shape" => "1024x512 * 1024x512", "type" => "2D * 2D"],
                     ["shape" => "1024x512 * 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 * 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -163,14 +163,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayDivide",
                 "metadata" => [
-                    ["shape" => "16x16x16 / 16x16x16", "type" => "3D Tensor / 3D Tesor"],
-                    ["shape" => "64x64x64 / 64x64x64", "type" => "3D Tensor / 3D Tesor"],
-                    ["shape" => "512x512x64 / 512x512x64", "type" => "3D Tensor / 3D Tesor"],
-                    ["shape" => "16x16x16 / float", "type" => "3D Tensor / Scalar"],
-                    ["shape" => "64x64x64 / float", "type" => "3D Tensor / Scalar"],
-                    ["shape" => "512x512x512 / float", "type" => "3D Tensor / Scalar"],
-                    ["shape" => "512x64 / 512x64", "type" => "2D Tensor / 2D Tesor"],
-                    ["shape" => "1024x512 / 1024x512", "type" => "2D Tensor / 2D Tesor"],
+                    ["shape" => "16x16x16 / 16x16x16", "type" => "3D / 3D"],
+                    ["shape" => "64x64x64 / 64x64x64", "type" => "3D / 3D"],
+                    ["shape" => "512x512x64 / 512x512x64", "type" => "3D / 3D"],
+                    ["shape" => "16x16x16 / float", "type" => "3D / Scalar"],
+                    ["shape" => "64x64x64 / float", "type" => "3D / Scalar"],
+                    ["shape" => "512x512x512 / float", "type" => "3D / Scalar"],
+                    ["shape" => "512x64 / 512x64", "type" => "2D / 2D"],
+                    ["shape" => "1024x512 / 1024x512", "type" => "2D / 2D"],
                     ["shape" => "1024x512 / 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 / 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -183,14 +183,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayPower",
                 "metadata" => [
-                    ["shape" => "16x16x16 ** 16x16x16", "type" => "3D Tensor ** 3D Tesor"],
-                    ["shape" => "64x64x64 ** 64x64x64", "type" => "3D Tensor ** 3D Tesor"],
-                    ["shape" => "512x512x64 ** 512x512x64", "type" => "3D Tensor ** 3D Tesor"],
-                    ["shape" => "16x16x16 ** float", "type" => "3D Tensor ** Scalar"],
-                    ["shape" => "64x64x64 ** float", "type" => "3D Tensor ** Scalar"],
-                    ["shape" => "512x512x512 ** float", "type" => "3D Tensor ** Scalar"],
-                    ["shape" => "512x64 ** 512x64", "type" => "2D Tensor ** 2D Tesor"],
-                    ["shape" => "1024x512 ** 1024x512", "type" => "2D Tensor ** 2D Tesor"],
+                    ["shape" => "16x16x16 ** 16x16x16", "type" => "3D ** 3D"],
+                    ["shape" => "64x64x64 ** 64x64x64", "type" => "3D ** 3D"],
+                    ["shape" => "512x512x64 ** 512x512x64", "type" => "3D ** 3D"],
+                    ["shape" => "16x16x16 ** float", "type" => "3D ** Scalar"],
+                    ["shape" => "64x64x64 ** float", "type" => "3D ** Scalar"],
+                    ["shape" => "512x512x512 ** float", "type" => "3D ** Scalar"],
+                    ["shape" => "512x64 ** 512x64", "type" => "2D ** 2D"],
+                    ["shape" => "1024x512 ** 1024x512", "type" => "2D ** 2D"],
                     ["shape" => "1024x512 ** 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 ** 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -203,14 +203,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayGt",
                 "metadata" => [
-                    ["shape" => "16x16x16 > 16x16x16", "type" => "3D Tensor > 3D Tesor"],
-                    ["shape" => "64x64x64 > 64x64x64", "type" => "3D Tensor > 3D Tesor"],
-                    ["shape" => "512x512x64 > 512x512x64", "type" => "3D Tensor > 3D Tesor"],
-                    ["shape" => "16x16x16 > float", "type" => "3D Tensor > Scalar"],
-                    ["shape" => "64x64x64 > float", "type" => "3D Tensor > Scalar"],
-                    ["shape" => "512x512x512 > float", "type" => "3D Tensor > Scalar"],
-                    ["shape" => "512x64 > 512x64", "type" => "2D Tensor > 2D Tesor"],
-                    ["shape" => "1024x512 > 1024x512", "type" => "2D Tensor > 2D Tesor"],
+                    ["shape" => "16x16x16 > 16x16x16", "type" => "3D > 3D"],
+                    ["shape" => "64x64x64 > 64x64x64", "type" => "3D > 3D"],
+                    ["shape" => "512x512x64 > 512x512x64", "type" => "3D > 3D"],
+                    ["shape" => "16x16x16 > float", "type" => "3D > Scalar"],
+                    ["shape" => "64x64x64 > float", "type" => "3D > Scalar"],
+                    ["shape" => "512x512x512 > float", "type" => "3D > Scalar"],
+                    ["shape" => "512x64 > 512x64", "type" => "2D > 2D"],
+                    ["shape" => "1024x512 > 1024x512", "type" => "2D > 2D"],
                     ["shape" => "1024x512 > 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 > 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -223,14 +223,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayLt",
                 "metadata" => [
-                    ["shape" => "16x16x16 < 16x16x16", "type" => "3D Tensor < 3D Tesor"],
-                    ["shape" => "64x64x64 < 64x64x64", "type" => "3D Tensor < 3D Tesor"],
-                    ["shape" => "512x512x64 < 512x512x64", "type" => "3D Tensor < 3D Tesor"],
-                    ["shape" => "16x16x16 < float", "type" => "3D Tensor < Scalar"],
-                    ["shape" => "64x64x64 < float", "type" => "3D Tensor < Scalar"],
-                    ["shape" => "512x512x512 < float", "type" => "3D Tensor < Scalar"],
-                    ["shape" => "512x64 < 512x64", "type" => "2D Tensor < 2D Tesor"],
-                    ["shape" => "1024x512 < 1024x512", "type" => "2D Tensor < 2D Tesor"],
+                    ["shape" => "16x16x16 < 16x16x16", "type" => "3D < 3D"],
+                    ["shape" => "64x64x64 < 64x64x64", "type" => "3D < 3D"],
+                    ["shape" => "512x512x64 < 512x512x64", "type" => "3D < 3D"],
+                    ["shape" => "16x16x16 < float", "type" => "3D < Scalar"],
+                    ["shape" => "64x64x64 < float", "type" => "3D < Scalar"],
+                    ["shape" => "512x512x512 < float", "type" => "3D < Scalar"],
+                    ["shape" => "512x64 < 512x64", "type" => "2D < 2D"],
+                    ["shape" => "1024x512 < 1024x512", "type" => "2D < 2D"],
                     ["shape" => "1024x512 < 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 < 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -243,14 +243,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayEq",
                 "metadata" => [
-                    ["shape" => "16x16x16 == 16x16x16", "type" => "3D Tensor == 3D Tesor"],
-                    ["shape" => "64x64x64 == 64x64x64", "type" => "3D Tensor == 3D Tesor"],
-                    ["shape" => "512x512x64 == 512x512x64", "type" => "3D Tensor == 3D Tesor"],
-                    ["shape" => "16x16x16 == float", "type" => "3D Tensor == Scalar"],
-                    ["shape" => "64x64x64 == float", "type" => "3D Tensor == Scalar"],
-                    ["shape" => "512x512x512 == float", "type" => "3D Tensor == Scalar"],
-                    ["shape" => "512x64 == 512x64", "type" => "2D Tensor == 2D Tesor"],
-                    ["shape" => "1024x512 == 1024x512", "type" => "2D Tensor == 2D Tesor"],
+                    ["shape" => "16x16x16 == 16x16x16", "type" => "3D == 3D"],
+                    ["shape" => "64x64x64 == 64x64x64", "type" => "3D == 3D"],
+                    ["shape" => "512x512x64 == 512x512x64", "type" => "3D == 3D"],
+                    ["shape" => "16x16x16 == float", "type" => "3D == Scalar"],
+                    ["shape" => "64x64x64 == float", "type" => "3D == Scalar"],
+                    ["shape" => "512x512x512 == float", "type" => "3D == Scalar"],
+                    ["shape" => "512x64 == 512x64", "type" => "2D == 2D"],
+                    ["shape" => "1024x512 == 1024x512", "type" => "2D == 2D"],
                     ["shape" => "1024x512 == 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 == 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -263,14 +263,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayNe",
                 "metadata" => [
-                    ["shape" => "16x16x16 != 16x16x16", "type" => "3D Tensor != 3D Tesor"],
-                    ["shape" => "64x64x64 != 64x64x64", "type" => "3D Tensor != 3D Tesor"],
-                    ["shape" => "512x512x64 != 512x512x64", "type" => "3D Tensor != 3D Tesor"],
-                    ["shape" => "16x16x16 != float", "type" => "3D Tensor != Scalar"],
-                    ["shape" => "64x64x64 != float", "type" => "3D Tensor != Scalar"],
-                    ["shape" => "512x512x512 != float", "type" => "3D Tensor != Scalar"],
-                    ["shape" => "512x64 != 512x64", "type" => "2D Tensor != 2D Tesor"],
-                    ["shape" => "1024x512 != 1024x512", "type" => "2D Tensor != 2D Tesor"],
+                    ["shape" => "16x16x16 != 16x16x16", "type" => "3D != 3D"],
+                    ["shape" => "64x64x64 != 64x64x64", "type" => "3D != 3D"],
+                    ["shape" => "512x512x64 != 512x512x64", "type" => "3D != 3D"],
+                    ["shape" => "16x16x16 != float", "type" => "3D != Scalar"],
+                    ["shape" => "64x64x64 != float", "type" => "3D != Scalar"],
+                    ["shape" => "512x512x512 != float", "type" => "3D != Scalar"],
+                    ["shape" => "512x64 != 512x64", "type" => "2D != 2D"],
+                    ["shape" => "1024x512 != 1024x512", "type" => "2D != 2D"],
                     ["shape" => "1024x512 != 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 != 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -283,14 +283,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayLe",
                 "metadata" => [
-                    ["shape" => "16x16x16 <= 16x16x16", "type" => "3D Tensor <= 3D Tesor"],
-                    ["shape" => "64x64x64 <= 64x64x64", "type" => "3D Tensor <= 3D Tesor"],
-                    ["shape" => "512x512x64 <= 512x512x64", "type" => "3D Tensor <= 3D Tesor"],
-                    ["shape" => "16x16x16 <= float", "type" => "3D Tensor <= Scalar"],
-                    ["shape" => "64x64x64 <= float", "type" => "3D Tensor <= Scalar"],
-                    ["shape" => "512x512x512 <= float", "type" => "3D Tensor <= Scalar"],
-                    ["shape" => "512x64 <= 512x64", "type" => "2D Tensor <= 2D Tesor"],
-                    ["shape" => "1024x512 <= 1024x512", "type" => "2D Tensor <= 2D Tesor"],
+                    ["shape" => "16x16x16 <= 16x16x16", "type" => "3D <= 3D"],
+                    ["shape" => "64x64x64 <= 64x64x64", "type" => "3D <= 3D"],
+                    ["shape" => "512x512x64 <= 512x512x64", "type" => "3D <= 3D"],
+                    ["shape" => "16x16x16 <= float", "type" => "3D <= Scalar"],
+                    ["shape" => "64x64x64 <= float", "type" => "3D <= Scalar"],
+                    ["shape" => "512x512x512 <= float", "type" => "3D <= Scalar"],
+                    ["shape" => "512x64 <= 512x64", "type" => "2D <= 2D"],
+                    ["shape" => "1024x512 <= 1024x512", "type" => "2D <= 2D"],
                     ["shape" => "1024x512 <= 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 <= 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -303,14 +303,14 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayGe",
                 "metadata" => [
-                    ["shape" => "16x16x16 >= 16x16x16", "type" => "3D Tensor >= 3D Tesor"],
-                    ["shape" => "64x64x64 >= 64x64x64", "type" => "3D Tensor >= 3D Tesor"],
-                    ["shape" => "512x512x64 >= 512x512x64", "type" => "3D Tensor >= 3D Tesor"],
-                    ["shape" => "16x16x16 >= float", "type" => "3D Tensor >= Scalar"],
-                    ["shape" => "64x64x64 >= float", "type" => "3D Tensor >= Scalar"],
-                    ["shape" => "512x512x512 >= float", "type" => "3D Tensor >= Scalar"],
-                    ["shape" => "512x64 >= 512x64", "type" => "2D Tensor >= 2D Tesor"],
-                    ["shape" => "1024x512 >= 1024x512", "type" => "2D Tensor >= 2D Tesor"],
+                    ["shape" => "16x16x16 >= 16x16x16", "type" => "3D >= 3D"],
+                    ["shape" => "64x64x64 >= 64x64x64", "type" => "3D >= 3D"],
+                    ["shape" => "512x512x64 >= 512x512x64", "type" => "3D >= 3D"],
+                    ["shape" => "16x16x16 >= float", "type" => "3D >= Scalar"],
+                    ["shape" => "64x64x64 >= float", "type" => "3D >= Scalar"],
+                    ["shape" => "512x512x512 >= float", "type" => "3D >= Scalar"],
+                    ["shape" => "512x64 >= 512x64", "type" => "2D >= 2D"],
+                    ["shape" => "1024x512 >= 1024x512", "type" => "2D >= 2D"],
                     ["shape" => "1024x512 >= 1x512", "type" => "2D Broadcast"],
                     ["shape" => "1024x3x512 >= 1x3x512", "type" => "3D Broadcast"],
                 ]
@@ -323,13 +323,13 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayNeg",
                 "metadata" => [
-                    ["shape" => " - 16x16x16", "type" => " - 3D Tensor"],
-                    ["shape" => " - 64x64x64", "type" => " - 3D Tesor"],
-                    ["shape" => " - 512x512x64", "type" => " - 3D Tesor"],
-                    ["shape" => " - 512x512x512", "type" => " - 3D Tesor"],
-                    ["shape" => " - 512x512", "type" => " - 2D Tesor"],
-                    ["shape" => " - 1024x512", "type" => " - 2D Tesor"],
-                    ["shape" => " - 1x180000", "type" => " - 2D Tesor"],
+                    ["shape" => " - 16x16x16", "type" => " - 3D"],
+                    ["shape" => " - 64x64x64", "type" => " - 3D"],
+                    ["shape" => " - 512x512x64", "type" => " - 3D"],
+                    ["shape" => " - 512x512x512", "type" => " - 3D"],
+                    ["shape" => " - 512x512", "type" => " - 2D"],
+                    ["shape" => " - 1024x512", "type" => " - 2D"],
+                    ["shape" => " - 1x180000", "type" => " - 2D"],
                 ]
             ],
             [
@@ -340,13 +340,13 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayFloor",
                 "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D Tensor"],
-                    ["shape" => "64x64x64", "type" => "3D Tesor"],
-                    ["shape" => "512x512x64", "type" => "3D Tesor"],
-                    ["shape" => "512x512x512", "type" => "3D Tesor"],
-                    ["shape" => "512x512", "type" => "2D Tesor"],
-                    ["shape" => "1024x512", "type" => "2D Tesor"],
-                    ["shape" => "1x180000", "type" => " - 2D Tesor"],
+                    ["shape" => "16x16x16", "type" => "3D"],
+                    ["shape" => "64x64x64", "type" => "3D"],
+                    ["shape" => "512x512x64", "type" => "3D"],
+                    ["shape" => "512x512x512", "type" => "3D"],
+                    ["shape" => "512x512", "type" => "2D"],
+                    ["shape" => "1024x512", "type" => "2D"],
+                    ["shape" => "1x180000", "type" => " - 2D"],
                 ]
             ],
             [
@@ -357,13 +357,13 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayCeil",
                 "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D Tensor"],
-                    ["shape" => "64x64x64", "type" => "3D Tesor"],
-                    ["shape" => "512x512x64", "type" => "3D Tesor"],
-                    ["shape" => "512x512x512", "type" => "3D Tesor"],
-                    ["shape" => "512x512", "type" => "2D Tesor"],
-                    ["shape" => "1024x512", "type" => "2D Tesor"],
-                    ["shape" => "1x180000", "type" => " - 2D Tesor"],
+                    ["shape" => "16x16x16", "type" => "3D"],
+                    ["shape" => "64x64x64", "type" => "3D"],
+                    ["shape" => "512x512x64", "type" => "3D"],
+                    ["shape" => "512x512x512", "type" => "3D"],
+                    ["shape" => "512x512", "type" => "2D"],
+                    ["shape" => "1024x512", "type" => "2D"],
+                    ["shape" => "1x180000", "type" => " - 2D"],
                 ]
             ],
             [
@@ -374,13 +374,13 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayRound",
                 "metadata" => [
-                    ["shape" => "16x16x16", "type" => "3D Tensor"],
-                    ["shape" => "64x64x64", "type" => "3D Tesor"],
-                    ["shape" => "512x512x64", "type" => "3D Tesor"],
-                    ["shape" => "512x512x512", "type" => "3D Tesor"],
-                    ["shape" => "512x512", "type" => "2D Tesor"],
-                    ["shape" => "1024x512", "type" => "2D Tesor"],
-                    ["shape" => "1x180000", "type" => " - 2D Tesor"],
+                    ["shape" => "16x16x16", "type" => "3D"],
+                    ["shape" => "64x64x64", "type" => "3D"],
+                    ["shape" => "512x512x64", "type" => "3D"],
+                    ["shape" => "512x512x512", "type" => "3D"],
+                    ["shape" => "512x512", "type" => "2D"],
+                    ["shape" => "1024x512", "type" => "2D"],
+                    ["shape" => "1x180000", "type" => " - 2D"],
                 ]
             ],
             [
@@ -391,16 +391,67 @@ class CudaArrayBenchmark extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayMatmul",
                 "metadata" => [
-                    ["shape" => "16x16 x 16x16", "type" => " 2D Tensor"],
-                    ["shape" => " 128x128 x 128x128", "type" => " 2D Tensor"],
-                    ["shape" => " 32x256x256 x 32x256x256", "type" => " 3D Tensor"],
-                    ["shape" => " 1x512x512 x 64x512x512", "type" => " 3D Tensor (broadcast)"],
-                    ["shape" => " 1024x768 x 768x512", "type" => " 2D Tensor"],
-                    ["shape" => " 64x1024x512 x 64x512x256", "type" => " 3D Tensor"],
-                    ["shape" => " 1x1000000 x 1000000x1", "type" => " 2D Tensor (extreme)"],
-                    ["shape" => " 8x64x256x256 x 8x64x256x256", "type" => " 4D Tensor"],
+                    ["shape" => "16x16 x 16x16", "type" => " 2D"],
+                    ["shape" => " 128x128 x 128x128", "type" => " 2D"],
+                    ["shape" => " 32x256x256 x 32x256x256", "type" => " 3D"],
+                    ["shape" => " 1x512x512 x 64x512x512", "type" => " 3D (broadcast)"],
+                    ["shape" => " 1024x768 x 768x512", "type" => " 2D"],
+                    ["shape" => " 64x1024x512 x 64x512x256", "type" => " 3D"],
+                    ["shape" => " 1x1000000 x 1000000x1", "type" => " 2D (extreme)"],
+                    ["shape" => " 8x64x256x256 x 8x64x256x256", "type" => " 4D"],
                 ]
-            ]
+            ],
+            [
+                "run" => 7,
+                "warmup" => true,
+                "name" => "CudaArray::toHost() [GPU -> ContiguousArray]",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArraytoHost",
+                "metadata" => [
+                    ["shape" => "16x16x16", "type" => "3D"],
+                    ["shape" => "64x64x64", "type" => "3D"],
+                    ["shape" => "1024x512x64", "type" => "3D"],
+                    ["shape" => "512x512", "type" => "2D"],
+                    ["shape" => "1024x512", "type" => "2D"],
+                    ["shape" => "1x180000", "type" => "2D"],
+                    ["shape" => "180000", "type" => "1D"],
+                ]
+            ],
+            [
+                "run" => 7,
+                "warmup" => true,
+                "name" => "CudaArray::toArray() [GPU -> PHP Array]",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArraytoArray",
+                "metadata" => [
+                    ["shape" => "16x16x16", "type" => "3D"],
+                    ["shape" => "64x64x64", "type" => "3D"],
+                    ["shape" => "1024x512x64", "type" => "3D"],
+                    ["shape" => "512x512", "type" => "2D"],
+                    ["shape" => "1024x512", "type" => "2D"],
+                    ["shape" => "1x180000", "type" => "2D"],
+                    ["shape" => "180000", "type" => "1D"],
+                ]
+            ],
+            [
+                "run" => 7,
+                "warmup" => true,
+                "name" => "CudaArray::__construct() [PHP Array -> GPU]",
+                "iterations" => 10,
+                "type" => "CUDA",
+                "handler" => "cudaArrayConstructor",
+                "metadata" => [
+                    ["shape" => "16x16x16", "type" => "3D"],
+                    ["shape" => "64x64x64", "type" => "3D"],
+                    ["shape" => "1024x512x64", "type" => "3D"],
+                    ["shape" => "512x512", "type" => "2D"],
+                    ["shape" => "1024x512", "type" => "2D"],
+                    ["shape" => "1x180000", "type" => "2D"],
+                    ["shape" => "180000", "type" => "1D"],
+                ]
+            ],
         ];
     }
 
@@ -481,6 +532,32 @@ class CudaArrayBenchmark extends Benchmark
             6 => [CudaArray::rand([64, 1024, 512]), CudaArray::rand([64, 512, 256])],
             7 => [CudaArray::rand([1, 1000000]), CudaArray::rand([1000000, 1])],
             8 => [CudaArray::rand([8, 64, 256, 256]), CudaArray::rand([8, 64, 256, 256])],
+        };
+    }
+
+    public function argsTransfer(int $count): array
+    {
+        return match ($count) {
+            1 => [CudaArray::rand([16, 16, 16])],
+            2 => [CudaArray::rand([64, 64, 64])],
+            3 => [CudaArray::rand([1024, 512, 64])],
+            4 => [CudaArray::rand([512, 512])],
+            5 => [CudaArray::rand([1024, 512])],
+            6 => [CudaArray::rand([1, 180000])],
+            7 => [CudaArray::rand([180000])],
+        };
+    }
+
+    public function argsConstructor(int $count): array
+    {
+        return match ($count) {
+            1 => [array_fill(0, 15, array_fill(0, 15, array_fill(0, 15, $count)))],
+            2 => [array_fill(0, 63, array_fill(0, 63, array_fill(0, 63, $count)))],
+            3 => [array_fill(0, 1023, array_fill(0, 511, array_fill(0, 63, $count)))],
+            4 => [array_fill(0, 511, array_fill(0, 511, $count))],
+            5 => [array_fill(0, 1023, array_fill(0, 511, $count))],
+            6 => [array_fill(0, 1, array_fill(0, 180000, $count))],
+            7 => [array_fill(0, 180000, $count)],
         };
     }
 
@@ -614,5 +691,23 @@ class CudaArrayBenchmark extends Benchmark
     public function cudaArrayMatmul(CudaArray $first, CudaArray $second): void
     {
         $first->matmul($second);
+    }
+
+    #[InjectArgs("argsTransfer")]
+    public function cudaArrayToHost(CudaArray $tensor): void
+    {
+        $tensor->toHost();
+    }
+
+    #[InjectArgs("argsTransfer")]
+    public function cudaArrayToArray(CudaArray $tensor): void
+    {
+        $tensor->toArray();
+    }
+
+    #[InjectArgs("argsConstructor")]
+    public function cudaArrayConstructor(array $phpArray): void
+    {
+        new CudaArray($phpArray);
     }
 }

@@ -132,39 +132,50 @@ class HtmlExporter implements ExporterInterface
         $html .= '<tr>';
         $html .= '<th>Benchmark</th>';
         $html .= '<th>Tests</th>';
-        $html .= '<th>Avg Time (ms)</th>';
+        $html .= '<th>Avg Time</th>';
         $html .= '<th>Avg Memory</th>';
-        $html .= '<th>Speed Ratio</th>';
+        $html .= '<th>OP/Second</th>';
         $html .= '<th>Status</th>';
         $html .= '</tr>';
         $html .= '</thead>';
         $html .= '<tbody>';
 
         foreach ($benchmarksData as $benchmark) {
-            $avgTime = 0;
-            $avgMemory = 0;
+            $totalTime = 0;
+            $totalMemoryBytes = 0;
             $testCount = count($benchmark['results']);
 
-            foreach ($benchmark['results'] as $result) {
-                $avgTime += $result['stats']['time']['avg'];
-                $avgMemory += $this->parseBytes($result['stats']['memory']['avg']);
+            if ($testCount === 0) {
+                continue;
             }
 
-            $avgTime = $testCount > 0 ? $avgTime / $testCount : 0;
-            $avgMemory = $testCount > 0 ? $this->formatBytes($avgMemory / $testCount) : '0 B';
+            foreach ($benchmark['results'] as $result) {
+                $time = $result['stats']['time']['avg'];
+                $memory = $result['stats']['memory']['avg'];
 
-            $speedRatio = $avgTime > 0 ? number_format(1 / $avgTime, 2) : 0;
+                $totalTime += $time;
+                $totalMemoryBytes += $this->parseMemoryToBytes($memory);
+            }
+
+            $avgTime = $totalTime / $testCount;
+            $avgMemoryBytes = $totalMemoryBytes / $testCount;
+            $opsPerSecond = $avgTime > 0 ? (1_000_000 / $avgTime) : 0;
+
+            $formattedAvgTime = $this->formatTime($avgTime);
+            $formattedOps = $this->formatOpsPerSecond($opsPerSecond);
+            $formattedMemory = $this->formatBytes($avgMemoryBytes);
 
             $html .= sprintf(
                 '<tr class="summary-row" data-benchmark="%s">',
                 htmlspecialchars($benchmark['handler_name'])
             );
+            
             $html .= '<td>' . htmlspecialchars($benchmark['handler_name']) . '</td>';
             $html .= '<td>' . $testCount . '</td>';
-            $html .= '<td><span class="time-value">' . number_format($avgTime, 4) . '</span></td>';
-            $html .= '<td><span class="memory-value">' . $avgMemory . '</span></td>';
-            $html .= '<td><span class="ratio-badge">' . $speedRatio . 'x</span></td>';
-            $html .= '<td><span class="status-badge status-ok">✓</span></td>';
+            $html .= '<td><span class="time-value" title="Average time">' . $formattedAvgTime . ' (avg)</span></td>';
+            $html .= '<td><span class="memory-value" title="Average memory usage">' . $formattedMemory . '</span></td>';
+            $html .= '<td><span class="ratio-badge" title="Operations per second">' . $formattedOps . '</span></td>';
+            $html .= '<td><span class="status-badge status-excellent">✓</span></td>';
             $html .= '</tr>';
         }
 
@@ -174,6 +185,19 @@ class HtmlExporter implements ExporterInterface
         $html .= '</div>';
 
         return $html;
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = 0;
+
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+
+        return number_format($bytes, 2) . ' ' . $units[$i];
     }
 
     private function generateComparisonTable(array $allResults): string
@@ -363,7 +387,7 @@ class HtmlExporter implements ExporterInterface
             }
             $items[] = '<div class="metadata-item"><strong>' .
                 htmlspecialchars($key) . ':</strong> ' .
-                htmlspecialchars((string)$value) . '</div>';
+                htmlspecialchars((string) $value) . '</div>';
         }
 
         return '<div class="metadata-items">' . implode('', $items) . '</div>';
@@ -440,22 +464,6 @@ class HtmlExporter implements ExporterInterface
         return $html;
     }
 
-    private function calculateStdDev(array $values): float
-    {
-        if (count($values) < 2) {
-            return 0;
-        }
-
-        $mean = array_sum($values) / count($values);
-        $sum = 0;
-
-        foreach ($values as $value) {
-            $sum += pow($value - $mean, 2);
-        }
-
-        return sqrt($sum / count($values));
-    }
-
     private function calculateTimePercentage(float $value, array $allResults): float
     {
         $max = 0;
@@ -476,17 +484,6 @@ class HtmlExporter implements ExporterInterface
         return $max > 0 ? min(100, ($value / $max) * 100) : 0;
     }
 
-    private function formatBytes($bytes): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= pow(1024, $pow);
-
-        return round($bytes, 2) . ' ' . $units[$pow];
-    }
-
     private function parseBytes(string $formatted): float
     {
         $units = ['B' => 1, 'KB' => 1024, 'MB' => 1048576, 'GB' => 1073741824];
@@ -497,5 +494,69 @@ class HtmlExporter implements ExporterInterface
         }
 
         return floatval($parts[0]) * $units[$parts[1]];
+    }
+
+
+    private function parseMemoryToBytes(string $memoryString): int
+    {
+        $units = ['B' => 1, 'KB' => 1024, 'MB' => 1024 ** 2, 'GB' => 1024 ** 3];
+        $memoryString = trim($memoryString);
+
+        foreach ($units as $unit => $multiplier) {
+            if (str_ends_with($memoryString, $unit)) {
+                $value = (float) str_replace($unit, '', $memoryString);
+                return (int) ($value * $multiplier);
+            }
+        }
+
+        return (int) $memoryString;
+    }
+
+    private function calculateStdDev(array $values): float
+    {
+        $n = count($values);
+        if ($n < 2) {
+            return 0.0;
+        }
+
+        $mean = array_sum($values) / $n;
+        $sumSquares = 0.0;
+
+        foreach ($values as $value) {
+            $sumSquares += ($value - $mean) * ($value - $mean);
+        }
+
+        $variance = $sumSquares / ($n - 1);
+
+        return sqrt($variance);
+    }
+
+
+    private function formatTime(float $timeMs): string
+    {
+        if ($timeMs < 0.001) {
+            return number_format($timeMs * 1_000_000, 2) . ' ns';
+        } elseif ($timeMs < 1) {
+            return number_format($timeMs * 1000, 2) . ' μs';
+        } elseif ($timeMs < 1000) {
+            return number_format($timeMs, 3) . ' ms';
+        } else {
+            return number_format($timeMs / 1000, 3) . ' s';
+        }
+    }
+
+    private function formatOpsPerSecond(float $ops): string
+    {
+        if ($ops >= 1_000_000_000) {
+            return number_format($ops / 1_000_000_000, 2) . ' B op/s';
+        } elseif ($ops >= 1_000_000) {
+            return number_format($ops / 1_000_000, 2) . ' M op/s';
+        } elseif ($ops >= 1_000) {
+            return number_format($ops / 1_000, 2) . ' K op/s';
+        } elseif ($ops < 1) {
+            return number_format(1 / $ops, 2) . ' s/op';
+        } else {
+            return number_format($ops, 2) . ' op/s';
+        }
     }
 }

@@ -6,107 +6,16 @@ use Cuda\CudaArray;
 use Benchmarks\Handlers\Benchmark;
 use Benchmarks\Support\Attr\InjectArgs;
 
-class CudaArrayBenchmark extends Benchmark
+class CudaArrayBasicMathOperations extends Benchmark
 {
     public function name(): string
     {
-        return "CudaArray Benchmark";
+        return "CudaArray Basic Operations Benchmark";
     }
 
     public function register(): array
     {
         return [
-            [
-                "run" => 6,
-                "warmup" => true,
-                "name" => "CudaArray::zeros()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayZeros",
-                "metadata" => [
-                    ["shape" => "16x16x16"],
-                    ["shape" => "64x64x64"],
-                    ["shape" => "128x128x128"],
-                    ["shape" => "256x256x256"],
-                    ["shape" => "1024x128x64"],
-                    ["shape" => "512x256x128"],
-                ]
-            ],
-            [
-                "run" => 6,
-                "warmup" => true,
-                "name" => "CudaArray::ones()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayOnes",
-                "metadata" => [
-                    ["shape" => "16x16x16"],
-                    ["shape" => "64x64x64"],
-                    ["shape" => "128x128x128"],
-                    ["shape" => "256x256x256"],
-                    ["shape" => "1024x128x64"],
-                    ["shape" => "512x256x128"],
-                ]
-            ],
-            [
-                "run" => 6,
-                "warmup" => true,
-                "name" => "CudaArray::full()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayFull",
-                "metadata" => [
-                    ["shape" => "16x16x16"],
-                    ["shape" => "64x64x64"],
-                    ["shape" => "128x128x128"],
-                    ["shape" => "256x256x256"],
-                    ["shape" => "1024x128x64"],
-                    ["shape" => "512x256x128"],
-                ]
-
-            ],
-            [
-                "run" => 3,
-                "warmup" => true,
-                "name" => "CudaArray::rand()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayRand",
-                "metadata" => [
-                    ["shape" => "16x16x16"],
-                    ["shape" => "64x64x64"],
-                    ["shape" => "128x128x128"],
-                    ["shape" => "256x256x256"],
-                    ["shape" => "1024x128x64"],
-                    ["shape" => "512x256x128"],
-                ]
-            ],
-            [
-                "run" => 3,
-                "warmup" => true,
-                "name" => "CudaArray::concat()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayConcatAxisZero",
-                "metadata" => [
-                    ["shape" => "16x16", "axis" => "0"],
-                    ["shape" => "64x64", "axis" => "0"],
-                    ["shape" => "512x512", "axis" => "0"],
-                ]
-            ],
-            [
-                "run" => 3,
-                "warmup" => true,
-                "name" => "CudaArray::concat()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayConcatAxisOne",
-                "metadata" => [
-                    ["shape" => "16x16", "axis" => "1"],
-                    ["shape" => "64x64", "axis" => "1"],
-                    ["shape" => "512x512", "axis" => "1"],
-                ]
-            ],
             [
                 "run" => 10,
                 "warmup" => true,
@@ -363,172 +272,6 @@ class CudaArrayBenchmark extends Benchmark
                 "handler" => "cudaArrayRound",
                 "metadata" => $this->unaryMetadata()
             ],
-            [
-                "run" => 8,
-                "warmup" => true,
-                "name" => "CudaArray::matmul()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayMatmul",
-                "metadata" => [
-                    ["shape" => "16x16 x 16x16", "type" => " 2D"],
-                    ["shape" => " 128x128 x 128x128", "type" => " 2D"],
-                    ["shape" => " 32x256x256 x 32x256x256", "type" => " 3D"],
-                    ["shape" => " 1x512x512 x 64x512x512", "type" => " 3D (broadcast)"],
-                    ["shape" => " 1024x768 x 768x512", "type" => " 2D"],
-                    ["shape" => " 64x1024x512 x 64x512x256", "type" => " 3D"],
-                    ["shape" => " 1x1000000 x 1000000x1", "type" => " 2D (extreme)"],
-                    ["shape" => " 8x64x256x256 x 8x64x256x256", "type" => " 4D"],
-                ]
-            ],
-            [
-                "run" => 16,
-                "warmup" => true,
-                "name" => "CudaArray::sum()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArraySum",
-                "metadata" => $this->reductionMetadata()
-            ],
-            [
-                "run" => 16,
-                "warmup" => true,
-                "name" => "CudaArray::min()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayMin",
-                "metadata" => $this->reductionMetadata()
-            ],
-            [
-                "run" => 16,
-                "warmup" => true,
-                "name" => "CudaArray::prod()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayProd",
-                "metadata" => $this->reductionMetadata()
-            ],
-            [
-                "run" => 16,
-                "warmup" => true,
-                "name" => "CudaArray::argMax()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayArgMax",
-                "metadata" => $this->reductionMetadata()
-            ],
-            [
-                "run" => 16,
-                "warmup" => true,
-                "name" => "CudaArray::argMin()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayArgMin",
-                "metadata" => $this->reductionMetadata()
-            ],
-            [
-                "run" => 7,
-                "warmup" => true,
-                "name" => "CudaArray::flatten()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayFlatten",
-                "metadata" => $this->unaryMetadata()
-            ],
-            [
-                "run" => 12,
-                "warmup" => true,
-                "name" => "CudaArray::transpose()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayTranspose",
-                "metadata" => [
-                    ["shape" => "16x16", "idxs" => "[1, 0]"],
-                    ["shape" => "32x64", "idxs" => "[1, 0]"],
-                    ["shape" => "64x32", "idxs" => "[1, 0]"],
-                    ["shape" => "128x128", "idxs" => "[1, 0]"],
-                    ["shape" => "8x16x32", "idxs" => "[0, 2, 1]"],
-                    ["shape" => "8x16x32", "idxs" => "[2, 1, 0]"],
-                    ["shape" => "8x16x32", "idxs" => "[1, 0, 2]"],
-                    ["shape" => "16x8x2", "idxs" => "[0, 2, 1]"],
-                    ["shape" => "4x8x16x32", "idxs" => "[0, 1, 3, 2]"],
-                    ["shape" => "4x8x16x32", "idxs" => "[3, 2, 1, 0]"],
-                    ["shape" => "4x8x16x32", "idxs" => "[1, 0, 2, 3]"],
-                    ["shape" => "4x8x16x32", "idxs" => "[0, 2, 1, 3]"],
-                ]
-            ],
-            [
-                "run" => 12,
-                "warmup" => true,
-                "name" => "CudaArray::reshape()",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayReshape",
-                "metadata" => [
-                    ["shape" => "4x4", "output-shape" => "16x1"],
-                    ["shape" => "4x4", "output-shape" => "1x16"],
-                    ["shape" => "8x8", "output-shape" => "4x16"],
-                    ["shape" => "8x8", "output-shape" => "16x4"],
-                    ["shape" => "12x12", "output-shape" => "3x4x12"],
-                    ["shape" => "12x12", "output-shape" => "4x3x12"],
-                    ["shape" => "24x6", "output-shape" => "8x3x6"],
-                    ["shape" => "6x24", "output-shape" => "2x3x24"],
-                    ["shape" => "3x4x5", "output-shape" => "12x5"],
-                    ["shape" => "3x4x5", "output-shape" => "3x20"],
-                    ["shape" => "2x6x8", "output-shape" => "12x8"],
-                    ["shape" => "2x6x8", "output-shape" => "2x48"],
-                ]
-            ],
-            [
-                "run" => 7,
-                "warmup" => true,
-                "name" => "CudaArray::toHost() [GPU -> ContiguousArray]",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArraytoHost",
-                "metadata" => $this->unaryMetadata()
-            ],
-            [
-                "run" => 7,
-                "warmup" => true,
-                "name" => "CudaArray::toArray() [GPU -> PHP Array]",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArraytoArray",
-                "metadata" => $this->unaryMetadata()
-            ],
-            [
-                "run" => 7,
-                "warmup" => true,
-                "name" => "CudaArray::__construct() [PHP Array -> GPU]",
-                "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayConstructor",
-                "metadata" => $this->unaryMetadata()
-            ],
-        ];
-    }
-
-    private function reductionMetadata(): array
-    {
-        return [
-            ["shape" => "16x16x16", "type" => "3D", "axis" => "2"],
-            ["shape" => "64x64x64", "type" => "3D", "axis" => "2"],
-            ["shape" => "512x512x64", "type" => "3D", "axis" => "2"],
-            ["shape" => "1024x512x512", "type" => "3D", "axis" => "2"],
-            ["shape" => "16x16x16", "type" => "3D", "axis" => "1"],
-            ["shape" => "64x64x64", "type" => "3D", "axis" => "1"],
-            ["shape" => "512x512x64", "type" => "3D", "axis" => "1"],
-            ["shape" => "1024x512x512", "type" => "3D", "axis" => "1"],
-            ["shape" => "16x16x16", "type" => "3D", "axis" => "0"],
-            ["shape" => "64x64x64", "type" => "3D", "axis" => "0"],
-            ["shape" => "512x512x64", "type" => "3D", "axis" => "0"],
-            ["shape" => "1024x512x512", "type" => "3D", "axis" => "0"],
-            ["shape" => "16x16x16", "type" => "3D", "axis" => "-1"],
-            ["shape" => "64x64x64", "type" => "3D", "axis" => "-1"],
-            ["shape" => "512x512x64", "type" => "3D", "axis" => "-1"],
-            ["shape" => "1024x512x512", "type" => "3D", "axis" => "-1"],
-
         ];
     }
 
@@ -547,7 +290,7 @@ class CudaArrayBenchmark extends Benchmark
 
     public function description(): string
     {
-        return "CudaArray methods Benchmark";
+        return "CudaArray basic operation methods Benchmark";
     }
 
     public function args3DShape(int $count): array
@@ -727,41 +470,6 @@ class CudaArrayBenchmark extends Benchmark
         };
     }
 
-    #[InjectArgs("args3DShape")]
-    public function cudaArrayOnes(array $shape): void
-    {
-        CudaArray::ones($shape);
-    }
-
-    #[InjectArgs("args3DShape")]
-    public function cudaArrayZeros(array $shape): void
-    {
-        CudaArray::zeros($shape);
-    }
-
-    #[InjectArgs("args3DAndValue")]
-    public function cudaArrayFull(array $shape, int $value): void
-    {
-        CudaArray::full($shape, $value);
-    }
-
-    #[InjectArgs("args3DAndRange")]
-    public function cudaArrayRand(array $shape, float $min, float $max): void
-    {
-        CudaArray::rand($shape, $min, $max);
-    }
-
-    #[InjectArgs("argsCudaArrayConcatAxisZero")]
-    public function cudaArrayConcatAxisZero(CudaArray $first, CudaArray $second, int $axis): void
-    {
-        $first->concat([$second], $axis);
-    }
-
-    #[InjectArgs("argsCudaArrayConcatAxisOne")]
-    public function cudaArrayConcatAxisOne(CudaArray $first, CudaArray $second, int $axis): void
-    {
-        $first->concat([$second], $axis);
-    }
 
     #[InjectArgs("argsArithmetic")]
     public function cudaArrayAdd(CudaArray $first, CudaArray|float $second): void
@@ -817,24 +525,6 @@ class CudaArrayBenchmark extends Benchmark
         $first->ne($second);
     }
 
-    #[InjectArgs("argsUnary")]
-    public function cudaArrayFlatten(CudaArray $tensor): void
-    {
-        $tensor->flatten();
-    }
-
-    #[InjectArgs("argsReshape")]
-    public function cudaArrayReshape(CudaArray $tensor, array $shape): void
-    {
-        $tensor->reshape($shape);
-    }
-
-    #[InjectArgs("argsTranspose")]
-    public function cudaArrayTranspose(CudaArray $tensor, array $idxs): void
-    {
-        $tensor->transpose($idxs);
-    }
-
     #[InjectArgs("argsArithmetic")]
     public function cudaArrayle(CudaArray $first, CudaArray|float $second): void
     {
@@ -869,65 +559,5 @@ class CudaArrayBenchmark extends Benchmark
     public function cudaArrayRound(CudaArray $tensor): void
     {
         $tensor->round();
-    }
-
-    #[InjectArgs("argsMatmul")]
-    public function cudaArrayMatmul(CudaArray $first, CudaArray $second): void
-    {
-        $first->matmul($second);
-    }
-
-    #[InjectArgs("argsTransfer")]
-    public function cudaArrayToHost(CudaArray $tensor): void
-    {
-        $tensor->toHost();
-    }
-
-    #[InjectArgs("argsTransfer")]
-    public function cudaArrayToArray(CudaArray $tensor): void
-    {
-        $tensor->toArray();
-    }
-
-    #[InjectArgs("argsConstructor")]
-    public function cudaArrayConstructor(array $phpArray): void
-    {
-        new CudaArray($phpArray);
-    }
-
-    #[InjectArgs("argsReduction")]
-    public function cudaArraySum(CudaArray $tensor, ?int $axis): void
-    {
-        $tensor->sum($axis);
-    }
-
-    #[InjectArgs("argsReduction")]
-    public function cudaArrayMax(CudaArray $tensor, ?int $axis): void
-    {
-        $tensor->max($axis);
-    }
-
-    #[InjectArgs("argsReduction")]
-    public function cudaArrayMin(CudaArray $tensor, ?int $axis): void
-    {
-        $tensor->min($axis);
-    }
-
-    #[InjectArgs("argsReduction")]
-    public function cudaArrayProd(CudaArray $tensor, ?int $axis): void
-    {
-        $tensor->prod($axis);
-    }
-
-    #[InjectArgs("argsReduction")]
-    public function cudaArrayArgMax(CudaArray $tensor, ?int $axis): void
-    {
-        $tensor->argMax($axis);
-    }
-
-    #[InjectArgs("argsReduction")]
-    public function cudaArrayArgMin(CudaArray $tensor, ?int $axis): void
-    {
-        $tensor->argMin($axis);
     }
 }

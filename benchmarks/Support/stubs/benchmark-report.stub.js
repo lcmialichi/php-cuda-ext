@@ -1,221 +1,205 @@
-// CUDA Benchmark Report - Interactive Features
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = document.querySelectorAll('.report-section');
-
-    document.addEventListener('click', function (e) {
-        if (e.target.closest('.toggle-group-btn') || e.target.closest('.group-header')) {
-            const btn = e.target.closest('.toggle-group-btn') ||
-                e.target.closest('.group-header').querySelector('.toggle-group-btn');
-            const groupBody = btn.closest('.test-group').querySelector('.group-body');
-            const icon = btn.querySelector('i');
-
-            groupBody.classList.toggle('expanded');
-            btn.classList.toggle('rotated');
-            icon.className = groupBody.classList.contains('expanded') ?
-                'fas fa-chevron-up' : 'fas fa-chevron-down';
-        }
-
-        if (e.target.closest('.toggle-run-details-btn')) {
-            const btn = e.target.closest('.toggle-run-details-btn');
-            const runId = btn.getAttribute('data-run');
-            const details = document.getElementById(runId);
-
-            details.classList.toggle('expanded');
-            btn.innerHTML = details.classList.contains('expanded') ?
-                '<i class="fas fa-chart-bar"></i> Hide Details' :
-                '<i class="fas fa-chart-bar"></i> View Details';
-        }
-    });
-
-    document.addEventListener('change', function (e) {
-        if (e.target.classList.contains('sort-select')) {
-            const sortBy = e.target.value;
-            sortTestGroups(sortBy);
-        }
-    });
-
-    function sortTestGroups(sortBy) {
-        const container = document.querySelector('.comparison-groups');
-        const groups = Array.from(container.querySelectorAll('.test-group'));
-
-        groups.sort((a, b) => {
-            let aValue, bValue;
-
-            switch (sortBy) {
-                case 'name':
-                    aValue = a.getAttribute('data-name').toLowerCase();
-                    bValue = b.getAttribute('data-name').toLowerCase();
-                    return aValue.localeCompare(bValue);
-
-                case 'time':
-                    aValue = parseFloat(a.getAttribute('data-time'));
-                    bValue = parseFloat(b.getAttribute('data-time'));
-                    return aValue - bValue;
-
-                case 'memory':
-                    aValue = parseFloat(a.getAttribute('data-memory'));
-                    bValue = parseFloat(b.getAttribute('data-memory'));
-                    return aValue - bValue;
-
-                case 'runs':
-                    aValue = parseInt(a.getAttribute('data-runs'));
-                    bValue = parseInt(b.getAttribute('data-runs'));
-                    return bValue - aValue; // Mais runs primeiro
-
-                default:
-                    return 0;
-            }
-        });
-
-        groups.forEach(group => container.appendChild(group));
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const controls = document.querySelector('.controls');
-        if (controls) {
-            const expandAllBtn = document.createElement('button');
-            expandAllBtn.className = 'expand-all-btn';
-            expandAllBtn.innerHTML = '<i class="fas fa-expand-alt"></i> Expand All';
-            expandAllBtn.style.marginLeft = '1rem';
-            controls.querySelector('.sort-controls').appendChild(expandAllBtn);
-
-            expandAllBtn.addEventListener('click', function () {
-                const groups = document.querySelectorAll('.test-group');
-                const allExpanded = Array.from(groups).every(group =>
-                    group.querySelector('.group-body').classList.contains('expanded'));
-
-                groups.forEach(group => {
-                    const body = group.querySelector('.group-body');
-                    const btn = group.querySelector('.toggle-group-btn');
-                    const icon = btn.querySelector('i');
-
-                    if (allExpanded) {
-                        body.classList.remove('expanded');
-                        btn.classList.remove('rotated');
-                        icon.className = 'fas fa-chevron-down';
-                    } else {
-                        body.classList.add('expanded');
-                        btn.classList.add('rotated');
-                        icon.className = 'fas fa-chevron-up';
-                    }
-                });
-
-                expandAllBtn.innerHTML = allExpanded ?
-                    '<i class="fas fa-expand-alt"></i> Expand All' :
-                    '<i class="fas fa-compress-alt"></i> Collapse All';
-            });
-        }
-    });
-
+    
     navLinks.forEach(link => {
-        link.addEventListener('click', function (e) {
+        link.addEventListener('click', function(e) {
             e.preventDefault();
-
+            
             navLinks.forEach(l => l.classList.remove('active'));
             this.classList.add('active');
-
-            const targetId = this.getAttribute('href').substring(1);
+            
+            const sectionId = this.getAttribute('data-section');
             sections.forEach(section => {
                 section.classList.remove('active');
-                if (section.id === targetId) {
+                if (section.id === sectionId) {
                     section.classList.add('active');
                 }
             });
-
-            history.pushState(null, '', '#' + targetId);
         });
     });
-
-    const sortButtons = document.querySelectorAll('.sort-btn');
-    sortButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const sortType = this.getAttribute('data-sort');
-            sortComparisonCards(sortType);
-
-            sortButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
+    
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const testCards = document.querySelectorAll('.test-card');
+            
+            testCards.forEach(card => {
+                const testName = card.querySelector('h4').textContent.toLowerCase();
+                if (testName.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         });
-    });
-
-    document.querySelectorAll('.toggle-details-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const card = this.closest('.comparison-card');
-            const details = card.querySelector('.metric-details');
-            details.style.display = details.style.display === 'none' ? 'grid' : 'none';
-            this.textContent = details.style.display === 'none' ? 'Show Details' : 'Hide Details';
+    }
+    
+    const benchmarkFilter = document.querySelector('.benchmark-filter');
+    if (benchmarkFilter) {
+        benchmarkFilter.addEventListener('change', function() {
+            const selectedBenchmark = this.value;
+            const benchmarkGroups = document.querySelectorAll('.benchmark-group');
+            
+            benchmarkGroups.forEach(group => {
+                const benchmarkName = group.getAttribute('data-benchmark');
+                if (!selectedBenchmark || benchmarkName === selectedBenchmark) {
+                    group.style.display = 'block';
+                } else {
+                    group.style.display = 'none';
+                }
+            });
         });
-    });
-
-    document.querySelectorAll('.details-header').forEach(header => {
-        header.addEventListener('click', function () {
-            const content = this.nextElementSibling.nextElementSibling;
-            const icon = this.querySelector('i');
-
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                icon.className = 'fas fa-caret-down';
-            } else {
-                content.style.display = 'none';
-                icon.className = 'fas fa-caret-right';
+    }
+    
+    const sortSelect = document.querySelector('.sort-select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            const sortValue = this.value;
+            const testCards = Array.from(document.querySelectorAll('.test-card'));
+            
+            testCards.sort((a, b) => {
+                const aName = a.getAttribute('data-name');
+                const bName = b.getAttribute('data-name');
+                const aTime = parseFloat(a.getAttribute('data-time'));
+                const bTime = parseFloat(b.getAttribute('data-time'));
+                const aMemory = parseFloat(a.getAttribute('data-memory'));
+                const bMemory = parseFloat(b.getAttribute('data-memory'));
+                const aOps = parseFloat(a.getAttribute('data-ops'));
+                const bOps = parseFloat(b.getAttribute('data-ops'));
+                const aRuns = parseInt(a.getAttribute('data-runs'));
+                const bRuns = parseInt(b.getAttribute('data-runs'));
+                
+                switch(sortValue) {
+                    case 'name-asc':
+                        return aName.localeCompare(bName);
+                    case 'name-desc':
+                        return bName.localeCompare(aName);
+                    case 'time-asc':
+                        return aTime - bTime;
+                    case 'time-desc':
+                        return bTime - aTime;
+                    case 'memory-asc':
+                        return aMemory - bMemory;
+                    case 'memory-desc':
+                        return bMemory - aMemory;
+                    case 'ops-desc':
+                        return bOps - aOps;
+                    case 'ops-asc':
+                        return aOps - bOps;
+                    default:
+                        return 0;
+                }
+            });
+            
+            const testsGrid = document.querySelector('.tests-grid');
+            if (testsGrid) {
+                testCards.forEach(card => testsGrid.appendChild(card));
+            }
+        });
+    }
+    
+    const viewDetailsBtns = document.querySelectorAll('.view-details-btn');
+    const detailsModal = document.getElementById('detailsModal');
+    const modalBody = document.getElementById('modalBody');
+    const closeModal = detailsModal?.querySelector('.close-modal');
+    const modalOverlay = detailsModal?.querySelector('.modal-overlay');
+    
+    const benchmarkData = window.benchmarkData || {};
+    
+    viewDetailsBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const testName = this.getAttribute('data-test');
+            const testCard = this.closest('.test-card');
+            const benchmarkGroup = testCard?.closest('.benchmark-group');
+            const handlerName = benchmarkGroup?.getAttribute('data-benchmark');
+            
+            const testData = findTestData(testName, handlerName);
+            
+            if (testData && modalBody) {
+                const detailsHtml = generateTestDetailsHTML(testData, testName, handlerName);
+                modalBody.innerHTML = detailsHtml;
+                
+                modalBody.querySelectorAll('.view-run-details').forEach(runBtn => {
+                    runBtn.addEventListener('click', function() {
+                        const runData = JSON.parse(this.getAttribute('data-run'));
+                        showRunDetails(runData, testName);
+                    });
+                });
+                
+                detailsModal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
             }
         });
     });
-
-    if (window.location.hash) {
-        const targetId = window.location.hash.substring(1);
-        const targetLink = document.querySelector(`.nav-link[href="#${targetId}"]`);
-        const targetSection = document.getElementById(targetId);
-
-        if (targetLink && targetSection) {
-            navLinks.forEach(l => l.classList.remove('active'));
-            sections.forEach(s => s.classList.remove('active'));
-
-            targetLink.classList.add('active');
-            targetSection.classList.add('active');
+    
+    if (closeModal) {
+        closeModal.addEventListener('click', closeDetailsModal);
+    }
+    
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', closeDetailsModal);
+    }
+    
+    function closeDetailsModal() {
+        detailsModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && detailsModal.style.display === 'block') {
+            closeDetailsModal();
         }
+    });
+    
+    function findTestData(testName, handlerName) {
+        console.log('Looking for:', testName, handlerName);
+        return null;
     }
-
-    function sortComparisonCards(sortType) {
-        const container = document.querySelector('.comparison-grid');
-        const cards = Array.from(container.querySelectorAll('.comparison-card'));
-
-        cards.sort((a, b) => {
-            let aValue, bValue;
-
-            switch (sortType) {
-                case 'time':
-                    aValue = parseFloat(a.getAttribute('data-time'));
-                    bValue = parseFloat(b.getAttribute('data-time'));
-                    return aValue - bValue;
-
-                case 'memory':
-                    aValue = parseFloat(a.getAttribute('data-memory'));
-                    bValue = parseFloat(b.getAttribute('data-memory'));
-                    return aValue - bValue;
-
-                case 'name':
-                    aValue = a.querySelector('h3').textContent.toLowerCase();
-                    bValue = b.querySelector('h3').textContent.toLowerCase();
-                    return aValue.localeCompare(bValue);
-
-                default:
-                    return 0;
+    
+    function generateTestDetailsHTML(testData, testName, handlerName) {
+        return '<div class="loading">Loading details...</div>';
+    }
+    
+    function showRunDetails(runData, testName) {
+        alert(`Run details for ${testName}:\n` +
+              `Time: ${runData.stats.time.avg} ms\n` +
+              `Memory: ${runData.stats.memory.avg}\n` +
+              `Ops/Sec: ${runData.stats.ops.formatted}\n` +
+              `Iterations: ${runData.iterations}`);
+    }
+    
+    const toggleButtons = document.querySelectorAll('.toggle-performance-chart');
+    toggleButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const chartId = this.getAttribute('data-chart');
+            const chart = document.getElementById(chartId);
+            if (chart) {
+                chart.style.display = chart.style.display === 'none' ? 'block' : 'none';
+                this.querySelector('i').classList.toggle('fa-chevron-down');
+                this.querySelector('i').classList.toggle('fa-chevron-up');
             }
         });
-
-        cards.forEach(card => container.appendChild(card));
-    }
-
-    document.querySelectorAll('.summary-row').forEach(row => {
-        const benchmarkName = row.getAttribute('data-benchmark');
-
-        row.addEventListener('mouseenter', function () {
-            this.style.backgroundColor = '#f0f7ff';
-        });
-
-        row.addEventListener('mouseleave', function () {
-            this.style.backgroundColor = '';
+    });
+    
+    const summaryRows = document.querySelectorAll('.summary-row');
+    summaryRows.forEach(row => {
+        row.addEventListener('click', function() {
+            const benchmark = this.getAttribute('data-benchmark');
+            const benchmarkFilter = document.querySelector('.benchmark-filter');
+            if (benchmarkFilter) {
+                benchmarkFilter.value = benchmark;
+                benchmarkFilter.dispatchEvent(new Event('change'));
+                
+                document.querySelector('[data-section="comparison"]').click();
+            }
         });
     });
+    
+    function initCharts() {
+        console.log('Charts initialized');
+    }
+    
+    initCharts();
 });

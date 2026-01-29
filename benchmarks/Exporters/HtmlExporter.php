@@ -52,13 +52,14 @@ class HtmlExporter implements ExporterInterface
         }
 
         $summaryHtml = $this->generateSummaryTable($benchmarksData);
-        $comparisonHtml = $this->generateComparisonTable($allResults);
+        $comparisonHtml = $this->generateComparisonTable($allResults, $benchmarksData);
 
         $html = str_replace(
             [
                 '{{TITLE}}',
                 '{{DEVICE}}',
                 '{{GENERATED_AT}}',
+                '{{TIMESTAMP}}',
                 '{{SUMMARY_SECTION}}',
                 '{{COMPARISON_SECTION}}',
                 '{{STYLE}}',
@@ -68,6 +69,7 @@ class HtmlExporter implements ExporterInterface
                 'CUDA Benchmark Report - ' . date('Y-m-d H:i:s'),
                 $report->getDevice(),
                 date('Y-m-d H:i:s'),
+                time(),
                 $summaryHtml,
                 $comparisonHtml,
                 $this->cssTemplate,
@@ -85,6 +87,9 @@ class HtmlExporter implements ExporterInterface
         $results = [];
 
         foreach ($classResult->getResults() as $result) {
+            $avgTime = $result->getAvgTime();
+            $opsPerSecond = $this->calculateOpsPerSecond($avgTime);
+            
             $results[] = [
                 'name' => $result->getName(),
                 'type' => $result->getType(),
@@ -97,7 +102,7 @@ class HtmlExporter implements ExporterInterface
                     'time' => [
                         'min' => $result->getMinTime(),
                         'max' => $result->getMaxTime(),
-                        'avg' => $result->getAvgTime(),
+                        'avg' => $avgTime,
                         'total' => array_sum($result->getTimes()),
                         'std_dev' => $this->calculateStdDev($result->getTimes())
                     ],
@@ -106,6 +111,10 @@ class HtmlExporter implements ExporterInterface
                         'max' => $this->formatBytes($result->getMaxMemoryUsage()),
                         'avg' => $this->formatBytes($result->getAvgMemoryUsage()),
                         'total' => $this->formatBytes(array_sum($result->getMemoryUsages()))
+                    ],
+                    'ops' => [
+                        'per_second' => $opsPerSecond,
+                        'formatted' => $this->formatOpsPerSecond($opsPerSecond)
                     ]
                 ]
             ];
@@ -143,6 +152,7 @@ class HtmlExporter implements ExporterInterface
         foreach ($benchmarksData as $benchmark) {
             $totalTime = 0;
             $totalMemoryBytes = 0;
+            $totalOps = 0;
             $testCount = count($benchmark['results']);
 
             if ($testCount === 0) {
@@ -150,19 +160,17 @@ class HtmlExporter implements ExporterInterface
             }
 
             foreach ($benchmark['results'] as $result) {
-                $time = $result['stats']['time']['avg'];
-                $memory = $result['stats']['memory']['avg'];
-
-                $totalTime += $time;
-                $totalMemoryBytes += $this->parseMemoryToBytes($memory);
+                $totalTime += $result['stats']['time']['avg'];
+                $totalMemoryBytes += $this->parseMemoryToBytes($result['stats']['memory']['avg']);
+                $totalOps += $result['stats']['ops']['per_second'];
             }
 
             $avgTime = $totalTime / $testCount;
             $avgMemoryBytes = $totalMemoryBytes / $testCount;
-            $opsPerSecond = $avgTime > 0 ? (1_000_000 / $avgTime) : 0;
+            $avgOps = $totalOps / $testCount;
 
             $formattedAvgTime = $this->formatTime($avgTime);
-            $formattedOps = $this->formatOpsPerSecond($opsPerSecond);
+            $formattedOps = $this->formatOpsPerSecond($avgOps);
             $formattedMemory = $this->formatBytes($avgMemoryBytes);
 
             $html .= sprintf(
@@ -182,9 +190,297 @@ class HtmlExporter implements ExporterInterface
         $html .= '</tbody>';
         $html .= '</table>';
         $html .= '</div>';
+        
+        $html .= $this->generateSummaryStats($benchmarksData);
+        
         $html .= '</div>';
 
         return $html;
+    }
+
+    private function generateSummaryStats(array $benchmarksData): string
+    {
+        if (empty($benchmarksData)) {
+            return '';
+        }
+
+        $totalTests = 0;
+        $totalTime = 0;
+        $totalMemory = 0;
+        $totalOps = 0;
+        
+        foreach ($benchmarksData as $benchmark) {
+            $totalTests += count($benchmark['results']);
+            foreach ($benchmark['results'] as $result) {
+                $totalTime += $result['stats']['time']['avg'];
+                $totalMemory += $this->parseMemoryToBytes($result['stats']['memory']['avg']);
+                $totalOps += $result['stats']['ops']['per_second'];
+            }
+        }
+        
+        $avgTime = $totalTime / $totalTests;
+        $avgMemory = $totalMemory / $totalTests;
+        $avgOps = $totalOps / $totalTests;
+        
+        $html = '<div class="summary-stats">';
+        $html .= '<div class="stats-grid">';
+        
+        $html .= '<div class="stat-card">';
+        $html .= '<div class="stat-icon"><i class="fas fa-vial"></i></div>';
+        $html .= '<div class="stat-content">';
+        $html .= '<div class="stat-value">' . $totalTests . '</div>';
+        $html .= '<div class="stat-label">Total Tests</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        $html .= '<div class="stat-card">';
+        $html .= '<div class="stat-icon"><i class="fas fa-clock"></i></div>';
+        $html .= '<div class="stat-content">';
+        $html .= '<div class="stat-value">' . $this->formatTime($avgTime) . '</div>';
+        $html .= '<div class="stat-label">Avg Time</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        $html .= '<div class="stat-card">';
+        $html .= '<div class="stat-icon"><i class="fas fa-memory"></i></div>';
+        $html .= '<div class="stat-content">';
+        $html .= '<div class="stat-value">' . $this->formatBytes($avgMemory) . '</div>';
+        $html .= '<div class="stat-label">Avg Memory</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        $html .= '<div class="stat-card">';
+        $html .= '<div class="stat-icon"><i class="fas fa-tachometer-alt"></i></div>';
+        $html .= '<div class="stat-content">';
+        $html .= '<div class="stat-value">' . $this->formatOpsPerSecond($avgOps) . '</div>';
+        $html .= '<div class="stat-label">Avg Ops/Sec</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        return $html;
+    }
+
+    private function generateComparisonTable(array $allResults, array $benchmarksData): string
+    {
+        if (empty($allResults)) {
+            return '';
+        }
+
+        $groupedByHandler = [];
+        foreach ($allResults as $result) {
+            $handler = $this->findHandlerForResult($result, $benchmarksData);
+            $testName = $result['name'];
+            $metadataHash = $this->getMetadataHash($result['metadata']);
+
+            if (!isset($groupedByHandler[$handler])) {
+                $groupedByHandler[$handler] = [];
+            }
+
+            if (!isset($groupedByHandler[$handler][$testName])) {
+                $groupedByHandler[$handler][$testName] = [];
+            }
+
+            if (!isset($groupedByHandler[$handler][$testName][$metadataHash])) {
+                $groupedByHandler[$handler][$testName][$metadataHash] = [
+                    'metadata' => $result['metadata'],
+                    'type' => $result['type'],
+                    'runs' => []
+                ];
+            }
+
+            $groupedByHandler[$handler][$testName][$metadataHash]['runs'][] = $result;
+        }
+
+        $html = '<div class="comparison-section">';
+        $html .= '<h2><i class="fas fa-balance-scale"></i> Test Comparison</h2>';
+        
+        $html .= '<div class="comparison-stats-header">';
+        $html .= '<div class="stats-overview">';
+        $html .= '<span class="stat-item"><i class="fas fa-layer-group"></i> ' . count($benchmarksData) . ' Benchmarks</span>';
+        $html .= '<span class="stat-item"><i class="fas fa-list"></i> ' . count($allResults) . ' Tests</span>';
+        $html .= '<span class="stat-item"><i class="fas fa-play"></i> ' . array_sum(array_map('count', $groupedByHandler)) . ' Configurations</span>';
+        $html .= '</div>';
+        $html .= '</div>';
+        
+        $html .= '<div class="controls">';
+        $html .= '<div class="filter-controls">';
+        $html .= '<input type="text" class="search-input" placeholder="Search tests...">';
+        $html .= '<select class="benchmark-filter">';
+        $html .= '<option value="">All Benchmarks</option>';
+        foreach ($benchmarksData as $benchmark) {
+            $html .= '<option value="' . htmlspecialchars($benchmark['handler_name']) . '">' . 
+                     htmlspecialchars($benchmark['handler_name']) . '</option>';
+        }
+        $html .= '</select>';
+        $html .= '</div>';
+        
+        $html .= '<div class="sort-controls">';
+        $html .= '<select class="sort-select">';
+        $html .= '<option value="name-asc">Sort by Name (A-Z)</option>';
+        $html .= '<option value="name-desc">Sort by Name (Z-A)</option>';
+        $html .= '<option value="time-asc">Sort by Time (Fastest)</option>';
+        $html .= '<option value="time-desc">Sort by Time (Slowest)</option>';
+        $html .= '<option value="memory-asc">Sort by Memory (Lowest)</option>';
+        $html .= '<option value="memory-desc">Sort by Memory (Highest)</option>';
+        $html .= '<option value="ops-desc">Sort by Ops/Sec (Highest)</option>';
+        $html .= '<option value="ops-asc">Sort by Ops/Sec (Lowest)</option>';
+        $html .= '</select>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        $html .= '<div class="comparison-container">';
+
+        foreach ($groupedByHandler as $handlerName => $tests) {
+            $html .= '<div class="benchmark-group" data-benchmark="' . htmlspecialchars($handlerName) . '">';
+            $html .= '<div class="benchmark-group-header">';
+            $html .= '<h3><i class="fas fa-microchip"></i> ' . htmlspecialchars($handlerName) . '</h3>';
+            $html .= '<span class="test-count">' . count($tests) . ' tests</span>';
+            $html .= '</div>';
+            
+            $html .= '<div class="tests-grid">';
+            
+            foreach ($tests as $testName => $metadataGroups) {
+                $totalRuns = 0;
+                $bestTime = PHP_FLOAT_MAX;
+                $worstTime = 0;
+                $bestOps = 0;
+                $totalMemory = 0;
+                $configCount = count($metadataGroups);
+                
+                foreach ($metadataGroups as $group) {
+                    $totalRuns += count($group['runs']);
+                    foreach ($group['runs'] as $run) {
+                        $time = $run['stats']['time']['avg'];
+                        $ops = $run['stats']['ops']['per_second'];
+                        $memory = $this->parseMemoryToBytes($run['stats']['memory']['avg']);
+                        
+                        $bestTime = min($bestTime, $time);
+                        $worstTime = max($worstTime, $time);
+                        $bestOps = max($bestOps, $ops);
+                        $totalMemory += $memory;
+                    }
+                }
+                
+                $avgMemory = $totalRuns > 0 ? $totalMemory / $totalRuns : 0;
+                $timeRange = $bestTime > 0 ? (($worstTime - $bestTime) / $bestTime * 100) : 0;
+                
+                $html .= '<div class="test-card" 
+                    data-name="' . htmlspecialchars($testName) . '"
+                    data-time="' . $bestTime . '"
+                    data-memory="' . $avgMemory . '"
+                    data-ops="' . $bestOps . '"
+                    data-runs="' . $totalRuns . '">';
+                
+                $html .= '<div class="test-card-header">';
+                $html .= '<h4>' . htmlspecialchars($testName) . '</h4>';
+                $html .= '<span class="config-count">' . $configCount . ' configs</span>';
+                $html .= '</div>';
+                
+                $html .= '<div class="test-card-body">';
+                
+                $html .= '<div class="performance-metrics">';
+                $html .= '<div class="metric">';
+                $html .= '<div class="metric-label"><i class="fas fa-clock"></i> Best Time</div>';
+                $html .= '<div class="metric-value time-metric">' . $this->formatTime($bestTime) . '</div>';
+                $html .= '</div>';
+                
+                $html .= '<div class="metric">';
+                $html .= '<div class="metric-label"><i class="fas fa-tachometer-alt"></i> Ops/Sec</div>';
+                $html .= '<div class="metric-value ops-metric">' . $this->formatOpsPerSecond($bestOps) . '</div>';
+                $html .= '</div>';
+                
+                $html .= '<div class="metric">';
+                $html .= '<div class="metric-label"><i class="fas fa-memory"></i> Memory</div>';
+                $html .= '<div class="metric-value memory-metric">' . $this->formatBytes($avgMemory) . '</div>';
+                $html .= '</div>';
+                $html .= '</div>';
+                
+                if ($timeRange > 0) {
+                    $html .= '<div class="performance-bar">';
+                    $html .= '<div class="bar-labels">';
+                    $html .= '<span>' . $this->formatTime($bestTime) . '</span>';
+                    $html .= '<span>' . round($timeRange, 1) . '% range</span>';
+                    $html .= '<span>' . $this->formatTime($worstTime) . '</span>';
+                    $html .= '</div>';
+                    $html .= '<div class="bar-container">';
+                    $html .= '<div class="bar-fill" style="width: ' . min(100, $timeRange) . '%"></div>';
+                    $html .= '</div>';
+                    $html .= '</div>';
+                }
+                
+                $html .= '<div class="config-summary">';
+                foreach ($metadataGroups as $metadataHash => $group) {
+                    if (empty($group['metadata'])) {
+                        $html .= '<span class="config-tag">Default</span>';
+                    } else {
+                        $configText = implode(', ', array_map(
+                            fn($k, $v) => $k . ': ' . (is_array($v) ? json_encode($v) : $v),
+                            array_keys($group['metadata']),
+                            array_values($group['metadata'])
+                        ));
+                        $html .= '<span class="config-tag" title="' . htmlspecialchars($configText) . '">' . 
+                                 htmlspecialchars(substr($configText, 0, 30)) . 
+                                 (strlen($configText) > 30 ? '...' : '') . '</span>';
+                    }
+                }
+                $html .= '</div>';
+                
+                $html .= '</div>';
+                
+                $html .= '<div class="test-card-footer">';
+                $html .= '<button class="view-details-btn" data-test="' . htmlspecialchars($testName) . '">';
+                $html .= '<i class="fas fa-chart-bar"></i> View Details';
+                $html .= '</button>';
+                $html .= '</div>';
+                
+                $html .= '</div>';
+            }
+            
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+        
+        $html .= $this->generateDetailsModal();
+        
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    private function findHandlerForResult(array $result, array $benchmarksData): string
+    {
+        foreach ($benchmarksData as $benchmark) {
+            foreach ($benchmark['results'] as $benchmarkResult) {
+                if ($benchmarkResult['name'] === $result['name'] && 
+                    $benchmarkResult['type'] === $result['type'] &&
+                    $this->getMetadataHash($benchmarkResult['metadata']) === $this->getMetadataHash($result['metadata'])) {
+                    return $benchmark['handler_name'];
+                }
+            }
+        }
+        return 'Unknown';
+    }
+
+    private function generateDetailsModal(): string
+    {
+        return '
+        <div class="details-modal" id="detailsModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-chart-bar"></i> Test Details</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Details will be loaded here -->
+                </div>
+            </div>
+        </div>';
     }
 
     private function formatBytes(int $bytes): string
@@ -200,174 +496,6 @@ class HtmlExporter implements ExporterInterface
         return number_format($bytes, 2) . ' ' . $units[$i];
     }
 
-    private function generateComparisonTable(array $allResults): string
-    {
-        if (empty($allResults)) {
-            return '';
-        }
-
-        $groupedResults = [];
-        foreach ($allResults as $result) {
-            $testName = $result['name'];
-            $metadataHash = $this->getMetadataHash($result['metadata']);
-
-            if (!isset($groupedResults[$testName])) {
-                $groupedResults[$testName] = [];
-            }
-
-            if (!isset($groupedResults[$testName][$metadataHash])) {
-                $groupedResults[$testName][$metadataHash] = [
-                    'metadata' => $result['metadata'],
-                    'results' => [],
-                    'type' => $result['type']
-                ];
-            }
-
-            $groupedResults[$testName][$metadataHash]['results'][] = $result;
-        }
-
-        $html = '<div class="comparison-section">';
-        $html .= '<h2><i class="fas fa-balance-scale"></i> Test Comparison (Grouped by Test Name)</h2>';
-        $html .= '<div class="controls">';
-        $html .= '<div class="sort-controls">';
-        $html .= '<select class="sort-select">';
-        $html .= '<option value="name">Sort by Name</option>';
-        $html .= '<option value="time">Sort by Avg Time</option>';
-        $html .= '<option value="memory">Sort by Avg Memory</option>';
-        $html .= '<option value="runs">Sort by Number of Runs</option>';
-        $html .= '</select>';
-        $html .= '</div>';
-        $html .= '</div>';
-
-        $html .= '<div class="comparison-groups">';
-
-        foreach ($groupedResults as $testName => $metadataGroups) {
-            $totalRuns = 0;
-            foreach ($metadataGroups as $group) {
-                $totalRuns += count($group['results']);
-            }
-
-            $avgTime = 0;
-            $avgMemory = 0;
-            $runCount = 0;
-
-            foreach ($metadataGroups as $group) {
-                foreach ($group['results'] as $result) {
-                    $avgTime += $result['stats']['time']['avg'];
-                    $avgMemory += $this->parseBytes($result['stats']['memory']['avg']);
-                    $runCount++;
-                }
-            }
-
-            $avgTime = $runCount > 0 ? $avgTime / $runCount : 0;
-            $avgMemory = $runCount > 0 ? $this->formatBytes($avgMemory / $runCount) : '0 B';
-
-            $html .= '<div class="test-group" data-name="' . htmlspecialchars($testName) . '" 
-                 data-time="' . $avgTime . '" data-memory="' . $this->parseBytes($avgMemory) . '" 
-                 data-runs="' . $totalRuns . '">';
-
-            $html .= '<div class="group-header">';
-            $html .= '<div class="group-title">';
-            $html .= '<h3>' . htmlspecialchars($testName) . '</h3>';
-            $html .= '<div class="group-stats">';
-            $html .= '<span class="stat-badge"><i class="fas fa-play-circle"></i> ' . $totalRuns . ' runs</span>';
-            $html .= '<span class="stat-badge"><i class="fas fa-clock"></i> ' . number_format($avgTime, 4) . ' ms avg</span>';
-            $html .= '<span class="stat-badge"><i class="fas fa-memory"></i> ' . $avgMemory . ' avg</span>';
-            $html .= '</div>';
-            $html .= '</div>';
-            $html .= '<button class="toggle-group-btn"><i class="fas fa-chevron-down"></i></button>';
-            $html .= '</div>';
-
-            $html .= '<div class="group-body">';
-            $currentRun = 0;
-
-            foreach ($metadataGroups as $metadataHash => $group) {
-                $metadataHtml = $this->formatMetadataForComparison($group['metadata']);
-                $groupResultCount = count($group['results']);
-                $groupAvgTime = 0;
-                $groupAvgMemory = 0;
-                $currentRun++;
-
-                foreach ($group['results'] as $result) {
-                    $groupAvgTime += $result['stats']['time']['avg'];
-                    $groupAvgMemory += $this->parseBytes($result['stats']['memory']['avg']);
-                }
-
-                $groupAvgTime = $groupResultCount > 0 ? $groupAvgTime / $groupResultCount : 0;
-                $groupAvgMemory = $groupResultCount > 0 ? $this->formatBytes($groupAvgMemory / $groupResultCount) : '0 B';
-
-                $html .= '<div class="metadata-group">';
-                $html .= '<div class="metadata-group-header">';
-                $html .= '<h4>Configuration</h4>';
-                $html .= '<div class="metadata-content">' . $metadataHtml . '</div>';
-                $html .= '<div class="metadata-stats">';
-                $html .= '<span><i class="fas fa-running"></i> ' . $groupResultCount . ' runs</span>';
-                $html .= '<span><i class="fas fa-clock"></i> ' . number_format($groupAvgTime, 4) . ' ms avg</span>';
-                $html .= '</div>';
-                $html .= '</div>';
-
-                $html .= '<div class="runs-container">';
-                foreach ($group['results'] as $index => $result) {
-                    $timePercent = $this->calculateTimePercentage($result['stats']['time']['avg'], $allResults);
-                    $memoryPercent = $this->calculateMemoryPercentage(
-                        $this->parseBytes($result['stats']['memory']['avg']),
-                        $allResults
-                    );
-
-                    $html .= '<div class="run-card">';
-                    $html .= '<div class="run-header">';
-                    $html .= '<span class="run-number">Run ' . $currentRun . '</span>';
-                    $html .= '<span class="run-type">' . htmlspecialchars($result['type']) . '</span>';
-                    $html .= '</div>';
-
-                    $html .= '<div class="run-body">';
-                    $html .= '<div class="metric-row">';
-                    $html .= '<div class="metric-cell">';
-                    $html .= '<div class="metric-label">Time</div>';
-                    $html .= '<div class="metric-value">' . number_format($result['stats']['time']['avg'], 4) . ' ms</div>';
-                    $html .= '<div class="progress-bar">';
-                    $html .= '<div class="progress-fill" style="width: ' . $timePercent . '%"></div>';
-                    $html .= '</div>';
-                    $html .= '</div>';
-
-                    $html .= '<div class="metric-cell">';
-                    $html .= '<div class="metric-label">Memory</div>';
-                    $html .= '<div class="metric-value">' . $result['stats']['memory']['avg'] . '</div>';
-                    $html .= '<div class="progress-bar">';
-                    $html .= '<div class="progress-fill" style="width: ' . $memoryPercent . '%"></div>';
-                    $html .= '</div>';
-                    $html .= '</div>';
-                    $html .= '</div>';
-
-                    $html .= '<div class="run-details-toggle">';
-                    $html .= '<button class="toggle-run-details-btn" data-run="' .
-                        htmlspecialchars($testName . '-' . $metadataHash . '-' . $index) . '">';
-                    $html .= '<i class="fas fa-chart-bar"></i> View Details';
-                    $html .= '</button>';
-                    $html .= '</div>';
-
-                    $html .= '<div class="run-details" id="' .
-                        htmlspecialchars($testName . '-' . $metadataHash . '-' . $index) . '">';
-                    $html .= $this->generateRunDetails($result, $index + 1);
-                    $html .= '</div>';
-                    $html .= '</div>';
-                    $html .= '</div>';
-                }
-
-                $html .= '</div>';
-                $html .= '</div>';
-            }
-
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
-        $html .= '</div>';
-
-        return $html;
-    }
-
     private function getMetadataHash(array $metadata): string
     {
         ksort($metadata);
@@ -377,7 +505,7 @@ class HtmlExporter implements ExporterInterface
     private function formatMetadataForComparison(array $metadata): string
     {
         if (empty($metadata)) {
-            return '<span class="no-metadata">No metadata</span>';
+            return '<div class="metadata-empty">No configuration metadata</div>';
         }
 
         $items = [];
@@ -385,117 +513,14 @@ class HtmlExporter implements ExporterInterface
             if (is_array($value)) {
                 $value = json_encode($value);
             }
-            $items[] = '<div class="metadata-item"><strong>' .
-                htmlspecialchars($key) . ':</strong> ' .
-                htmlspecialchars((string) $value) . '</div>';
+            $items[] = '<div class="metadata-item">' .
+                '<span class="metadata-key">' . htmlspecialchars($key) . ':</span>' .
+                '<span class="metadata-value">' . htmlspecialchars((string) $value) . '</span>' .
+                '</div>';
         }
 
-        return '<div class="metadata-items">' . implode('', $items) . '</div>';
+        return '<div class="metadata-grid">' . implode('', $items) . '</div>';
     }
-
-    private function generateRunDetails(array $result, int $runNumber): string
-    {
-        $html = '<div class="run-details-content">';
-        $html .= '<div class="details-grid">';
-
-        $html .= '<div class="detail-block time-stats">';
-        $html .= '<h5><i class="fas fa-clock"></i> Time Statistics (ms)</h5>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Min:</span>';
-        $html .= '<span class="stat-value">' . number_format($result['stats']['time']['min'], 4) . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Max:</span>';
-        $html .= '<span class="stat-value">' . number_format($result['stats']['time']['max'], 4) . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Avg:</span>';
-        $html .= '<span class="stat-value">' . number_format($result['stats']['time']['avg'], 4) . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Total:</span>';
-        $html .= '<span class="stat-value">' . number_format($result['stats']['time']['total'], 4) . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Std Dev:</span>';
-        $html .= '<span class="stat-value">' . number_format($result['stats']['time']['std_dev'], 4) . '</span>';
-        $html .= '</div>';
-        $html .= '</div>';
-
-        $html .= '<div class="detail-block memory-stats">';
-        $html .= '<h5><i class="fas fa-memory"></i> Memory Statistics</h5>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Min:</span>';
-        $html .= '<span class="stat-value">' . $result['stats']['memory']['min'] . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Max:</span>';
-        $html .= '<span class="stat-value">' . $result['stats']['memory']['max'] . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Avg:</span>';
-        $html .= '<span class="stat-value">' . $result['stats']['memory']['avg'] . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Total:</span>';
-        $html .= '<span class="stat-value">' . $result['stats']['memory']['total'] . '</span>';
-        $html .= '</div>';
-        $html .= '</div>';
-
-        $html .= '<div class="detail-block run-info">';
-        $html .= '<h5><i class="fas fa-info-circle"></i> Run Information</h5>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Run #:</span>';
-        $html .= '<span class="stat-value">' . $runNumber . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Iterations:</span>';
-        $html .= '<span class="stat-value">' . $result['iterations'] . '</span>';
-        $html .= '</div>';
-        $html .= '<div class="stat-row">';
-        $html .= '<span class="stat-label">Type:</span>';
-        $html .= '<span class="stat-value">' . htmlspecialchars($result['type']) . '</span>';
-        $html .= '</div>';
-        $html .= '</div>';
-
-        $html .= '</div>';
-        $html .= '</div>';
-
-        return $html;
-    }
-
-    private function calculateTimePercentage(float $value, array $allResults): float
-    {
-        $max = 0;
-        foreach ($allResults as $result) {
-            $max = max($max, $result['stats']['time']['avg']);
-        }
-
-        return $max > 0 ? min(100, ($value / $max) * 100) : 0;
-    }
-
-    private function calculateMemoryPercentage(float $value, array $allResults): float
-    {
-        $max = 0;
-        foreach ($allResults as $result) {
-            $max = max($max, $this->parseBytes($result['stats']['memory']['avg']));
-        }
-
-        return $max > 0 ? min(100, ($value / $max) * 100) : 0;
-    }
-
-    private function parseBytes(string $formatted): float
-    {
-        $units = ['B' => 1, 'KB' => 1024, 'MB' => 1048576, 'GB' => 1073741824];
-        $parts = explode(' ', $formatted);
-
-        if (count($parts) !== 2 || !isset($units[$parts[1]])) {
-            return 0;
-        }
-
-        return floatval($parts[0]) * $units[$parts[1]];
-    }
-
 
     private function parseMemoryToBytes(string $memoryString): int
     {
@@ -531,6 +556,15 @@ class HtmlExporter implements ExporterInterface
         return sqrt($variance);
     }
 
+    private function calculateOpsPerSecond(float $timeMs): float
+    {
+        if ($timeMs <= 0) {
+            return 0;
+        }
+        
+        $seconds = $timeMs / 1000;
+        return 1 / $seconds;
+    }
 
     private function formatTime(float $timeMs): string
     {

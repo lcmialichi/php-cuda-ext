@@ -17,103 +17,153 @@ class CudaArrayBasicMathOperations extends Benchmark
     {
         return [
             [
-                "run" => 10,
+                "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::add()",
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayAdd",
                 "metadata" => [
-                    ["shape" => "16x16x16 + 16x16x16", "type" => "3D + 3D"],
-                    ["shape" => "64x64x64 + 64x64x64", "type" => "3D + 3D"],
-                    ["shape" => "512x512x64 + 512x512x64", "type" => "3D + 3D"],
-                    ["shape" => "16x16x16 + float", "type" => "3D + Scalar"],
-                    ["shape" => "64x64x64 + float", "type" => "3D + Scalar"],
-                    ["shape" => "512x512x512 + float", "type" => "3D + Scalar"],
-                    ["shape" => "512x64 + 512x64", "type" => "2D + 2D"],
-                    ["shape" => "1024x512 + 1024x512", "type" => "2D + 2D"],
-                    ["shape" => "1024x512 + 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 + 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "256", "type" => "1D + 1D (tiny)", "category" => "elementwise"],
+                    ["shape" => "65536", "type" => "1D + 1D (small)", "category" => "elementwise"],
+                    ["shape" => "16777216", "type" => "1D + 1D (medium)", "category" => "elementwise"],
+                    ["shape" => "67108864", "type" => "1D + 1D (large)", "category" => "elementwise"],
+                    ["shape" => "16x16", "type" => "2D + 2D (tiny square)", "category" => "elementwise"],
+                    ["shape" => "256x256", "type" => "2D + 2D (small square)", "category" => "elementwise"],
+                    ["shape" => "1024x1024", "type" => "2D + 2D (medium square)", "category" => "elementwise"],
+                    ["shape" => "4096x4096", "type" => "2D + 2D (large square)", "category" => "elementwise"],
+                    ["shape" => "32x32768", "type" => "2D + 2D (wide)", "category" => "elementwise"],
+                    ["shape" => "32768x32", "type" => "2D + 2D (tall)", "category" => "elementwise"],
+                    ["shape" => "32x32x32", "type" => "3D + 3D (small cube)", "category" => "elementwise"],
+                    ["shape" => "128x128x128", "type" => "3D + 3D (medium cube)", "category" => "elementwise"],
+                    ["shape" => "512x512x3", "type" => "3D + 3D (HWC image)", "category" => "elementwise"],
+                    ["shape" => "3x512x512", "type" => "3D + 3D (CHW image)", "category" => "elementwise"],
+                    ["shape" => "8x64x64x3", "type" => "4D + 4D (small batch)", "category" => "elementwise"],
+                    ["shape" => "32x256x256x3", "type" => "4D + 4D (medium batch)", "category" => "elementwise"],
+                    ["shape" => "1024x1024 + scalar", "type" => "2D + scalar", "category" => "broadcast"],
+                    ["shape" => "1024x1024 + 1x1024", "type" => "2D + 1D (broadcast dim0)", "category" => "broadcast"],
+                    ["shape" => "1024x1024 + 1024x1", "type" => "2D + 1D (broadcast dim1)", "category" => "broadcast"],
+                    ["shape" => "1024x3x512 + 1x3x512", "type" => "3D + 3D (broadcast)", "category" => "broadcast"],
                 ]
             ],
             [
-                "run" => 10,
+                "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::subtract()",
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArraySubtract",
                 "metadata" => [
-                    ["shape" => "16x16x16 - 16x16x16", "type" => "3D - 3D"],
-                    ["shape" => "64x64x64 - 64x64x64", "type" => "3D - 3D"],
-                    ["shape" => "512x512x64 - 512x512x64", "type" => "3D - 3D"],
-                    ["shape" => "16x16x16 - float", "type" => "3D - Scalar"],
-                    ["shape" => "64x64x64 - float", "type" => "3D - Scalar"],
-                    ["shape" => "512x512x512 - float", "type" => "3D - Scalar"],
-                    ["shape" => "512x64 - 512x64", "type" => "2D - 2D"],
-                    ["shape" => "1024x512 - 1024x512", "type" => "2D - 2D"],
-                    ["shape" => "1024x512 - 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 - 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "256", "type" => "1D - 1D (tiny)", "category" => "elementwise"],
+                    ["shape" => "65536", "type" => "1D - 1D (small)", "category" => "elementwise"],
+                    ["shape" => "16777216", "type" => "1D - 1D (medium)", "category" => "elementwise"],
+                    ["shape" => "67108864", "type" => "1D - 1D (large)", "category" => "elementwise"],
+                    ["shape" => "16x16", "type" => "2D - 2D (tiny square)", "category" => "elementwise"],
+                    ["shape" => "256x256", "type" => "2D - 2D (small square)", "category" => "elementwise"],
+                    ["shape" => "1024x1024", "type" => "2D - 2D (medium square)", "category" => "elementwise"],
+                    ["shape" => "4096x4096", "type" => "2D - 2D (large square)", "category" => "elementwise"],
+                    ["shape" => "32x32768", "type" => "2D - 2D (wide)", "category" => "elementwise"],
+                    ["shape" => "32768x32", "type" => "2D - 2D (tall)", "category" => "elementwise"],
+                    ["shape" => "32x32x32", "type" => "3D - 3D (small cube)", "category" => "elementwise"],
+                    ["shape" => "128x128x128", "type" => "3D - 3D (medium cube)", "category" => "elementwise"],
+                    ["shape" => "512x512x3", "type" => "3D - 3D (HWC image)", "category" => "elementwise"],
+                    ["shape" => "3x512x512", "type" => "3D - 3D (CHW image)", "category" => "elementwise"],
+                    ["shape" => "8x64x64x3", "type" => "4D - 4D (small batch)", "category" => "elementwise"],
+                    ["shape" => "32x256x256x3", "type" => "4D - 4D (medium batch)", "category" => "elementwise"],
+                    ["shape" => "1024x1024 - scalar", "type" => "2D - scalar", "category" => "broadcast"],
+                    ["shape" => "1024x1024 - 1x1024", "type" => "2D - 1D (broadcast dim0)", "category" => "broadcast"],
+                    ["shape" => "1024x1024 - 1024x1", "type" => "2D - 1D (broadcast dim1)", "category" => "broadcast"],
+                    ["shape" => "1024x3x512 - 1x3x512", "type" => "3D - 3D (broadcast)", "category" => "broadcast"],
                 ]
             ],
             [
-                "run" => 10,
+                "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::multiply()",
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayMultiply",
                 "metadata" => [
-                    ["shape" => "16x16x16 * 16x16x16", "type" => "3D * 3D"],
-                    ["shape" => "64x64x64 * 64x64x64", "type" => "3D * 3D"],
-                    ["shape" => "512x512x64 * 512x512x64", "type" => "3D * 3D"],
-                    ["shape" => "16x16x16 * float", "type" => "3D * Scalar"],
-                    ["shape" => "64x64x64 * float", "type" => "3D * Scalar"],
-                    ["shape" => "512x512x512 * float", "type" => "3D * Scalar"],
-                    ["shape" => "512x64 * 512x64", "type" => "2D * 2D"],
-                    ["shape" => "1024x512 * 1024x512", "type" => "2D * 2D"],
-                    ["shape" => "1024x512 * 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 * 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "256", "type" => "1D * 1D (tiny)", "category" => "elementwise"],
+                    ["shape" => "65536", "type" => "1D * 1D (small)", "category" => "elementwise"],
+                    ["shape" => "16777216", "type" => "1D * 1D (medium)", "category" => "elementwise"],
+                    ["shape" => "67108864", "type" => "1D * 1D (large)", "category" => "elementwise"],
+                    ["shape" => "16x16", "type" => "2D * 2D (tiny square)", "category" => "elementwise"],
+                    ["shape" => "256x256", "type" => "2D * 2D (small square)", "category" => "elementwise"],
+                    ["shape" => "1024x1024", "type" => "2D * 2D (medium square)", "category" => "elementwise"],
+                    ["shape" => "4096x4096", "type" => "2D * 2D (large square)", "category" => "elementwise"],
+                    ["shape" => "32x32768", "type" => "2D * 2D (wide)", "category" => "elementwise"],
+                    ["shape" => "32768x32", "type" => "2D * 2D (tall)", "category" => "elementwise"],
+                    ["shape" => "32x32x32", "type" => "3D * 3D (small cube)", "category" => "elementwise"],
+                    ["shape" => "128x128x128", "type" => "3D * 3D (medium cube)", "category" => "elementwise"],
+                    ["shape" => "512x512x3", "type" => "3D * 3D (HWC image)", "category" => "elementwise"],
+                    ["shape" => "3x512x512", "type" => "3D * 3D (CHW image)", "category" => "elementwise"],
+                    ["shape" => "8x64x64x3", "type" => "4D * 4D (small batch)", "category" => "elementwise"],
+                    ["shape" => "32x256x256x3", "type" => "4D * 4D (medium batch)", "category" => "elementwise"],
+                    ["shape" => "1024x1024 * scalar", "type" => "2D * scalar", "category" => "broadcast"],
+                    ["shape" => "1024x1024 * 1x1024", "type" => "2D * 1D (broadcast dim0)", "category" => "broadcast"],
+                    ["shape" => "1024x1024 * 1024x1", "type" => "2D * 1D (broadcast dim1)", "category" => "broadcast"],
+                    ["shape" => "1024x3x512 * 1x3x512", "type" => "3D * 3D (broadcast)", "category" => "broadcast"],
                 ]
             ],
             [
-                "run" => 10,
+                "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::divide()",
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayDivide",
                 "metadata" => [
-                    ["shape" => "16x16x16 / 16x16x16", "type" => "3D / 3D"],
-                    ["shape" => "64x64x64 / 64x64x64", "type" => "3D / 3D"],
-                    ["shape" => "512x512x64 / 512x512x64", "type" => "3D / 3D"],
-                    ["shape" => "16x16x16 / float", "type" => "3D / Scalar"],
-                    ["shape" => "64x64x64 / float", "type" => "3D / Scalar"],
-                    ["shape" => "512x512x512 / float", "type" => "3D / Scalar"],
-                    ["shape" => "512x64 / 512x64", "type" => "2D / 2D"],
-                    ["shape" => "1024x512 / 1024x512", "type" => "2D / 2D"],
-                    ["shape" => "1024x512 / 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 / 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "256", "type" => "1D / 1D (tiny)", "category" => "elementwise"],
+                    ["shape" => "65536", "type" => "1D / 1D (small)", "category" => "elementwise"],
+                    ["shape" => "16777216", "type" => "1D / 1D (medium)", "category" => "elementwise"],
+                    ["shape" => "67108864", "type" => "1D / 1D (large)", "category" => "elementwise"],
+                    ["shape" => "16x16", "type" => "2D / 2D (tiny square)", "category" => "elementwise"],
+                    ["shape" => "256x256", "type" => "2D / 2D (small square)", "category" => "elementwise"],
+                    ["shape" => "1024x1024", "type" => "2D / 2D (medium square)", "category" => "elementwise"],
+                    ["shape" => "4096x4096", "type" => "2D / 2D (large square)", "category" => "elementwise"],
+                    ["shape" => "32x32768", "type" => "2D / 2D (wide)", "category" => "elementwise"],
+                    ["shape" => "32768x32", "type" => "2D / 2D (tall)", "category" => "elementwise"],
+                    ["shape" => "32x32x32", "type" => "3D / 3D (small cube)", "category" => "elementwise"],
+                    ["shape" => "128x128x128", "type" => "3D / 3D (medium cube)", "category" => "elementwise"],
+                    ["shape" => "512x512x3", "type" => "3D / 3D (HWC image)", "category" => "elementwise"],
+                    ["shape" => "3x512x512", "type" => "3D / 3D (CHW image)", "category" => "elementwise"],
+                    ["shape" => "8x64x64x3", "type" => "4D / 4D (small batch)", "category" => "elementwise"],
+                    ["shape" => "32x256x256x3", "type" => "4D / 4D (medium batch)", "category" => "elementwise"],
+                    ["shape" => "1024x1024 / scalar", "type" => "2D / scalar", "category" => "broadcast"],
+                    ["shape" => "1024x1024 / 1x1024", "type" => "2D / 1D (broadcast dim0)", "category" => "broadcast"],
+                    ["shape" => "1024x1024 / 1024x1", "type" => "2D / 1D (broadcast dim1)", "category" => "broadcast"],
+                    ["shape" => "1024x3x512 / 1x3x512", "type" => "3D / 3D (broadcast)", "category" => "broadcast"],
                 ]
             ],
             [
-                "run" => 10,
+                "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::power()",
                 "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayPower",
                 "metadata" => [
-                    ["shape" => "16x16x16 ** 16x16x16", "type" => "3D ** 3D"],
-                    ["shape" => "64x64x64 ** 64x64x64", "type" => "3D ** 3D"],
-                    ["shape" => "512x512x64 ** 512x512x64", "type" => "3D ** 3D"],
-                    ["shape" => "16x16x16 ** float", "type" => "3D ** Scalar"],
-                    ["shape" => "64x64x64 ** float", "type" => "3D ** Scalar"],
-                    ["shape" => "512x512x512 ** float", "type" => "3D ** Scalar"],
-                    ["shape" => "512x64 ** 512x64", "type" => "2D ** 2D"],
-                    ["shape" => "1024x512 ** 1024x512", "type" => "2D ** 2D"],
-                    ["shape" => "1024x512 ** 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 ** 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "256", "type" => "1D ** 1D (tiny)", "category" => "elementwise"],
+                    ["shape" => "65536", "type" => "1D ** 1D (small)", "category" => "elementwise"],
+                    ["shape" => "16777216", "type" => "1D ** 1D (medium)", "category" => "elementwise"],
+                    ["shape" => "67108864", "type" => "1D ** 1D (large)", "category" => "elementwise"],
+                    ["shape" => "16x16", "type" => "2D ** 2D (tiny square)", "category" => "elementwise"],
+                    ["shape" => "256x256", "type" => "2D ** 2D (small square)", "category" => "elementwise"],
+                    ["shape" => "1024x1024", "type" => "2D ** 2D (medium square)", "category" => "elementwise"],
+                    ["shape" => "4096x4096", "type" => "2D ** 2D (large square)", "category" => "elementwise"],
+                    ["shape" => "32x32768", "type" => "2D ** 2D (wide)", "category" => "elementwise"],
+                    ["shape" => "32768x32", "type" => "2D ** 2D (tall)", "category" => "elementwise"],
+                    ["shape" => "32x32x32", "type" => "3D ** 3D (small cube)", "category" => "elementwise"],
+                    ["shape" => "128x128x128", "type" => "3D ** 3D (medium cube)", "category" => "elementwise"],
+                    ["shape" => "512x512x3", "type" => "3D ** 3D (HWC image)", "category" => "elementwise"],
+                    ["shape" => "3x512x512", "type" => "3D ** 3D (CHW image)", "category" => "elementwise"],
+                    ["shape" => "8x64x64x3", "type" => "4D ** 4D (small batch)", "category" => "elementwise"],
+                    ["shape" => "32x256x256x3", "type" => "4D ** 4D (medium batch)", "category" => "elementwise"],
+                    ["shape" => "1024x1024 ** scalar", "type" => "2D ** scalar", "category" => "broadcast"],
+                    ["shape" => "1024x1024 ** 1x1024", "type" => "2D ** 1D (broadcast dim0)", "category" => "broadcast"],
+                    ["shape" => "1024x1024 ** 1024x1", "type" => "2D ** 1D (broadcast dim1)", "category" => "broadcast"],
+                    ["shape" => "1024x3x512 ** 1x3x512", "type" => "3D ** 3D (broadcast)", "category" => "broadcast"],
                 ]
             ],
             [
@@ -124,16 +174,16 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayGt",
                 "metadata" => [
-                    ["shape" => "16x16x16 > 16x16x16", "type" => "3D > 3D"],
-                    ["shape" => "64x64x64 > 64x64x64", "type" => "3D > 3D"],
-                    ["shape" => "512x512x64 > 512x512x64", "type" => "3D > 3D"],
-                    ["shape" => "16x16x16 > float", "type" => "3D > Scalar"],
-                    ["shape" => "64x64x64 > float", "type" => "3D > Scalar"],
-                    ["shape" => "512x512x512 > float", "type" => "3D > Scalar"],
-                    ["shape" => "512x64 > 512x64", "type" => "2D > 2D"],
-                    ["shape" => "1024x512 > 1024x512", "type" => "2D > 2D"],
-                    ["shape" => "1024x512 > 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 > 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "1024x1024 > 1024x1024", "type" => "2D > 2D", "category" => "comparison"],
+                    ["shape" => "1024x1024 > scalar", "type" => "2D > scalar", "category" => "comparison"],
+                    ["shape" => "4096x4096 > 4096x4096", "type" => "2D > 2D (large)", "category" => "comparison"],
+                    ["shape" => "32x32x32 > 32x32x32", "type" => "3D > 3D", "category" => "comparison"],
+                    ["shape" => "512x512x3 > 512x512x3", "type" => "3D > 3D (HWC)", "category" => "comparison"],
+                    ["shape" => "3x512x512 > 3x512x512", "type" => "3D > 3D (CHW)", "category" => "comparison"],
+                    ["shape" => "1024x1024 > 1x1024", "type" => "2D > 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "1024x1024 > 1024x1", "type" => "2D > 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "65536 > 65536", "type" => "1D > 1D", "category" => "comparison"],
+                    ["shape" => "16777216 > 16777216", "type" => "1D > 1D (medium)", "category" => "comparison"],
                 ]
             ],
             [
@@ -144,16 +194,16 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayLt",
                 "metadata" => [
-                    ["shape" => "16x16x16 < 16x16x16", "type" => "3D < 3D"],
-                    ["shape" => "64x64x64 < 64x64x64", "type" => "3D < 3D"],
-                    ["shape" => "512x512x64 < 512x512x64", "type" => "3D < 3D"],
-                    ["shape" => "16x16x16 < float", "type" => "3D < Scalar"],
-                    ["shape" => "64x64x64 < float", "type" => "3D < Scalar"],
-                    ["shape" => "512x512x512 < float", "type" => "3D < Scalar"],
-                    ["shape" => "512x64 < 512x64", "type" => "2D < 2D"],
-                    ["shape" => "1024x512 < 1024x512", "type" => "2D < 2D"],
-                    ["shape" => "1024x512 < 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 < 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "1024x1024 < 1024x1024", "type" => "2D < 2D", "category" => "comparison"],
+                    ["shape" => "1024x1024 < scalar", "type" => "2D < scalar", "category" => "comparison"],
+                    ["shape" => "4096x4096 < 4096x4096", "type" => "2D < 2D (large)", "category" => "comparison"],
+                    ["shape" => "32x32x32 < 32x32x32", "type" => "3D < 3D", "category" => "comparison"],
+                    ["shape" => "512x512x3 < 512x512x3", "type" => "3D < 3D (HWC)", "category" => "comparison"],
+                    ["shape" => "3x512x512 < 3x512x512", "type" => "3D < 3D (CHW)", "category" => "comparison"],
+                    ["shape" => "1024x1024 < 1x1024", "type" => "2D < 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "1024x1024 < 1024x1", "type" => "2D < 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "65536 < 65536", "type" => "1D < 1D", "category" => "comparison"],
+                    ["shape" => "16777216 < 16777216", "type" => "1D < 1D (medium)", "category" => "comparison"],
                 ]
             ],
             [
@@ -164,16 +214,16 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayEq",
                 "metadata" => [
-                    ["shape" => "16x16x16 == 16x16x16", "type" => "3D == 3D"],
-                    ["shape" => "64x64x64 == 64x64x64", "type" => "3D == 3D"],
-                    ["shape" => "512x512x64 == 512x512x64", "type" => "3D == 3D"],
-                    ["shape" => "16x16x16 == float", "type" => "3D == Scalar"],
-                    ["shape" => "64x64x64 == float", "type" => "3D == Scalar"],
-                    ["shape" => "512x512x512 == float", "type" => "3D == Scalar"],
-                    ["shape" => "512x64 == 512x64", "type" => "2D == 2D"],
-                    ["shape" => "1024x512 == 1024x512", "type" => "2D == 2D"],
-                    ["shape" => "1024x512 == 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 == 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "1024x1024 == 1024x1024", "type" => "2D == 2D", "category" => "comparison"],
+                    ["shape" => "1024x1024 == scalar", "type" => "2D == scalar", "category" => "comparison"],
+                    ["shape" => "4096x4096 == 4096x4096", "type" => "2D == 2D (large)", "category" => "comparison"],
+                    ["shape" => "32x32x32 == 32x32x32", "type" => "3D == 3D", "category" => "comparison"],
+                    ["shape" => "512x512x3 == 512x512x3", "type" => "3D == 3D (HWC)", "category" => "comparison"],
+                    ["shape" => "3x512x512 == 3x512x512", "type" => "3D == 3D (CHW)", "category" => "comparison"],
+                    ["shape" => "1024x1024 == 1x1024", "type" => "2D == 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "1024x1024 == 1024x1", "type" => "2D == 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "65536 == 65536", "type" => "1D == 1D", "category" => "comparison"],
+                    ["shape" => "16777216 == 16777216", "type" => "1D == 1D (medium)", "category" => "comparison"],
                 ]
             ],
             [
@@ -184,16 +234,16 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayNe",
                 "metadata" => [
-                    ["shape" => "16x16x16 != 16x16x16", "type" => "3D != 3D"],
-                    ["shape" => "64x64x64 != 64x64x64", "type" => "3D != 3D"],
-                    ["shape" => "512x512x64 != 512x512x64", "type" => "3D != 3D"],
-                    ["shape" => "16x16x16 != float", "type" => "3D != Scalar"],
-                    ["shape" => "64x64x64 != float", "type" => "3D != Scalar"],
-                    ["shape" => "512x512x512 != float", "type" => "3D != Scalar"],
-                    ["shape" => "512x64 != 512x64", "type" => "2D != 2D"],
-                    ["shape" => "1024x512 != 1024x512", "type" => "2D != 2D"],
-                    ["shape" => "1024x512 != 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 != 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "1024x1024 != 1024x1024", "type" => "2D != 2D", "category" => "comparison"],
+                    ["shape" => "1024x1024 != scalar", "type" => "2D != scalar", "category" => "comparison"],
+                    ["shape" => "4096x4096 != 4096x4096", "type" => "2D != 2D (large)", "category" => "comparison"],
+                    ["shape" => "32x32x32 != 32x32x32", "type" => "3D != 3D", "category" => "comparison"],
+                    ["shape" => "512x512x3 != 512x512x3", "type" => "3D != 3D (HWC)", "category" => "comparison"],
+                    ["shape" => "3x512x512 != 3x512x512", "type" => "3D != 3D (CHW)", "category" => "comparison"],
+                    ["shape" => "1024x1024 != 1x1024", "type" => "2D != 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "1024x1024 != 1024x1", "type" => "2D != 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "65536 != 65536", "type" => "1D != 1D", "category" => "comparison"],
+                    ["shape" => "16777216 != 16777216", "type" => "1D != 1D (medium)", "category" => "comparison"],
                 ]
             ],
             [
@@ -204,16 +254,16 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayLe",
                 "metadata" => [
-                    ["shape" => "16x16x16 <= 16x16x16", "type" => "3D <= 3D"],
-                    ["shape" => "64x64x64 <= 64x64x64", "type" => "3D <= 3D"],
-                    ["shape" => "512x512x64 <= 512x512x64", "type" => "3D <= 3D"],
-                    ["shape" => "16x16x16 <= float", "type" => "3D <= Scalar"],
-                    ["shape" => "64x64x64 <= float", "type" => "3D <= Scalar"],
-                    ["shape" => "512x512x512 <= float", "type" => "3D <= Scalar"],
-                    ["shape" => "512x64 <= 512x64", "type" => "2D <= 2D"],
-                    ["shape" => "1024x512 <= 1024x512", "type" => "2D <= 2D"],
-                    ["shape" => "1024x512 <= 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 <= 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "1024x1024 <= 1024x1024", "type" => "2D <= 2D", "category" => "comparison"],
+                    ["shape" => "1024x1024 <= scalar", "type" => "2D <= scalar", "category" => "comparison"],
+                    ["shape" => "4096x4096 <= 4096x4096", "type" => "2D <= 2D (large)", "category" => "comparison"],
+                    ["shape" => "32x32x32 <= 32x32x32", "type" => "3D <= 3D", "category" => "comparison"],
+                    ["shape" => "512x512x3 <= 512x512x3", "type" => "3D <= 3D (HWC)", "category" => "comparison"],
+                    ["shape" => "3x512x512 <= 3x512x512", "type" => "3D <= 3D (CHW)", "category" => "comparison"],
+                    ["shape" => "1024x1024 <= 1x1024", "type" => "2D <= 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "1024x1024 <= 1024x1", "type" => "2D <= 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "65536 <= 65536", "type" => "1D <= 1D", "category" => "comparison"],
+                    ["shape" => "16777216 <= 16777216", "type" => "1D <= 1D (medium)", "category" => "comparison"],
                 ]
             ],
             [
@@ -224,16 +274,16 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "type" => "CUDA",
                 "handler" => "cudaArrayGe",
                 "metadata" => [
-                    ["shape" => "16x16x16 >= 16x16x16", "type" => "3D >= 3D"],
-                    ["shape" => "64x64x64 >= 64x64x64", "type" => "3D >= 3D"],
-                    ["shape" => "512x512x64 >= 512x512x64", "type" => "3D >= 3D"],
-                    ["shape" => "16x16x16 >= float", "type" => "3D >= Scalar"],
-                    ["shape" => "64x64x64 >= float", "type" => "3D >= Scalar"],
-                    ["shape" => "512x512x512 >= float", "type" => "3D >= Scalar"],
-                    ["shape" => "512x64 >= 512x64", "type" => "2D >= 2D"],
-                    ["shape" => "1024x512 >= 1024x512", "type" => "2D >= 2D"],
-                    ["shape" => "1024x512 >= 1x512", "type" => "2D Broadcast"],
-                    ["shape" => "1024x3x512 >= 1x3x512", "type" => "3D Broadcast"],
+                    ["shape" => "1024x1024 >= 1024x1024", "type" => "2D >= 2D", "category" => "comparison"],
+                    ["shape" => "1024x1024 >= scalar", "type" => "2D >= scalar", "category" => "comparison"],
+                    ["shape" => "4096x4096 >= 4096x4096", "type" => "2D >= 2D (large)", "category" => "comparison"],
+                    ["shape" => "32x32x32 >= 32x32x32", "type" => "3D >= 3D", "category" => "comparison"],
+                    ["shape" => "512x512x3 >= 512x512x3", "type" => "3D >= 3D (HWC)", "category" => "comparison"],
+                    ["shape" => "3x512x512 >= 3x512x512", "type" => "3D >= 3D (CHW)", "category" => "comparison"],
+                    ["shape" => "1024x1024 >= 1x1024", "type" => "2D >= 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "1024x1024 >= 1024x1", "type" => "2D >= 1D (broadcast)", "category" => "comparison"],
+                    ["shape" => "65536 >= 65536", "type" => "1D >= 1D", "category" => "comparison"],
+                    ["shape" => "16777216 >= 16777216", "type" => "1D >= 1D (medium)", "category" => "comparison"],
                 ]
             ],
             [
@@ -278,13 +328,13 @@ class CudaArrayBasicMathOperations extends Benchmark
     private function unaryMetadata(): array
     {
         return [
-            ["shape" => "16x16x16", "type" => "3D"],
-            ["shape" => "64x64x64", "type" => "3D"],
-            ["shape" => "512x512x64", "type" => "3D"],
-            ["shape" => "512x512x512", "type" => "3D"],
-            ["shape" => "512x512", "type" => "2D"],
-            ["shape" => "1024x512", "type" => "2D"],
-            ["shape" => "1x180000", "type" => "2D"],
+            ["shape" => "256", "type" => "1D (tiny)", "category" => "unary"],
+            ["shape" => "65536", "type" => "1D (small)", "category" => "unary"],
+            ["shape" => "16777216", "type" => "1D (medium)", "category" => "unary"],
+            ["shape" => "1024x1024", "type" => "2D (medium)", "category" => "unary"],
+            ["shape" => "4096x4096", "type" => "2D (large)", "category" => "unary"],
+            ["shape" => "512x512x3", "type" => "3D (HWC)", "category" => "unary"],
+            ["shape" => "3x512x512", "type" => "3D (CHW)", "category" => "unary"],
         ];
     }
 
@@ -293,184 +343,73 @@ class CudaArrayBasicMathOperations extends Benchmark
         return "CudaArray basic operation methods Benchmark";
     }
 
-    public function args3DShape(int $count): array
-    {
-        return  match ($count) {
-            1 => [[16, 16, 16]],
-            2 => [[64, 64, 64]],
-            3 => [[128, 128, 128]],
-            4 => [[256, 256, 256]],
-            5 => [[1024, 128, 64]],
-            6 => [[512, 256, 128]],
-        };
-    }
-
-    public function args3DAndValue(int $count): array
-    {
-        return  match ($count) {
-            1 => [[16, 16, 16], 10],
-            2 => [[64, 64, 64], 10],
-            3 => [[128, 128, 128], 10],
-            4 => [[256, 256, 256], 10],
-            5 => [[1024, 128, 64], 10],
-            6 => [[512, 256, 128], 10],
-        };
-    }
-
-    public function args3DAndRange(int $count): array
-    {
-        return  match ($count) {
-            1 => [[16, 16, 16], -1, 1],
-            2 => [[64, 64, 64],  -1, 1],
-            3 => [[128, 128, 128],  -1, 1],
-            4 => [[256, 256, 256],  -1, 1],
-            5 => [[1024, 128, 64],  -1, 1],
-            6 => [[512, 256, 128],  -1, 1],
-        };
-    }
-
-    public function argsCudaArrayConcatAxisZero(int $count): array
-    {
-        $size = pow(8, $count);
-        $shape = [$size, $size];
-        return [CudaArray::rand($shape), CudaArray::rand($shape), 0];
-    }
-
-    public function argsCudaArrayConcatAxisOne(int $count): array
-    {
-        $size = pow(8, $count);
-        $shape = [$size, $size];
-        return [CudaArray::rand($shape), CudaArray::rand($shape), 1];
-    }
-
     public function argsArithmetic(int $count): array
     {
         return match ($count) {
-            1 => [CudaArray::rand([16, 16, 16]), CudaArray::rand([16, 16, 16])],
-            2 => [CudaArray::rand([64, 64, 64]), CudaArray::rand([64, 64, 64])],
-            3 => [CudaArray::rand([512, 512, 64]), CudaArray::rand([512, 512, 64])],
-            4 => [CudaArray::rand([16, 16, 16]), 2],
-            5 => [CudaArray::rand([64, 64, 64]), 2],
-            6 => [CudaArray::rand([512, 512, 512]), 2],
-            7 => [CudaArray::rand([512, 64]), CudaArray::rand([512, 64])],
-            8 => [CudaArray::rand([1024, 512]), CudaArray::rand([1024, 512])],
-            9 => [CudaArray::rand([1024, 512]), CudaArray::rand([1, 512])],
-            10 => [CudaArray::rand([1024, 3, 512]), CudaArray::rand([1, 3, 1])],
+            1 => [CudaArray::rand([256]), CudaArray::rand([256])],
+            2 => [CudaArray::rand([65536]), CudaArray::rand([65536])],
+            3 => [CudaArray::rand([16777216]), CudaArray::rand([16777216])],
+            4 => [CudaArray::rand([67108864]), CudaArray::rand([67108864])],
+            
+            5 => [CudaArray::rand([16, 16]), CudaArray::rand([16, 16])],
+            6 => [CudaArray::rand([256, 256]), CudaArray::rand([256, 256])],
+            7 => [CudaArray::rand([1024, 1024]), CudaArray::rand([1024, 1024])],
+            8 => [CudaArray::rand([4096, 4096]), CudaArray::rand([4096, 4096])],
+            
+            9 => [CudaArray::rand([32, 32768]), CudaArray::rand([32, 32768])],
+            10 => [CudaArray::rand([32768, 32]), CudaArray::rand([32768, 32])],
+            
+            11 => [CudaArray::rand([32, 32, 32]), CudaArray::rand([32, 32, 32])],
+            12 => [CudaArray::rand([128, 128, 128]), CudaArray::rand([128, 128, 128])],
+            
+            13 => [CudaArray::rand([512, 512, 3]), CudaArray::rand([512, 512, 3])],
+            14 => [CudaArray::rand([3, 512, 512]), CudaArray::rand([3, 512, 512])],
+            
+            15 => [CudaArray::rand([8, 64, 64, 3]), CudaArray::rand([8, 64, 64, 3])],
+            16 => [CudaArray::rand([32, 256, 256, 3]), CudaArray::rand([32, 256, 256, 3])],
+            
+            17 => [CudaArray::rand([1024, 1024]), 2.0], 
+            18 => [CudaArray::rand([1024, 1024]), CudaArray::rand([1, 1024])],
+            19 => [CudaArray::rand([1024, 1024]), CudaArray::rand([1024, 1])],
+            20 => [CudaArray::rand([1024, 3, 512]), CudaArray::rand([1, 3, 512])],
+            
+            default => throw new \InvalidArgumentException("Invalid count: $count")
+        };
+    }
+
+    public function argsComparison(int $count): array
+    {
+        return match ($count) {
+            1 => [CudaArray::rand([1024, 1024]), CudaArray::rand([1024, 1024])],
+            2 => [CudaArray::rand([1024, 1024]), 0.5],
+            3 => [CudaArray::rand([4096, 4096]), CudaArray::rand([4096, 4096])],
+            4 => [CudaArray::rand([32, 32, 32]), CudaArray::rand([32, 32, 32])],
+            5 => [CudaArray::rand([512, 512, 3]), CudaArray::rand([512, 512, 3])],
+            6 => [CudaArray::rand([3, 512, 512]), CudaArray::rand([3, 512, 512])],
+            7 => [CudaArray::rand([1024, 1024]), CudaArray::rand([1, 1024])],
+            8 => [CudaArray::rand([1024, 1024]), CudaArray::rand([1024, 1])],
+            9 => [CudaArray::rand([65536]), CudaArray::rand([65536])],
+            10 => [CudaArray::rand([16777216]), CudaArray::rand([16777216])],
+            
+            default => throw new \InvalidArgumentException("Invalid count: $count")
         };
     }
 
     public function argsUnary(int $count): array
     {
         return match ($count) {
-            1 => [CudaArray::rand([16, 16, 16])],
-            2 => [CudaArray::rand([64, 64, 64])],
-            3 => [CudaArray::rand([512, 512, 64])],
-            4 => [CudaArray::rand([512, 512, 512])],
-            5 => [CudaArray::rand([512, 512])],
-            6 => [CudaArray::rand([1024, 512])],
-            7 => [CudaArray::rand([1, 180000])],
+            1 => [CudaArray::rand([256])],
+            2 => [CudaArray::rand([65536])],
+            3 => [CudaArray::rand([16777216])],
+            4 => [CudaArray::rand([1024, 1024])],
+            5 => [CudaArray::rand([4096, 4096])],
+            6 => [CudaArray::rand([512, 512, 3])],
+            7 => [CudaArray::rand([3, 512, 512])],
+            
+            default => throw new \InvalidArgumentException("Invalid count: $count")
         };
     }
-
-    public function argsReduction(int $count): array
-    {
-        return match ($count) {
-            1 => [CudaArray::rand([16, 16, 16]), 2],
-            2 => [CudaArray::rand([64, 64, 64]), 2],
-            3 => [CudaArray::rand([512, 512, 64]), 2],
-            4 => [CudaArray::rand([512, 512, 512]), 2],
-            5 => [CudaArray::rand([16, 16, 16]), 1],
-            6 => [CudaArray::rand([64, 64, 64]), 1],
-            7 => [CudaArray::rand([512, 512, 64]), 1],
-            8 => [CudaArray::rand([512, 512, 512]), 1],
-            9 => [CudaArray::rand([16, 16, 16]), 0],
-            10 => [CudaArray::rand([64, 64, 64]), 0],
-            11 => [CudaArray::rand([512, 512, 64]), 0],
-            12 => [CudaArray::rand([512, 512, 512]), 0],
-            13 => [CudaArray::rand([16, 16, 16]), null],
-            14 => [CudaArray::rand([64, 64, 64]), null],
-            15 => [CudaArray::rand([512, 512, 64]), null],
-            16 => [CudaArray::rand([512, 512, 512]), null],
-        };
-    }
-
-    public function argsTranspose(int $count): array
-    {
-        return match ($count) {
-            1 => [CudaArray::rand([16, 16]), [1, 0]],
-            2 => [CudaArray::rand([32, 64]), [1, 0]],
-            3 => [CudaArray::rand([64, 32]), [1, 0]],
-            4 => [CudaArray::rand([128, 128]), [1, 0]],
-            5 => [CudaArray::rand([8, 16, 32]), [0, 2, 1]],
-            6 => [CudaArray::rand([8, 16, 32]), [2, 1, 0]],
-            7 => [CudaArray::rand([8, 16, 32]), [1, 0, 2]],
-            8 => [CudaArray::rand([16, 8, 4]), [0, 2, 1]],
-            9 => [CudaArray::rand([4, 8, 16, 32]), [0, 1, 3, 2]],
-            10 => [CudaArray::rand([4, 8, 16, 32]), [3, 2, 1, 0]],
-            11 => [CudaArray::rand([4, 8, 16, 32]), [1, 0, 2, 3]],
-            12 => [CudaArray::rand([4, 8, 16, 32]), [0, 2, 1, 3]]
-        };
-    }
-
-    public function argsReshape(int $count): array
-    {
-        return match ($count) {
-            1 => [CudaArray::rand([4, 4]), [16, 1]],
-            2 => [CudaArray::rand([4, 4]), [1, 16]],
-            3 => [CudaArray::rand([8, 8]), [4, 16]],
-            4 => [CudaArray::rand([8, 8]), [16, 4]],
-            5 => [CudaArray::rand([12, 12]), [3, 4, 12]],
-            6 => [CudaArray::rand([12, 12]), [4, 3, 12]],
-            7 => [CudaArray::rand([24, 6]), [8, 3, 6]],
-            8 => [CudaArray::rand([6, 24]), [2, 3, 24]],
-            9 => [CudaArray::rand([3, 4, 5]), [12, 5]],
-            10 => [CudaArray::rand([3, 4, 5]), [3, 20]],
-            11 => [CudaArray::rand([2, 6, 8]), [12, 8]],
-            12 => [CudaArray::rand([2, 6, 8]), [2, 48]],
-        };
-    }
-
-    public function argsMatmul(int $count): array
-    {
-        return match ($count) {
-            1 => [CudaArray::rand([16, 16]), CudaArray::rand([16, 16])],
-            2 => [CudaArray::rand([128, 128]), CudaArray::rand([128, 128])],
-            3 => [CudaArray::rand([32, 256, 256]), CudaArray::rand([32, 256, 256])],
-            4 => [CudaArray::rand([1, 512, 512]), CudaArray::rand([64, 512, 512])],
-            5 => [CudaArray::rand([1024, 768]), CudaArray::rand([768, 512])],
-            6 => [CudaArray::rand([64, 1024, 512]), CudaArray::rand([64, 512, 256])],
-            7 => [CudaArray::rand([1, 1000000]), CudaArray::rand([1000000, 1])],
-            8 => [CudaArray::rand([8, 64, 256, 256]), CudaArray::rand([8, 64, 256, 256])],
-        };
-    }
-
-    public function argsTransfer(int $count): array
-    {
-        return match ($count) {
-            1 => [CudaArray::rand([16, 16, 16])],
-            2 => [CudaArray::rand([64, 64, 64])],
-            3 => [CudaArray::rand([1024, 512, 64])],
-            4 => [CudaArray::rand([512, 512])],
-            5 => [CudaArray::rand([1024, 512])],
-            6 => [CudaArray::rand([1, 180000])],
-            7 => [CudaArray::rand([180000])],
-        };
-    }
-
-    public function argsConstructor(int $count): array
-    {
-        return match ($count) {
-            1 => [array_fill(0, 15, array_fill(0, 15, array_fill(0, 15, $count)))],
-            2 => [array_fill(0, 63, array_fill(0, 63, array_fill(0, 63, $count)))],
-            3 => [array_fill(0, 1023, array_fill(0, 511, array_fill(0, 63, $count)))],
-            4 => [array_fill(0, 511, array_fill(0, 511, $count))],
-            5 => [array_fill(0, 1023, array_fill(0, 511, $count))],
-            6 => [array_fill(0, 1, array_fill(0, 180000, $count))],
-            7 => [array_fill(0, 180000, $count)],
-        };
-    }
-
-
+    
     #[InjectArgs("argsArithmetic")]
     public function cudaArrayAdd(CudaArray $first, CudaArray|float $second): void
     {
@@ -496,45 +435,45 @@ class CudaArrayBasicMathOperations extends Benchmark
     }
 
     #[InjectArgs("argsArithmetic")]
+    public function cudaArrayPower(CudaArray $first, CudaArray|float $second): void
+    {
+        $first ** $second;
+    }
+
+    #[InjectArgs("argsComparison")]
     public function cudaArrayGt(CudaArray $first, CudaArray|float $second): void
     {
         $first->gt($second);
     }
 
-    #[InjectArgs("argsArithmetic")]
+    #[InjectArgs("argsComparison")]
     public function cudaArrayLt(CudaArray $first, CudaArray|float $second): void
     {
         $first->lt($second);
     }
 
-    #[InjectArgs("argsArithmetic")]
+    #[InjectArgs("argsComparison")]
     public function cudaArrayEq(CudaArray $first, CudaArray|float $second): void
     {
         $first->eq($second);
     }
 
-    #[InjectArgs("argsArithmetic")]
-    public function cudaArrayGe(CudaArray $first, CudaArray|float $second): void
-    {
-        $first->ge($second);
-    }
-
-    #[InjectArgs("argsArithmetic")]
+    #[InjectArgs("argsComparison")]
     public function cudaArrayNe(CudaArray $first, CudaArray|float $second): void
     {
         $first->ne($second);
     }
 
-    #[InjectArgs("argsArithmetic")]
-    public function cudaArrayle(CudaArray $first, CudaArray|float $second): void
+    #[InjectArgs("argsComparison")]
+    public function cudaArrayLe(CudaArray $first, CudaArray|float $second): void
     {
         $first->le($second);
     }
 
-    #[InjectArgs("argsArithmetic")]
-    public function cudaArrayPower(CudaArray $first, CudaArray|float $second): void
+    #[InjectArgs("argsComparison")]
+    public function cudaArrayGe(CudaArray $first, CudaArray|float $second): void
     {
-        $first ** $second;
+        $first->ge($second);
     }
 
     #[InjectArgs("argsUnary")]

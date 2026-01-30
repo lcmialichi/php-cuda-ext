@@ -51,23 +51,6 @@ size_t dtype_to_size(dtype_t dtype)
     return (dtype < sizeof(sizes) / sizeof(size_t)) ? sizes[dtype] : 8;
 }
 
-const char *dtype_to_string(dtype_t dtype)
-{
-    static const char *strings[] = {
-        [DTYPE_FLOAT32] = "float32",
-        [DTYPE_FLOAT64] = "float64",
-        [DTYPE_INT8] = "int8",
-        [DTYPE_INT16] = "int16",
-        [DTYPE_INT32] = "int32",
-        [DTYPE_INT64] = "int64",
-        [DTYPE_UINT8] = "uint8",
-        [DTYPE_UINT16] = "uint16",
-        [DTYPE_UINT32] = "uint32",
-        [DTYPE_UINT64] = "uint64",
-        [DTYPE_BOOL] = "bool"};
-    return (dtype < sizeof(strings) / sizeof(char *)) ? strings[dtype] : "unknown";
-}
-
 static zend_always_inline void get_value(void *ptr, zval *rv, dtype_t dtype)
 {
     switch (dtype)

@@ -50,6 +50,7 @@ typedef struct tensor
     int *d_shape;
     int is_on_gpu;
     int is_dirty;
+    int is_contiguous_cached;
 } tensor_t;
 
 #ifdef __cplusplus
@@ -100,6 +101,20 @@ extern "C"
 
     int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value);
     int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor);
+
+    dtype_t tensor_promote_types(const tensor_t *a, const tensor_t *b);
+    int tensor_can_cast_to(const tensor_t *tensor, dtype_t new_dtype);
+    tensor_t *tensor_cast(tensor_t *tensor, dtype_t new_dtype);
+
+    tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype);
+    tensor_t *cuda_tensor_create_empty_with_dtype(int *shape, int ndims, dtype_t dtype);
+
+    int tensors_have_same_dtype(const tensor_t *a, const tensor_t *b);
+    int tensor_validate_dtype(tensor_t *tensor);
+
+    static inline size_t tensor_element_size(const tensor_t *tensor);
+    static inline size_t tensor_nbytes(const tensor_t *tensor);
+    static inline void tensor_invalidate_contiguity_cache(tensor_t *tensor);
 
 #ifdef __cplusplus
 }

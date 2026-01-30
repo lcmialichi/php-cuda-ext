@@ -63,6 +63,7 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda_array/cuda_array_ce.c \ 
     src/contiguous_array_ce.c \
     src/cuda_array/ca_private.c \
+    src/data_types.c \
     src/tensor.c \
     src/cuda/memory_pool.c \
     src/cuda_array/tensor_fabric.c \

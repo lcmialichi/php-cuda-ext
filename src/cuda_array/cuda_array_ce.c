@@ -1416,6 +1416,7 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
         zend_throw_error(NULL, "Only single index, array index list, or range slice assignment is supported in this context for now.");
     }
 }
+
 static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed)
 {
     zval *shape_array;

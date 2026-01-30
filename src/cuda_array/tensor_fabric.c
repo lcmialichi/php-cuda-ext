@@ -222,6 +222,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
     tensor->d_strides = d_strides;
     tensor->element_size = element_size;
     tensor->is_on_gpu = 1;
+    tensor->is_contiguous_cached = -1;
 
     size_t required_bytes = tensor->total_size * element_size;
     tensor->allocated_size = required_bytes;
@@ -311,6 +312,7 @@ tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, d
     tensor->d_strides = NULL;
     tensor->element_size = element_size;
     tensor->is_on_gpu = 0;
+    tensor->is_contiguous_cached = -1;
 
     size_t required_bytes = tensor->total_size * element_size;
     tensor->allocated_size = required_bytes;

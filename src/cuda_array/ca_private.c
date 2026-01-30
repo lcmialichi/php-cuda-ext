@@ -133,7 +133,6 @@ reduction_arg_fn get_reduction_arg_fn(operation_type_t op)
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
-    broadcast_fn func = get_broadcast_fn(operation_type);
 
     int result_shape[MAX_DIMS];
     int result_dims;
@@ -147,14 +146,8 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
         return NULL;
     }
 
-    tensor_t *result = cuda_tensor_create_empty(result_shape, result_dims);
-
-    if (func == NULL)
-    {
-        php_error_docref(NULL, E_ERROR, "Operation handler not found.");
-        return NULL;
-    }
-
+    dtype_t promoted_type = promote_types(a->dtype, b->dtype);
+    tensor_t *result = cuda_tensor_create_empty_dtype(result_shape, result_dims, promoted_type);
     if (!result)
     {
         zend_throw_error(NULL, "Broadcast failed: shapes %s and %s are incompatible",
@@ -169,11 +162,12 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
         return NULL;
     }
 
-    func(a->data, b->data, result->data,
-         a_strides, a->ndims,
-         b_strides, b->ndims,
-         result_shape, result_dims,
-         total_elements, a->offset, b->offset);
+    launch_broadcast(a->data, b->data, result->data,
+                     promoted_type, operation_type,
+                     a_strides, a->ndims,
+                     b_strides, b->ndims,
+                     result_shape, result_dims,
+                     total_elements, a->offset, b->offset);
 
     cudaError_t status = cudaDeviceSynchronize();
     return (status == cudaSuccess) ? result : NULL;

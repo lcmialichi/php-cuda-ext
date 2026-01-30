@@ -9,16 +9,24 @@ extern "C"
 #endif
 
     typedef void (*broadcast_fn)(float *a, float *b, float *result,
-                             int *a_strides, int a_dims,
-                             int *b_strides, int b_dims,
-                             int *result_shape, int result_dims,
-                             size_t total_elements, size_t a_base_offset,
-                             size_t b_base_offset);
+                                 int *a_strides, int a_dims,
+                                 int *b_strides, int b_dims,
+                                 int *result_shape, int result_dims,
+                                 size_t total_elements, size_t a_base_offset,
+                                 size_t b_base_offset);
     typedef struct
     {
         operation_type_t op;
         broadcast_fn fn;
     } BroadcastDispatchEntry;
+
+    void launch_broadcast(
+        void *a, void *b, void *result,
+        dtype_t dtype, operation_type_t op_type,
+        int *a_strides, int a_dims,
+        int *b_strides, int b_dims,
+        int *result_shape, int result_dims,
+        size_t total_elements, size_t a_offset, size_t b_offset);
 
     void launch_broadcast_add(float *a, float *b, float *result,
                               int *a_strides, int a_dims,
@@ -96,7 +104,6 @@ extern "C"
                                      int *result_shape, int result_dims,
                                      size_t total_elements, size_t a_base_offset,
                                      size_t b_base_offset);
-
 
 #ifdef __cplusplus
 }

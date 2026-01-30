@@ -8,8 +8,7 @@
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
 static size_t calculate_total_size(zval *data);
-static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index);
-static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size);
+static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int *index, size_t total_size, dtype_t dtype);
 
 tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str)
 {
@@ -28,7 +27,7 @@ tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str)
     return tensor_cast(tensor, new_dtype);
 }
 
-tensor_t *create_tensor_from_php_array(zval *data)
+tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype)
 {
     int shape[10] = {0};
     int ndims = 0;
@@ -41,7 +40,7 @@ tensor_t *create_tensor_from_php_array(zval *data)
         return NULL;
     }
 
-    tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
+    tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
         zend_throw_error(NULL, "Failed to create empty tensor");
@@ -55,7 +54,8 @@ tensor_t *create_tensor_from_php_array(zval *data)
         data,
         tensor->data,
         &index,
-        total_size);
+        total_size,
+        dtype);
 
     if (cuda_status != cudaSuccess)
     {
@@ -147,7 +147,7 @@ int set_rand_tensor_data(float *data, size_t size, unsigned long long seed, floa
             return FAILURE;
         }
     }
-    
+
     return SUCCESS;
 }
 
@@ -184,28 +184,18 @@ tensor_t *cuda_tensor_create_empty(const int shape[], int ndims)
     return cuda_tensor_create_float(shape, ndims, NULL);
 }
 
+tensor_t *cuda_tensor_create_empty_dtype(const int shape[], int ndims, dtype_t dtype)
+{
+    return cuda_tensor_create(shape, ndims, NULL, dtype);
+}
+
 tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dtype_t dtype)
 {
     tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
         return NULL;
 
-    size_t element_size;
-    if (dtype == DTYPE_FLOAT32)
-    {
-        element_size = sizeof(float);
-    }
-    else if (dtype == DTYPE_INT32)
-    {
-        element_size = sizeof(int);
-    }
-    else
-    {
-        efree(tensor);
-        zend_throw_error(NULL, "Unsupported data type for tensor creation");
-        return NULL;
-    }
-
+    size_t element_size = dtype_size(dtype);
     tensor->dtype = dtype;
     tensor->ndims = ndims;
     tensor->shape = (int *)emalloc(ndims * sizeof(int));
@@ -285,21 +275,7 @@ tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, d
     if (!tensor)
         return NULL;
 
-    size_t element_size;
-    if (dtype == DTYPE_FLOAT32)
-    {
-        element_size = sizeof(float);
-    }
-    else if (dtype == DTYPE_INT32)
-    {
-        element_size = sizeof(int);
-    }
-    else
-    {
-        efree(tensor);
-        zend_throw_error(NULL, "Unsupported data type for tensor creation");
-        return NULL;
-    }
+    size_t element_size = dtype_size(dtype);
 
     tensor->dtype = dtype;
     tensor->ndims = ndims;
@@ -387,54 +363,47 @@ tensor_t *resolve_result_tensor(tensor_t *t)
     return cuda_tensor_create_empty(t->shape, t->ndims);
 }
 
-static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size)
+static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int *index, size_t total_size, dtype_t dtype)
 {
-    float *pinned_host_data;
-    cudaError_t status = cudaMallocHost((void **)&pinned_host_data, total_size * sizeof(float));
+    void *pinned_host_data;
+    size_t el_size = dtype_size(dtype);
+
+    cudaError_t status = cudaMallocHost(&pinned_host_data, total_size * el_size);
     if (status != cudaSuccess)
         return status;
 
     int host_index = 0;
-    flatten_php_array_to_buffer(data, pinned_host_data, &host_index);
 
-    status = cudaMemcpyAsync(gpu_data, pinned_host_data, total_size * sizeof(float),
-                             cudaMemcpyHostToDevice, 0);
+    switch (dtype)
+    {
+    case DTYPE_FLOAT32:
+        flatten_php_array_to_float32(data, (float *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_FLOAT64:
+        flatten_php_array_to_float64(data, (double *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_INT32:
+        flatten_php_array_to_int32(data, (int32_t *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_INT8:
+        flatten_php_array_to_int8(data, (int8_t *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_INT64:
+        flatten_php_array_to_int64(data, (int64_t *)pinned_host_data, &host_index);
+        break;
+    // case DTYPE_BOOL:
+    //     flatten_php_array_to_uint8(data, (uint8_t *)pinned_host_data, &host_index);
+    //     break;
+    default:
+        cudaFreeHost(pinned_host_data);
+        return cudaErrorInvalidValue;
+    }
+
+    status = cudaMemcpy(gpu_data, pinned_host_data, total_size * el_size, cudaMemcpyHostToDevice);
 
     cudaFreeHost(pinned_host_data);
     *index = host_index;
     return status;
-}
-
-static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index)
-{
-    if (Z_TYPE_P(data) == IS_ARRAY)
-    {
-        HashTable *ht = Z_ARRVAL_P(data);
-        zval *current;
-        ZEND_HASH_FOREACH_VAL(ht, current)
-        {
-            flatten_php_array_to_buffer(current, buffer, index);
-        }
-        ZEND_HASH_FOREACH_END();
-        return;
-    }
-
-    if (Z_TYPE_P(data) == IS_LONG)
-    {
-        buffer[(*index)++] = (float)Z_LVAL_P(data);
-    }
-    else if (Z_TYPE_P(data) == IS_DOUBLE)
-    {
-        buffer[(*index)++] = (float)Z_DVAL_P(data);
-    }
-    else if (Z_TYPE_P(data) == IS_TRUE)
-    {
-        buffer[(*index)++] = 1.0f;
-    }
-    else if (Z_TYPE_P(data) == IS_FALSE)
-    {
-        buffer[(*index)++] = 0.0f;
-    }
 }
 
 static void flatten_php_array(zval *data, float *flat_array, int *index)

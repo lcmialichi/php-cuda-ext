@@ -33,17 +33,71 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor);
 
+static void php_cuda_build_recursive(zval *result, void *data, int dim, tensor_t *t, size_t current_offset)
+{
+    array_init(result);
+    int size = t->shape[dim];
+    size_t stride = t->strides[dim];
+
+    for (int i = 0; i < size; i++)
+    {
+        size_t child_offset = current_offset + i * stride;
+
+        if (dim == t->ndims - 1)
+        {
+            zval val;
+            switch (t->dtype)
+            {
+            case DTYPE_FLOAT32:
+                ZVAL_DOUBLE(&val, (double)((float *)data)[child_offset]);
+                break;
+            case DTYPE_FLOAT64:
+                ZVAL_DOUBLE(&val, ((double *)data)[child_offset]);
+                break;
+            case DTYPE_INT8:
+                ZVAL_LONG(&val, (zend_long)((int8_t *)data)[child_offset]);
+                break;
+            case DTYPE_INT16:
+                ZVAL_LONG(&val, (zend_long)((int16_t *)data)[child_offset]);
+                break;
+            case DTYPE_INT32:
+                ZVAL_LONG(&val, (zend_long)((int32_t *)data)[child_offset]);
+                break;
+            case DTYPE_INT64:
+                ZVAL_LONG(&val, (zend_long)((int64_t *)data)[child_offset]);
+                break;
+            case DTYPE_UINT8:
+                ZVAL_LONG(&val, (zend_long)((uint8_t *)data)[child_offset]);
+                break;
+            case DTYPE_BOOL:
+                ZVAL_BOOL(&val, ((bool *)data)[child_offset]);
+                break;
+            default:
+                ZVAL_NULL(&val);
+                break;
+            }
+            zend_hash_index_update(Z_ARRVAL_P(result), i, &val);
+        }
+        else
+        {
+            zval sub;
+            php_cuda_build_recursive(&sub, data, dim + 1, t, child_offset);
+            zend_hash_index_update(Z_ARRVAL_P(result), i, &sub);
+        }
+    }
+}
+
 static dtype_t parse_dtype_param(zend_string *dtype_str)
 {
     if (!dtype_str || ZSTR_LEN(dtype_str) == 0)
     {
-        return DTYPE_FLOAT32;
+        return DTYPE_UNKNOWN;
     }
 
     dtype_t dtype = dtype_from_string(ZSTR_VAL(dtype_str));
     if (dtype >= DTYPE_COUNT || dtype == DTYPE_UNKNOWN)
     {
-        return DTYPE_FLOAT32;
+        return DTYPE_UNKNOWN;
     }
 
     return dtype;
@@ -62,8 +116,13 @@ ZEND_METHOD(CudaArray, __construct)
 
     cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
     dtype_t dtype = parse_dtype_param(dtype_str);
+    if (dtype == DTYPE_UNKNOWN)
+    {
+        zend_throw_error(NULL, "Invalid dtype: '%s'", ZSTR_VAL(dtype_str));
+        RETURN_NULL();
+    }
 
-    tensor_t *tensor = create_tensor_from_php_array(data);
+    tensor_t *tensor = create_tensor_from_php_array(data, dtype);
 
     if (!tensor)
     {
@@ -405,51 +464,55 @@ ZEND_METHOD(CudaArray, full)
         RETURN_NULL();
     }
 
-
     create_result_object(return_value, tensor);
 }
 
 ZEND_METHOD(CudaArray, astype)
 {
     zend_string *dtype_str = NULL;
-    
+
     ZEND_PARSE_PARAMETERS_START(1, 1)
     Z_PARAM_STR(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
-    
+
     cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
-    if (!obj->tensor_handle) {
+    if (!obj->tensor_handle)
+    {
         zend_throw_error(NULL, "Invalid tensor");
         RETURN_NULL();
     }
-    
-    if (!dtype_str || ZSTR_LEN(dtype_str) == 0) {
+
+    if (!dtype_str || ZSTR_LEN(dtype_str) == 0)
+    {
         zend_throw_error(NULL, "Invalid dtype string");
         RETURN_NULL();
     }
-    
+
     tensor_t *new_tensor = tensor_cast_string(obj->tensor_handle, ZSTR_VAL(dtype_str));
-    if (!new_tensor) {
+    if (!new_tensor)
+    {
         zend_throw_error(NULL, "Failed to cast tensor to %s", ZSTR_VAL(dtype_str));
         RETURN_NULL();
     }
-    
+
     create_result_object(return_value, new_tensor);
 }
 
 ZEND_METHOD(CudaArray, dtype)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
-    if (!obj->tensor_handle) {
+    if (!obj->tensor_handle)
+    {
         zend_throw_error(NULL, "Invalid tensor");
         RETURN_NULL();
     }
-    
-    const char* dtype_name = dtype_to_string(obj->tensor_handle->dtype);
-    if (!dtype_name) {
+
+    const char *dtype_name = dtype_to_string(obj->tensor_handle->dtype);
+    if (!dtype_name)
+    {
         dtype_name = "unknown";
     }
-    
+
     RETURN_STRING(dtype_name);
 }
 
@@ -661,78 +724,25 @@ ZEND_METHOD(CudaArray, toArray)
     tensor_t *tensor = obj->tensor_handle;
 
     tensor_t *base = tensor->is_view ? tensor->base_tensor : tensor;
-    size_t base_total = base->total_size;
-
-    float *host_data = emalloc(base_total * tensor->element_size);
+    void *host_data = emalloc(base->total_size * tensor->element_size);
 
     cudaError_t status = cudaMemcpy(
         host_data,
         base->data,
-        base_total * tensor->element_size,
+        base->total_size * tensor->element_size,
         cudaMemcpyDeviceToHost);
 
     if (status != cudaSuccess)
     {
         efree(host_data);
-        zend_throw_error(NULL, "Failed to copy data from GPU: %s", cudaGetErrorString(status));
+        zend_throw_error(NULL, "GPU Copy Failed: %s", cudaGetErrorString(status));
         RETURN_NULL();
     }
 
-    void build_recursive(
-        zval * result,
-        void *data,
-        int dim,
-        tensor_t *t,
-        size_t current_offset,
-        dtype_t dtype)
-    {
-        array_init(result);
+    size_t offset_elements = tensor->offset / tensor->element_size;
 
-        int size = t->shape[dim];
-        size_t stride = t->strides[dim];
+    php_cuda_build_recursive(return_value, host_data, 0, tensor, offset_elements);
 
-        for (int i = 0; i < size; i++)
-        {
-            size_t child_offset = current_offset + i * stride;
-
-            if (dim == t->ndims - 1)
-            {
-                zval val;
-
-                if (dtype == DTYPE_FLOAT32)
-                {
-                    float *float_data = (float *)data;
-                    ZVAL_DOUBLE(&val, (double)float_data[child_offset]);
-                }
-                else if (dtype == DTYPE_FLOAT64)
-                {
-                    double *double_data = (double *)data;
-                    ZVAL_DOUBLE(&val, double_data[child_offset]);
-                }
-                else if (dtype == DTYPE_INT32)
-                {
-                    int32_t *int_data = (int32_t *)data;
-                    ZVAL_LONG(&val, (zend_long)int_data[child_offset]);
-                }
-                else if (dtype == DTYPE_INT64)
-                {
-                    int64_t *int64_data = (int64_t *)data;
-                    ZVAL_LONG(&val, (zend_long)int64_data[child_offset]);
-                }
-
-                zend_hash_index_update(Z_ARRVAL_P(result), i, &val);
-            }
-            else
-            {
-                zval sub;
-                build_recursive(&sub, data, dim + 1, t, child_offset, dtype);
-                zend_hash_index_update(Z_ARRVAL_P(result), i, &sub);
-            }
-        }
-    }
-
-    size_t offset_elements = tensor->offset / sizeof(float);
-    build_recursive(return_value, host_data, 0, tensor, offset_elements, tensor->dtype);
     efree(host_data);
 }
 
@@ -1480,7 +1490,7 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
 
     double min = 0;
     double max = 100;
-    
+
     ZEND_PARSE_PARAMETERS_START_EX(ZPP_ERROR_FAILURE, 1, 4)
     Z_PARAM_ARRAY(shape_array)
     Z_PARAM_OPTIONAL
@@ -1526,7 +1536,7 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
 {
     zval *shape_array;
     zend_string *dtype_str = NULL;
-   
+
     ZEND_PARSE_PARAMETERS_START(1, 2)
     Z_PARAM_ARRAY(shape_array)
     Z_PARAM_OPTIONAL

@@ -61,6 +61,7 @@ ZEND_METHOD(CudaArray, argMin);
 
 ZEND_METHOD(CudaArray, reshape);
 ZEND_METHOD(CudaArray, flatten);
+ZEND_METHOD(CudaArray, astype);
 
 ZEND_METHOD(CudaArray, concat);
 
@@ -70,3 +71,4 @@ ZEND_METHOD(CudaArray, getStrides);
 ZEND_METHOD(CudaArray, getNdims);
 ZEND_METHOD(CudaArray, toArray);
 ZEND_METHOD(CudaArray, toHost);
+ZEND_METHOD(CudaArray, dtype);

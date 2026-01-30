@@ -11,6 +11,23 @@ static size_t calculate_total_size(zval *data);
 static void flatten_php_array_to_buffer(zval *data, float *buffer, int *index);
 static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, float *gpu_data, int *index, size_t total_size);
 
+tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str)
+{
+    if (!tensor || !new_dtype_str)
+    {
+        return NULL;
+    }
+
+    dtype_t new_dtype = dtype_from_string(new_dtype_str);
+    if (new_dtype >= DTYPE_COUNT || new_dtype == DTYPE_UNKNOWN)
+    {
+        php_error_docref(NULL, E_WARNING, "Invalid dtype string: %s", new_dtype_str);
+        return NULL;
+    }
+
+    return tensor_cast(tensor, new_dtype);
+}
+
 tensor_t *create_tensor_from_php_array(zval *data)
 {
     int shape[10] = {0};
@@ -75,9 +92,9 @@ int cuda_tensor_get_scalar_value(tensor_t *t, float *result_val, int index)
     return SUCCESS;
 }
 
-tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value)
+tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value, dtype_t dtype)
 {
-    tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
+    tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
         return NULL;
@@ -130,6 +147,7 @@ int set_rand_tensor_data(float *data, size_t size, unsigned long long seed, floa
             return FAILURE;
         }
     }
+    
     return SUCCESS;
 }
 
@@ -138,9 +156,10 @@ tensor_t *cuda_tensor_create_rand(
     int ndims,
     float min_value,
     float max_value,
+    dtype_t dtype,
     unsigned long long seed)
 {
-    tensor_t *tensor = cuda_tensor_create_empty(shape, ndims);
+    tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
         return NULL;
@@ -167,9 +186,6 @@ tensor_t *cuda_tensor_create_empty(const int shape[], int ndims)
 
 tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dtype_t dtype)
 {
-    if (!tensor_init())
-        return NULL;
-
     tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
         return NULL;
@@ -265,9 +281,6 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
 
 tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, dtype_t dtype)
 {
-    if (!tensor_init())
-        return NULL;
-
     tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
         return NULL;
@@ -326,10 +339,13 @@ tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, d
         zend_throw_error(NULL, "Failed to allocate Host memory for tensor.");
         return NULL;
     }
-    
-    if (data) {
+
+    if (data)
+    {
         memcpy(tensor->data, data, required_bytes);
-    } else {
+    }
+    else
+    {
         memset(tensor->data, 0, required_bytes);
     }
 

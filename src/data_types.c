@@ -1,5 +1,6 @@
 #include "data_types.h"
 #include <ctype.h>
+#include <string.h>
 
 const dtype_info_t dtype_infos[DTYPE_COUNT] = {
     [DTYPE_FLOAT32] = {
@@ -114,30 +115,82 @@ const dtype_info_t dtype_infos[DTYPE_COUNT] = {
     }
 };
 
-static const dtype_t type_hierarchy[] = {
-    DTYPE_BOOL,
-    DTYPE_UINT8,
-    DTYPE_UINT16,
-    DTYPE_UINT32,
-    DTYPE_UINT64,
-    DTYPE_INT8,
-    DTYPE_INT16,
-    DTYPE_INT32,
-    DTYPE_INT64,
-    DTYPE_FLOAT32,
-    DTYPE_FLOAT64,
-};
+static void to_lower_case(char* dest, const char* src, size_t max_len) {
+    size_t i;
+    for (i = 0; src[i] && i < max_len - 1; i++) {
+        dest[i] = tolower(src[i]);
+    }
+    dest[i] = '\0';
+}
 
-const char* dtype_to_string(dtype_t dtype) {
-    if (dtype >= DTYPE_COUNT) return NULL;
-    return dtype_infos[dtype].name;
+dtype_t dtype_from_string(const char* type_str) {
+    if (!type_str || type_str[0] == '\0') {
+        return DTYPE_FLOAT32;
+    }
+    
+    char lower[32];
+    to_lower_case(lower, type_str, sizeof(lower));
+    
+    if (strcmp(lower, "float32") == 0 || strcmp(lower, "float") == 0 || 
+        strcmp(lower, "f32") == 0 || strcmp(lower, "single") == 0) {
+        return DTYPE_FLOAT32;
+    }
+    if (strcmp(lower, "float64") == 0 || strcmp(lower, "double") == 0 || 
+        strcmp(lower, "f64") == 0) {
+        return DTYPE_FLOAT64;
+    }
+    if (strcmp(lower, "int8") == 0 || strcmp(lower, "char") == 0 || 
+        strcmp(lower, "i8") == 0) {
+        return DTYPE_INT8;
+    }
+    if (strcmp(lower, "int16") == 0 || strcmp(lower, "short") == 0 || 
+        strcmp(lower, "i16") == 0) {
+        return DTYPE_INT16;
+    }
+    if (strcmp(lower, "int32") == 0 || strcmp(lower, "int") == 0 || 
+        strcmp(lower, "i32") == 0) {
+        return DTYPE_INT32;
+    }
+    if (strcmp(lower, "int64") == 0 || strcmp(lower, "long") == 0 || 
+        strcmp(lower, "i64") == 0 || strcmp(lower, "longlong") == 0) {
+        return DTYPE_INT64;
+    }
+    if (strcmp(lower, "uint8") == 0 || strcmp(lower, "uchar") == 0 || 
+        strcmp(lower, "u8") == 0 || strcmp(lower, "byte") == 0) {
+        return DTYPE_UINT8;
+    }
+    if (strcmp(lower, "uint16") == 0 || strcmp(lower, "ushort") == 0 || 
+        strcmp(lower, "u16") == 0) {
+        return DTYPE_UINT16;
+    }
+    if (strcmp(lower, "uint32") == 0 || strcmp(lower, "uint") == 0 || 
+        strcmp(lower, "u32") == 0) {
+        return DTYPE_UINT32;
+    }
+    if (strcmp(lower, "uint64") == 0 || strcmp(lower, "ulong") == 0 || 
+        strcmp(lower, "u64") == 0) {
+        return DTYPE_UINT64;
+    }
+    if (strcmp(lower, "bool") == 0 || strcmp(lower, "boolean") == 0) {
+        return DTYPE_BOOL;
+    }
+    
+    return DTYPE_UNKNOWN;
 }
 
 int is_valid_dtype_string(const char* type_str) {
-    dtype_t dtype = dtype_to_string(type_str);
+    if (!type_str || type_str[0] == '\0') {
+        return 0;
+    }
+    
+    dtype_t dtype = dtype_from_string(type_str);
     return (dtype != DTYPE_UNKNOWN && dtype != DTYPE_COUNT);
 }
 
+const char* dtype_to_string(dtype_t dtype) {
+    if (dtype >= DTYPE_COUNT) return "unknown";
+    return dtype_infos[dtype].name;
+}
 
 size_t dtype_size(dtype_t dtype) {
     if (dtype >= DTYPE_COUNT) return 0;
@@ -163,6 +216,20 @@ int dtype_is_boolean(dtype_t dtype) {
     if (dtype >= DTYPE_COUNT) return 0;
     return dtype_infos[dtype].is_boolean;
 }
+
+static const dtype_t type_hierarchy[] = {
+    DTYPE_BOOL,
+    DTYPE_UINT8,
+    DTYPE_UINT16,
+    DTYPE_UINT32,
+    DTYPE_UINT64,
+    DTYPE_INT8,
+    DTYPE_INT16,
+    DTYPE_INT32,
+    DTYPE_INT64,
+    DTYPE_FLOAT32,
+    DTYPE_FLOAT64,
+};
 
 static const int type_hierarchy_size = sizeof(type_hierarchy) / sizeof(type_hierarchy[0]);
 

@@ -30,22 +30,6 @@ static size_t compute_total_size(int* shape, int ndims) {
     return total;
 }
 
-int tensor_init()
-{
-    if (cuda_initialized())
-        return 1;
-
-    cudaError_t cuda_status = cudaSuccess;
-
-    cuda_status = cudaSetDevice(0);
-    if (cuda_status != cudaSuccess)
-    {
-        return 0;
-    }
-
-    cuda_set_initialized(1);
-    return 1;
-}
 
 int is_contiguous(tensor_t *tensor) {
     if (!tensor) return 0;
@@ -176,10 +160,7 @@ tensor_t* cuda_tensor_create_with_dtype(int* shape, int ndims, dtype_t dtype) {
     
     size_t total_bytes = tensor->total_size * tensor->element_size;
     if (total_bytes > 0) {
-        cudaError_t err = cudaMalloc(&tensor->data, total_bytes);
-        if (err != cudaSuccess) {
-            return handle_allocation_failure(tensor, "Failed to allocate GPU memory", err);
-        }
+        tensor->data = tensor_mem_alloc(total_bytes);
         tensor->allocated_size = total_bytes;
     }
     
@@ -616,16 +597,6 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
     }
 
     return view;
-}
-
-void cuda_set_initialized(int status)
-{
-    cuda_is_initialized = status;
-}
-
-int cuda_initialized()
-{
-    return cuda_is_initialized;
 }
 
 void cuda_tensor_destroy(tensor_t *tensor)

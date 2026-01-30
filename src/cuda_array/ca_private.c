@@ -440,7 +440,7 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
 
 tensor_t *cuda_tensor_transpose(tensor_t *tensor, int *axis, int axis_len)
 {
-    if (!cuda_initialized() || tensor == NULL || axis == NULL)
+    if (tensor == NULL || axis == NULL)
     {
         return NULL;
     }

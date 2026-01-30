@@ -33,15 +33,36 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor);
 
+static dtype_t parse_dtype_param(zend_string *dtype_str)
+{
+    if (!dtype_str || ZSTR_LEN(dtype_str) == 0)
+    {
+        return DTYPE_FLOAT32;
+    }
+
+    dtype_t dtype = dtype_from_string(ZSTR_VAL(dtype_str));
+    if (dtype >= DTYPE_COUNT || dtype == DTYPE_UNKNOWN)
+    {
+        return DTYPE_FLOAT32;
+    }
+
+    return dtype;
+}
+
 ZEND_METHOD(CudaArray, __construct)
 {
     zval *data;
+    zend_string *dtype_str = NULL;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
     Z_PARAM_ARRAY(data)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    dtype_t dtype = parse_dtype_param(dtype_str);
+
     tensor_t *tensor = create_tensor_from_php_array(data);
 
     if (!tensor)
@@ -49,6 +70,7 @@ ZEND_METHOD(CudaArray, __construct)
         RETURN_NULL();
     }
 
+    tensor->dtype = dtype;
     obj->tensor_handle = tensor;
     sync_php_object_shape(obj, tensor);
 }
@@ -344,10 +366,13 @@ ZEND_METHOD(CudaArray, full)
 {
     zval *shape_array;
     double value;
+    zend_string *dtype_str = NULL;
 
-    ZEND_PARSE_PARAMETERS_START(2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 3)
     Z_PARAM_ARRAY(shape_array)
     Z_PARAM_DOUBLE(value)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
 
     int shape[10] = {0};
@@ -371,14 +396,61 @@ ZEND_METHOD(CudaArray, full)
         RETURN_NULL();
     }
 
-    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, (float)value);
+    dtype_t dtype = parse_dtype_param(dtype_str);
+
+    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, (float)value, dtype);
     if (!tensor)
     {
         zend_throw_error(NULL, "Failed to create full tensor");
         RETURN_NULL();
     }
 
+
     create_result_object(return_value, tensor);
+}
+
+ZEND_METHOD(CudaArray, astype)
+{
+    zend_string *dtype_str = NULL;
+    
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_STR(dtype_str)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    if (!obj->tensor_handle) {
+        zend_throw_error(NULL, "Invalid tensor");
+        RETURN_NULL();
+    }
+    
+    if (!dtype_str || ZSTR_LEN(dtype_str) == 0) {
+        zend_throw_error(NULL, "Invalid dtype string");
+        RETURN_NULL();
+    }
+    
+    tensor_t *new_tensor = tensor_cast_string(obj->tensor_handle, ZSTR_VAL(dtype_str));
+    if (!new_tensor) {
+        zend_throw_error(NULL, "Failed to cast tensor to %s", ZSTR_VAL(dtype_str));
+        RETURN_NULL();
+    }
+    
+    create_result_object(return_value, new_tensor);
+}
+
+ZEND_METHOD(CudaArray, dtype)
+{
+    cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    if (!obj->tensor_handle) {
+        zend_throw_error(NULL, "Invalid tensor");
+        RETURN_NULL();
+    }
+    
+    const char* dtype_name = dtype_to_string(obj->tensor_handle->dtype);
+    if (!dtype_name) {
+        dtype_name = "unknown";
+    }
+    
+    RETURN_STRING(dtype_name);
 }
 
 ZEND_METHOD(CudaArray, reshape)
@@ -846,29 +918,13 @@ ZEND_METHOD(CudaArray, __debugInfo)
     {
         add_next_index_long(&shape_array, (zend_long)tensor->shape[i]);
     }
-    add_assoc_zval(return_value, "Shape", &shape_array);
+    add_assoc_zval(return_value, "shape", &shape_array);
 
-    const char *dtype_str;
-    size_t element_size;
+    const char *dtype_str = dtype_to_string(tensor->dtype);
+    size_t element_size = dtype_size(tensor->dtype);
 
-    if (tensor->dtype == DTYPE_FLOAT32)
-    {
-        dtype_str = "float32";
-        element_size = sizeof(float);
-    }
-    else if (tensor->dtype == DTYPE_INT32)
-    {
-        dtype_str = "int32";
-        element_size = sizeof(int);
-    }
-    else
-    {
-        dtype_str = "unknown";
-        element_size = 0;
-    }
-
-    add_assoc_string(return_value, "Dtype", (char *)dtype_str);
-    add_assoc_long(return_value, "Elements", (zend_long)tensor->total_size);
+    add_assoc_string(return_value, "dtype", (char *)dtype_str);
+    add_assoc_long(return_value, "elements", (zend_long)tensor->total_size);
 }
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor)
@@ -1420,14 +1476,17 @@ static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *
 static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed)
 {
     zval *shape_array;
+    zend_string *dtype_str = NULL;
+
     double min = 0;
     double max = 100;
-
-    ZEND_PARSE_PARAMETERS_START_EX(ZPP_ERROR_FAILURE, 1, 3)
+    
+    ZEND_PARSE_PARAMETERS_START_EX(ZPP_ERROR_FAILURE, 1, 4)
     Z_PARAM_ARRAY(shape_array)
     Z_PARAM_OPTIONAL
     Z_PARAM_DOUBLE(min)
     Z_PARAM_DOUBLE(max)
+    Z_PARAM_STR(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
 
     int shape[10] = {0};
@@ -1451,7 +1510,8 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
         RETURN_NULL();
     }
 
-    tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, (float)min, (float)max, seed);
+    dtype_t dtype = parse_dtype_param(dtype_str);
+    tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, (float)min, (float)max, dtype, seed);
 
     if (!tensor)
     {
@@ -1465,9 +1525,12 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
 static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value)
 {
     zval *shape_array;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    zend_string *dtype_str = NULL;
+   
+    ZEND_PARSE_PARAMETERS_START(1, 2)
     Z_PARAM_ARRAY(shape_array)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
 
     int shape[10] = {0};
@@ -1491,7 +1554,8 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
         RETURN_NULL();
     }
 
-    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, value);
+    dtype_t dtype = parse_dtype_param(dtype_str);
+    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, value, dtype);
 
     if (!tensor)
     {

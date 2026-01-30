@@ -61,7 +61,7 @@ extern "C"
 #define CUDA_CHECK_AND_RETURN_NULL(__tensor__)                                           \
     do                                                                                   \
     {                                                                                    \
-        if (UNEXPECTED(!cuda_initialized() || (__tensor__) == NULL))                     \
+        if (UNEXPECTED((__tensor__) == NULL))                     \
         {                                                                                \
             php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL"); \
             return NULL;                                                                 \
@@ -71,7 +71,7 @@ extern "C"
 #define CUDA_CHECK_AND_RETURN_FAILURE(__tensor__)                                        \
     do                                                                                   \
     {                                                                                    \
-        if (UNEXPECTED(!cuda_initialized() || (__tensor__) == NULL))                     \
+        if (UNEXPECTED((__tensor__) == NULL))                     \
         {                                                                                \
             php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL"); \
             return 0;                                                                    \
@@ -87,7 +87,6 @@ extern "C"
         }                                                                 \
     } while (0)
 
-    int tensor_init();
     int cuda_initialized();
     void cuda_set_initialized(int status);
     void cuda_tensor_destroy(tensor_t *tensor);

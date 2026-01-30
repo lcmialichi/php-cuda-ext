@@ -43,6 +43,9 @@ int dtype_is_integer(dtype_t dtype);
 int dtype_is_signed(dtype_t dtype);
 int dtype_is_boolean(dtype_t dtype);
 
+dtype_t dtype_from_string(const char* type_str);
+int is_valid_dtype_string(const char* type_str);
+
 dtype_t promote_types(dtype_t a, dtype_t b);
 dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b);
 dtype_t promote_types_for_comparison(dtype_t a, dtype_t b);

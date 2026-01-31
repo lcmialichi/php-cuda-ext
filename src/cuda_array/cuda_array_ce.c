@@ -91,7 +91,7 @@ static dtype_t parse_dtype_param(zend_string *dtype_str)
 {
     if (!dtype_str || ZSTR_LEN(dtype_str) == 0)
     {
-        return DTYPE_UNKNOWN;
+        return DTYPE_FLOAT32;
     }
 
     dtype_t dtype = dtype_from_string(ZSTR_VAL(dtype_str));
@@ -102,6 +102,7 @@ static dtype_t parse_dtype_param(zend_string *dtype_str)
 
     return dtype;
 }
+
 
 ZEND_METHOD(CudaArray, __construct)
 {
@@ -1521,6 +1522,7 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
     }
 
     dtype_t dtype = parse_dtype_param(dtype_str);
+
     tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, (float)min, (float)max, dtype, seed);
 
     if (!tensor)

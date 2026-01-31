@@ -2,9 +2,9 @@
 
 use Cuda\CudaArray;
 
-$ca = new  CudaArray([1, 0, 1, 0], dtype: "bool");
-$ca2 = new CudaArray([0, 1, 0, 1], dtype: "int");
+// $ca = new  CudaArray([1, 0, 1, 0], dtype: "bool");
+// $ca2 = new CudaArray([0, 1, 0, 1], dtype: "int");
 
-// $result = $ca + $ca2;
+$test = CudaArray::rand([10, 10]);
 
-// var_dump($result, $ca->toArray());
+var_dump($test->toArray());

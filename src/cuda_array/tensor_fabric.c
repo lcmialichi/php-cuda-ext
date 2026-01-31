@@ -172,6 +172,7 @@ tensor_t *cuda_tensor_create_rand(
             min_value,
             max_value) != SUCCESS)
     {
+
         cuda_tensor_destroy(tensor);
         return NULL;
     }

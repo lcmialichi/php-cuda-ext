@@ -1,5 +1,6 @@
 #ifndef AST_CUDA_TYPES_H
 #define AST_CUDA_TYPES_H
+
 #include "php.h"
 #include "kernel_types.h"
 #include "data_types.h"

@@ -4,6 +4,7 @@
 #include <time.h>
 #include <curand.h>
 #include "data_types.h"
+#include <stdbool.h>
 
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
@@ -392,9 +393,9 @@ static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int
     case DTYPE_INT64:
         flatten_php_array_to_int64(data, (int64_t *)pinned_host_data, &host_index);
         break;
-    // case DTYPE_BOOL:
-    //     flatten_php_array_to_uint8(data, (uint8_t *)pinned_host_data, &host_index);
-    //     break;
+    case DTYPE_BOOL:
+        flatten_php_array_to__bool(data, (bool *)pinned_host_data, &host_index);
+        break;
     default:
         cudaFreeHost(pinned_host_data);
         return cudaErrorInvalidValue;

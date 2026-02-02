@@ -5,6 +5,7 @@
 #include "php.h"
 #include "tensor.h"
 #include "data_types.h"
+#include <stdbool.h>
 
 #define DEFINE_FLATTENER(type_name, c_type)                                              \
     static void flatten_php_array_to_##type_name(zval *data, c_type *buffer, int *index) \
@@ -40,7 +41,7 @@ DEFINE_FLATTENER(int32, int32_t)
 DEFINE_FLATTENER(int8, int8_t)
 DEFINE_FLATTENER(int64, int64_t)
 DEFINE_FLATTENER(uint64, uint8_t)
-
+DEFINE_FLATTENER(_bool, bool)
 
 tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str);
 tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype);

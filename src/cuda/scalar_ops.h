@@ -8,42 +8,35 @@
 extern "C"
 {
 #endif
-    void launch_scalar_add_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_subtract_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_multiply_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_divide_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_power_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_greater_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_less_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_not_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_greater_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_scalar_less_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
+    void launch_scalar(
+        void *base,
+        dtype_t base_dtype,
+        scalar_value_t scalar_val,
+        void *result,
+        dtype_t result_dtype,
+        operation_type_t op_type,
+        size_t base_offset,
+        int *shape,
+        size_t *strides,
+        int ndims,
+        size_t total_size,
+        int is_contiguous);
 
-    void launch_inv_scalar_add_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_subtract_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_multiply_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_divide_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_power_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_greater_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_less_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_not_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_greater_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-    void launch_inv_scalar_less_equal_kernel(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
+    void launch_scalar_inv(
+        void *base,
+        dtype_t base_dtype,
+        scalar_value_t scalar_val,
+        void *result,
+        dtype_t result_dtype,
+        operation_type_t op_type,
+        size_t base_offset,
+        int *shape,
+        size_t *strides,
+        int ndims,
+        size_t total_size,
+        int is_contiguous);
 
 #ifdef __cplusplus
 }
 #endif
-
-typedef void (*scalar_fn)(float *base, float scalar, float *result, size_t base_offset, int *shape, size_t *strides, int ndims, size_t total_size);
-
-typedef struct
-{
-    operation_type_t op;
-    scalar_fn fn;
-} ScalarDispatchEntry;
-
-extern ScalarDispatchEntry scalar_dispatch[];
-
 #endif

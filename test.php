@@ -2,9 +2,10 @@
 
 use Cuda\CudaArray;
 
-// $ca = new  CudaArray([1, 0, 1, 0], dtype: "bool");
-// $ca2 = new CudaArray([0, 1, 0, 1], dtype: "int");
+$ca = new  CudaArray([1000, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0], dtype: "bool");
+$ca2 = new CudaArray([1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0], dtype: "float");
 
-$test = CudaArray::rand([10, 10]);
+// $ca = $ca->astype($ca2->dtype());
 
-var_dump($test->toArray());
+$test = $ca * 10 ;
+var_dump($ca, $ca->toArray());

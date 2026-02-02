@@ -58,14 +58,6 @@ int is_contiguous(tensor_t *tensor) {
     return result;
 }
 
-dtype_t tensor_promote_types(const tensor_t* a, const tensor_t* b) {
-    if (!a || !b) {
-        return DTYPE_FLOAT32;
-    }
-    
-    return promote_types_for_arithmetic(a->dtype, b->dtype);
-}
-
 int tensor_can_cast_to(const tensor_t* tensor, dtype_t new_dtype) {
     if (!tensor) return 0;
     

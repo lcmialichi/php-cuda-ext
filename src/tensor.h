@@ -101,7 +101,6 @@ extern "C"
     int cuda_tensor_set_scalar(tensor_t *tensor, size_t element_offset, float scalar_value);
     int cuda_tensor_set_tensor(tensor_t *base_tensor, size_t element_offset, tensor_t *tensor);
 
-    dtype_t tensor_promote_types(const tensor_t *a, const tensor_t *b);
     int tensor_can_cast_to(const tensor_t *tensor, dtype_t new_dtype);
     tensor_t *tensor_cast(tensor_t *tensor, dtype_t new_dtype);
 

@@ -103,7 +103,6 @@ static dtype_t parse_dtype_param(zend_string *dtype_str)
     return dtype;
 }
 
-
 ZEND_METHOD(CudaArray, __construct)
 {
     zval *data;
@@ -1212,13 +1211,6 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-
-    if (this_obj->tensor_handle == NULL)
-    {
-        zend_throw_error(NULL, "CudaArray not initialized");
-        RETURN_NULL();
-    }
-
     tensor_t *result_tensor = NULL;
 
     if (Z_TYPE_P(other_zv) == IS_OBJECT && instanceof_function(Z_OBJCE_P(other_zv), cuda_array_ce))
@@ -1233,15 +1225,30 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
 
         result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
     }
-    else if (Z_TYPE_P(other_zv) == IS_DOUBLE || Z_TYPE_P(other_zv) == IS_LONG)
-    {
-        float scalar_value = (Z_TYPE_P(other_zv) == IS_DOUBLE) ? (float)Z_DVAL_P(other_zv) : (float)Z_LVAL_P(other_zv);
-        result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
-    }
     else
     {
-        zend_throw_error(NULL, "Operation requires CudaArray or numeric value");
-        RETURN_NULL();
+        scalar_value_t scalar_value;
+        scalar_value.dtype = dtype_from_zval(other_zv);
+        switch (scalar_value.dtype)
+        {
+        case DTYPE_INT64:
+            scalar_value.v.i64 = Z_LVAL_P(other_zv);
+            break;
+        case DTYPE_FLOAT64:
+            scalar_value.v.f64 = Z_DVAL_P(other_zv);
+            break;
+        case IS_TRUE:
+            scalar_value.v.b = true;
+            break;
+        case IS_FALSE:
+            scalar_value.v.b = false;
+            break;
+        default:
+            zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
+            RETURN_NULL();
+        }
+
+        result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
     }
 
     if (result_tensor == NULL)
@@ -1311,14 +1318,30 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
             cuda_array_obj *other_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op2));
             result_tensor = cuda_tensor_op(this_obj->tensor_handle, other_obj->tensor_handle, operation_type);
         }
-        else if (Z_TYPE_P(op2) == IS_DOUBLE || Z_TYPE_P(op2) == IS_LONG)
-        {
-            float scalar_value = (Z_TYPE_P(op2) == IS_DOUBLE) ? (float)Z_DVAL_P(op2) : (float)Z_LVAL_P(op2);
-            result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
-        }
         else
         {
-            return FAILURE;
+            scalar_value_t scalar_value;
+            scalar_value.dtype = dtype_from_zval(op2);
+            switch (scalar_value.dtype)
+            {
+            case DTYPE_INT64:
+                scalar_value.v.i64 = Z_LVAL_P(op2);
+                break;
+            case DTYPE_FLOAT64:
+                scalar_value.v.f64 = Z_DVAL_P(op2);
+                break;
+            case IS_TRUE:
+                scalar_value.v.b = true;
+                break;
+            case IS_FALSE:
+                scalar_value.v.b = false;
+                break;
+            default:
+                zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
+                FAILURE;
+            }
+
+            result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
         }
     }
     else if (Z_TYPE_P(op2) == IS_OBJECT && Z_OBJCE_P(op2) == cuda_array_ce)
@@ -1329,15 +1352,28 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
             return FAILURE;
         }
 
-        if (Z_TYPE_P(op1) == IS_DOUBLE || Z_TYPE_P(op1) == IS_LONG)
+        scalar_value_t scalar_value;
+        scalar_value.dtype = dtype_from_zval(op1);
+        switch (scalar_value.dtype)
         {
-            float scalar_value = (Z_TYPE_P(op1) == IS_DOUBLE) ? (float)Z_DVAL_P(op1) : (float)Z_LVAL_P(op1);
-            result_tensor = cuda_inv_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
+        case DTYPE_INT64:
+            scalar_value.v.i64 = Z_LVAL_P(op1);
+            break;
+        case DTYPE_FLOAT64:
+            scalar_value.v.f64 = Z_DVAL_P(op1);
+            break;
+        case IS_TRUE:
+            scalar_value.v.b = true;
+            break;
+        case IS_FALSE:
+            scalar_value.v.b = false;
+            break;
+        default:
+            zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
+            FAILURE;
         }
-        else
-        {
-            return FAILURE;
-        }
+
+        result_tensor = cuda_inv_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
     }
     else
     {

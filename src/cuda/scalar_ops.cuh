@@ -2,12 +2,15 @@
 #define SCALAR_OPS_CUH
 
 #include <cuda_runtime.h>
+#include "new_ops_func.cuh"
+#include "cast.cuh"
 
-template <typename Op>
+template <typename T, typename Op>
 __global__ void scalar_kernel_strided(
-    const float *base,
-    float scalar,
-    float *result,
+    const void *base,
+    dtype_t base_dtype,
+    T scalar,
+    T *result,
     size_t base_offset,
     const int *shape,
     const size_t *strides,
@@ -28,15 +31,16 @@ __global__ void scalar_kernel_strided(
         offset += coord * strides[d];
     }
 
-    Op op;
-    result[base_offset + offset] = op(base[offset], scalar);
+    const T base_val = fetch_and_cast<T>(base, base_dtype, offset);
+    result[base_offset + offset] = Op::apply(base_val, scalar);
 }
 
-template <typename Op>
+template <typename T, typename Op>
 __global__ void inv_scalar_kernel_strided(
-    const float *base,
-    float scalar,
-    float *result,
+    const void *base,
+    dtype_t base_dtype,
+    T scalar,
+    T *result,
     size_t base_offset,
     const int *shape,
     const size_t *strides,
@@ -57,34 +61,72 @@ __global__ void inv_scalar_kernel_strided(
         offset += coord * strides[d];
     }
 
-    Op op;
-    result[base_offset + offset] = op(scalar, base[offset]);
+    const T base_val = fetch_and_cast<T>(base, base_dtype, offset);
+    result[base_offset + offset] = Op::apply(scalar, base_val);
 }
 
-template <typename Op>
+template <typename T, typename Op>
+__global__ void scalar_kernel_contiguous(
+    const void *__restrict__ base,
+    dtype_t base_dtype,
+    T scalar,
+    T *__restrict__ result,
+    size_t total_size)
+{
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < total_size)
+    {
+        const T base_val = fetch_and_cast<T>(base, base_dtype, idx);
+        result[idx] = Op::apply(base_val, scalar);
+    }
+}
+
+template <typename T, typename Op>
+__global__ void scalar_kernel_contiguous_inv(
+    void *__restrict__ base,
+    dtype_t base_dtype,
+    T scalar,
+    T *__restrict__ result,
+    size_t total_size)
+{
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < total_size)
+    {
+        const T base_val = fetch_and_cast<T>(base, base_dtype, idx);
+        result[idx] = Op::apply(scalar, base_val);
+    }
+}
+
+template <typename T, typename Op>
 void launch_inv_scalar_op(
-    float *base,
-    float scalar,
-    float *result,
+    void *base,
+    dtype_t base_dtype,
+    T scalar,
+    T *result,
     size_t base_offset,
-    int *shape,
-    size_t *strides,
+    int *d_shape,
+    size_t *d_strides,
     int ndims,
-    size_t total_size)
+    size_t total_size,
+    int is_contiguous)
 {
     int threads = 256;
     int blocks = (total_size + threads - 1) / threads;
+    if (is_contiguous == 1)
+    {
+        scalar_kernel_contiguous_inv<T, Op><<<blocks, threads>>>(
+            base,
+            base_dtype,
+            scalar,
+            result,
+            total_size);
 
-    int *d_shape;
-    size_t *d_strides;
+        return;
+    }
 
-    cudaMalloc(&d_shape, ndims * sizeof(int));
-    cudaMalloc(&d_strides, ndims * sizeof(size_t));
-    cudaMemcpy(d_shape, shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_strides, strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
-
-    inv_scalar_kernel_strided<Op><<<blocks, threads>>>(
+    inv_scalar_kernel_strided<T, Op><<<blocks, threads>>>(
         base,
+        base_dtype,
         scalar,
         result,
         base_offset,
@@ -92,35 +134,40 @@ void launch_inv_scalar_op(
         d_strides,
         ndims,
         total_size);
-
-    cudaFree(d_shape);
-    cudaFree(d_strides);
 }
 
-template <typename Op>
+template <typename T, typename Op>
 void launch_scalar_op(
-    float *base,
-    float scalar,
-    float *result,
+    void *base,
+    dtype_t base_dtype,
+    T scalar,
+    T *result,
     size_t base_offset,
-    int *shape,
-    size_t *strides,
+    int *d_shape,
+    size_t *d_strides,
     int ndims,
-    size_t total_size)
+    size_t total_size,
+    int is_contiguous
+)
 {
     int threads = 256;
     int blocks = (total_size + threads - 1) / threads;
 
-    int *d_shape;
-    size_t *d_strides;
+    if (is_contiguous == 1)
+    {
+        scalar_kernel_contiguous<T, Op><<<blocks, threads>>>(
+            base,
+            base_dtype,
+            scalar,
+            result,
+            total_size);
 
-    cudaMalloc(&d_shape, ndims * sizeof(int));
-    cudaMalloc(&d_strides, ndims * sizeof(size_t));
-    cudaMemcpy(d_shape, shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_strides, strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
+        return;
+    }
 
-    scalar_kernel_strided<Op><<<blocks, threads>>>(
+    scalar_kernel_strided<T, Op><<<blocks, threads>>>(
         base,
+        base_dtype,
         scalar,
         result,
         base_offset,
@@ -128,9 +175,6 @@ void launch_scalar_op(
         d_strides,
         ndims,
         total_size);
-
-    cudaFree(d_shape);
-    cudaFree(d_strides);
 }
 
 #endif

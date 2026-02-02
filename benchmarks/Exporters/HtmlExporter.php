@@ -55,7 +55,6 @@ class HtmlExporter implements ExporterInterface
         $comparisonHtml = $this->generateComparisonTable($allResults, $benchmarksData);
         $chartsHtml = $this->generateChartsSection($benchmarksData);
 
-        // Convert benchmarks data to JSON for JavaScript
         $benchmarksDataJson = json_encode($benchmarksData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
         $html = str_replace(

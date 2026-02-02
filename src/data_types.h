@@ -3,6 +3,7 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum
 {
@@ -23,8 +24,9 @@ typedef enum
     DTYPE_VOID
 } dtype_t;
 
-typedef struct {
-    const char* name;
+typedef struct
+{
+    const char *name;
     size_t size;
     int is_floating;
     int is_integer;
@@ -34,22 +36,45 @@ typedef struct {
     int default_device;
 } dtype_info_t;
 
+typedef struct
+{
+    union
+    {
+        float f32;
+        double f64;
+        int32_t i32;
+        int64_t i64;
+        int8_t i8;
+        bool b;
+    } v;
+    dtype_t dtype;
+} scalar_value_t;
+
+#ifndef __CUDACC__
+
+#include "php.h"
+#include "operations_strctures.h"
+
+dtype_t dtype_from_zval(zval *val);
+dtype_t promote_types(dtype_t a, dtype_t b);
+dtype_t promote_types_for_comparison(dtype_t a, dtype_t b);
+dtype_t promote_types_for_logical(dtype_t a, dtype_t b);
+dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op);
+dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b, operation_type_t op);
+
+#endif
+
 extern const dtype_info_t dtype_infos[DTYPE_COUNT];
 
-const char* dtype_to_string(dtype_t dtype);
+const char *dtype_to_string(dtype_t dtype);
 size_t dtype_size(dtype_t dtype);
 int dtype_is_floating(dtype_t dtype);
 int dtype_is_integer(dtype_t dtype);
 int dtype_is_signed(dtype_t dtype);
 int dtype_is_boolean(dtype_t dtype);
 
-dtype_t dtype_from_string(const char* type_str);
-int is_valid_dtype_string(const char* type_str);
-
-dtype_t promote_types(dtype_t a, dtype_t b);
-dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b);
-dtype_t promote_types_for_comparison(dtype_t a, dtype_t b);
-dtype_t promote_types_for_logical(dtype_t a, dtype_t b);
+dtype_t dtype_from_string(const char *type_str);
 int can_safely_cast_to(dtype_t from, dtype_t to);
+int is_valid_dtype_string(const char *type_str);
 
 #endif

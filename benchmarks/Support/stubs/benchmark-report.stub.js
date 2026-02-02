@@ -9,11 +9,11 @@ class BenchmarkReport {
     init() {
         this.initTabs();
         this.initSearchFilter();
-        
+
         if (document.querySelector('#nav-charts-tab').classList.contains('active')) {
             setTimeout(() => this.initCharts(), 100);
         }
-        
+
         this.initClickHandlers();
         this.initModal();
         this.initChartControls();
@@ -38,11 +38,11 @@ class BenchmarkReport {
             searchInput.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
                 const cards = document.querySelectorAll('#comparison-grid > div');
-                
+
                 cards.forEach(card => {
                     const testName = card.querySelector('.test-card-header h6').textContent.toLowerCase();
                     const benchmark = card.getAttribute('data-benchmark').toLowerCase();
-                    
+
                     if (testName.includes(term) || benchmark.includes(term)) {
                         card.style.display = 'block';
                     } else {
@@ -57,10 +57,10 @@ class BenchmarkReport {
             filterSelect.addEventListener('change', (e) => {
                 const selected = e.target.value;
                 const cards = document.querySelectorAll('#comparison-grid > div');
-                
+
                 cards.forEach(card => {
                     const benchmark = card.getAttribute('data-benchmark');
-                    
+
                     if (!selected || benchmark === selected) {
                         card.style.display = 'block';
                     } else {
@@ -76,11 +76,11 @@ class BenchmarkReport {
             row.addEventListener('click', (e) => {
                 const benchmark = row.getAttribute('data-benchmark');
                 const filterSelect = document.querySelector('.benchmark-filter');
-                
+
                 if (filterSelect) {
                     filterSelect.value = benchmark;
                     filterSelect.dispatchEvent(new Event('change'));
-                    
+
                     const comparisonTab = document.querySelector('#nav-comparison-tab');
                     if (comparisonTab) {
                         bootstrap.Tab.getOrCreateInstance(comparisonTab).show();
@@ -94,7 +94,7 @@ class BenchmarkReport {
                 const button = e.target.closest('.view-details-btn');
                 const handler = button.getAttribute('data-handler');
                 const test = button.getAttribute('data-test');
-                
+
                 this.showTestDetails(handler, test);
             }
         });
@@ -105,21 +105,21 @@ class BenchmarkReport {
             if (e.target.closest('#mainPerformanceChart')) {
                 const canvas = e.target.closest('#mainPerformanceChart');
                 const chart = this.charts.main;
-                
+
                 if (!chart) return;
-                
+
                 const activePoints = chart.getElementsAtEventForMode(
                     e.nativeEvent,
                     'nearest',
                     { intersect: true },
                     true
                 );
-                
+
                 if (activePoints.length > 0) {
                     const firstPoint = activePoints[0];
                     const label = chart.data.labels[firstPoint.index];
                     const testName = label;
-                    
+
                     const handlers = this.findHandlersForTest(testName);
                     if (handlers.length > 0) {
                         this.showTestDetails(handlers[0], testName);
@@ -152,7 +152,7 @@ class BenchmarkReport {
                         <p class="mt-3 text-muted">Loading test details...</p>
                     </div>
                 `;
-                
+
                 if (this.charts.detail) {
                     this.charts.detail.destroy();
                     delete this.charts.detail;
@@ -163,21 +163,21 @@ class BenchmarkReport {
 
     showTestDetails(handlerName, testName) {
         const testData = this.findTestData(handlerName, testName);
-        
+
         if (!testData || testData.length === 0) {
             this.showError('No data found for this test');
             return;
         }
-        
+
         const modalBody = document.getElementById('modalBody');
         if (!modalBody) return;
-        
+
         const detailsHtml = this.generateTestDetailsHTML(testData, handlerName, testName);
         modalBody.innerHTML = detailsHtml;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
         modal.show();
-        
+
         setTimeout(() => this.initTestDetailChart(testData, handlerName, testName), 100);
     }
 
@@ -186,13 +186,13 @@ class BenchmarkReport {
             console.warn('No benchmark data available');
             return [];
         }
-        
+
         const benchmark = this.benchmarkData.find(b => b.handler_name === handlerName);
         if (!benchmark) {
             console.warn(`Benchmark ${handlerName} not found`);
             return [];
         }
-        
+
         const results = benchmark.results.filter(r => r.name === testName);
         console.log(`Found ${results.length} results for ${handlerName} - ${testName}`, results);
         return results;
@@ -200,7 +200,7 @@ class BenchmarkReport {
 
     generateTestDetailsHTML(testData, handlerName, testName) {
         const sortedData = [...testData].sort((a, b) => a.stats.time.avg - b.stats.time.avg);
-        
+
         let html = `
             <div class="test-details">
                 <div class="row mb-4">
@@ -243,20 +243,20 @@ class BenchmarkReport {
                                     </tr>
                                 </thead>
                                 <tbody>`;
-        
+
         sortedData.forEach((result, index) => {
             const metadata = result.metadata || {};
             let configLabel = '';
-            
+
             if (Object.keys(metadata).length === 0) {
                 configLabel = '<span class="text-muted">Default configuration</span>';
             } else {
-                const metadataItems = Object.entries(metadata).map(([k, v]) => 
+                const metadataItems = Object.entries(metadata).map(([k, v]) =>
                     `<span class="metadata-item"><span class="metadata-key">${k}:</span> <span class="metadata-value">${this.formatValue(v)}</span></span>`
                 ).join('');
                 configLabel = `<div class="metadata-items">${metadataItems}</div>`;
             }
-            
+
             html += `
                 <tr>
                     <td class="text-center">${index + 1}</td>
@@ -272,7 +272,7 @@ class BenchmarkReport {
                     <td class="text-center">${result.stats.time.std_dev.toFixed(3)} ms</td>
                 </tr>`;
         });
-        
+
         html += `
                                 </tbody>
                             </table>
@@ -280,7 +280,7 @@ class BenchmarkReport {
                     </div>
                 </div>
             </div>`;
-        
+
         return html;
     }
 
@@ -314,10 +314,10 @@ class BenchmarkReport {
 
         const chartLimit = document.querySelector('.chart-limit');
         const limit = chartLimit ? parseInt(chartLimit.value) : 100;
-        
+
         const metricSelect = document.querySelector('.metric-select');
         const metric = metricSelect ? metricSelect.value : 'time';
-        
+
         const sortSelect = document.querySelector('.sort-select');
         const sortBy = sortSelect ? sortSelect.value : 'name';
 
@@ -329,7 +329,7 @@ class BenchmarkReport {
             index
         }));
 
-        switch(sortBy) {
+        switch (sortBy) {
             case 'name':
                 indexedData.sort((a, b) => a.label.localeCompare(b.label));
                 break;
@@ -351,7 +351,7 @@ class BenchmarkReport {
         let backgroundColor = '';
         let borderColor = '';
 
-        switch(metric) {
+        switch (metric) {
             case 'time':
                 data = limitedData.map(d => d.time);
                 label = 'Average Time (ms)';
@@ -403,7 +403,7 @@ class BenchmarkReport {
                         callbacks: {
                             label: (context) => {
                                 let value = context.parsed.x;
-                                
+
                                 if (metric === 'time') {
                                     return `${this.formatTime(value)}`;
                                 } else if (metric === 'memory') {
@@ -486,7 +486,7 @@ class BenchmarkReport {
                 label,
                 time: chartData.time[index]
             }));
-            
+
             const slowest = [...indexedData].sort((a, b) => b.time - a.time).slice(0, 10);
             const slowestLabels = slowest.map(d => {
                 if (d.label.length > 30) {
@@ -495,7 +495,7 @@ class BenchmarkReport {
                 return d.label;
             });
             const slowestTimes = slowest.map(d => d.time);
-            
+
             this.charts.slowest = new Chart(slowestCtx, {
                 type: 'bar',
                 data: {
@@ -548,7 +548,7 @@ class BenchmarkReport {
                 label,
                 time: chartData.time[index]
             }));
-            
+
             const fastest = [...indexedData].sort((a, b) => a.time - b.time).slice(0, 10);
             const fastestLabels = fastest.map(d => {
                 if (d.label.length > 30) {
@@ -557,7 +557,7 @@ class BenchmarkReport {
                 return d.label;
             });
             const fastestTimes = fastest.map(d => d.time);
-            
+
             this.charts.fastest = new Chart(fastestCtx, {
                 type: 'bar',
                 data: {
@@ -641,7 +641,7 @@ class BenchmarkReport {
             if (Object.keys(metadata).length === 0) {
                 return `Config ${index + 1}`;
             }
-            
+
             const keys = Object.keys(metadata);
             if (keys.length === 1) {
                 const key = keys[0];
@@ -747,7 +747,7 @@ class BenchmarkReport {
     showError(message) {
         const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
         const modalBody = document.getElementById('modalBody');
-        
+
         modalBody.innerHTML = `
             <div class="text-center py-5">
                 <div class="alert alert-danger" role="alert">
@@ -759,7 +759,7 @@ class BenchmarkReport {
                 </button>
             </div>
         `;
-        
+
         modal.show();
     }
 
@@ -788,8 +788,10 @@ class BenchmarkReport {
     }
 
     formatTime(ms) {
-        if (ms < 0.001) return (ms * 1000000).toFixed(2) + ' ns';
-        if (ms < 1) return (ms * 1000).toFixed(2) + ' μs';
+        if (ms <= 0) return '0 ms';
+        if (ms < 0.001) {
+            return (ms * 1000).toFixed(2) + ' μs';
+        }
         if (ms < 1000) return ms.toFixed(3) + ' ms';
         return (ms / 1000).toFixed(3) + ' s';
     }

@@ -2,56 +2,73 @@
 #include "scalar_ops.h"
 #include "scalar_ops.cuh"
 #include "operation_functors.cuh"
+#include "dispatcher.h"
+#include "../data_types.h"
 
-extern "C"
+extern "C" void launch_scalar(
+    void *base,
+    dtype_t base_dtype,
+    scalar_value_t scalar_val,
+    void *result,
+    dtype_t result_dtype,
+    operation_type_t op_type,
+    size_t base_offset,
+    int *shape,
+    size_t *strides,
+    int ndims,
+    size_t total_size,
+    int is_contiguous
+)
 {
-#define DEFINE_SCALAR_WRAPPER(name, Op)                                                             \
-    void name(float *base,                                                                          \
-              float scalar,                                                                         \
-              float *result,                                                                        \
-              size_t base_offset,                                                                   \
-              int *shape,                                                                           \
-              size_t *strides,                                                                      \
-              int ndims,                                                                            \
-              size_t total_size)                                                                    \
-    {                                                                                               \
-        launch_scalar_op<Op>(base, scalar, result, base_offset, shape, strides, ndims, total_size); \
-    }
+    DISPATCH_DTYPE(result_dtype, {
+        scalar_t val = convert_union_to_type<scalar_t>(scalar_val);
+        DISPATCH_OP(op_type, {
+            launch_scalar_op<scalar_t, bin_op_t>(
+                base,
+                base_dtype,
+                val, 
+                (scalar_t *)result, 
+                base_offset, 
+                shape, 
+                strides, 
+                ndims, 
+                total_size,
+                is_contiguous
+            );
+        });
+    });
+}
 
-#define DEFINE_INV_SCALAR_WRAPPER(name, Op)                                                             \
-    void name(float *base,                                                                              \
-              float scalar,                                                                             \
-              float *result,                                                                            \
-              size_t base_offset,                                                                       \
-              int *shape,                                                                               \
-              size_t *strides,                                                                          \
-              int ndims,                                                                                \
-              size_t total_size)                                                                        \
-    {                                                                                                   \
-        launch_inv_scalar_op<Op>(base, scalar, result, base_offset, shape, strides, ndims, total_size); \
-    }
-
-    DEFINE_SCALAR_WRAPPER(launch_scalar_add_kernel, AddOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_subtract_kernel, SubOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_multiply_kernel, MulOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_divide_kernel, DivOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_power_kernel, PowOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_greater_kernel, GreaterOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_less_kernel, LessOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_equal_kernel, EqualOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_not_equal_kernel, NotEqualOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_greater_equal_kernel, GreaterEqualOp)
-    DEFINE_SCALAR_WRAPPER(launch_scalar_less_equal_kernel, LessEqualOp)
-
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_add_kernel, AddOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_subtract_kernel, SubOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_multiply_kernel, MulOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_divide_kernel, DivOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_power_kernel, PowOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_greater_kernel, GreaterOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_less_kernel, LessOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_equal_kernel, EqualOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_not_equal_kernel, NotEqualOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_greater_equal_kernel, GreaterEqualOp)
-    DEFINE_INV_SCALAR_WRAPPER(launch_inv_scalar_less_equal_kernel, LessEqualOp)
+extern "C" void launch_scalar_inv(
+    void *base,
+    dtype_t base_dtype,
+    scalar_value_t scalar_val,
+    void *result,
+    dtype_t result_dtype,
+    operation_type_t op_type,
+    size_t base_offset,
+    int *shape,
+    size_t *strides,
+    int ndims,
+    size_t total_size,
+    int is_contiguous
+)
+{
+    DISPATCH_DTYPE(result_dtype, {
+        scalar_t val = convert_union_to_type<scalar_t>(scalar_val);
+        DISPATCH_OP(op_type, {
+            launch_inv_scalar_op<scalar_t, bin_op_t>(
+                base,
+                base_dtype,
+                val, 
+                (scalar_t *)result, 
+                base_offset, 
+                shape, 
+                strides, 
+                ndims, 
+                total_size,
+                is_contiguous
+            );
+        });
+    });
 }

@@ -10,47 +10,6 @@
 #include "php.h"
 #include "tensor.h"
 
-ScalarDispatchEntry scalar_dispatch[] = {
-    {OP_ADD, launch_scalar_add_kernel},
-    {OP_SUB, launch_scalar_subtract_kernel},
-    {OP_MUL, launch_scalar_multiply_kernel},
-    {OP_DIV, launch_scalar_divide_kernel},
-    {OP_POW, launch_scalar_power_kernel},
-    {OP_GT, launch_scalar_greater_kernel},
-    {OP_LT, launch_scalar_less_kernel},
-    {OP_EQ, launch_scalar_equal_kernel},
-    {OP_NE, launch_scalar_not_equal_kernel},
-    {OP_GE, launch_scalar_greater_equal_kernel},
-    {OP_LE, launch_scalar_less_equal_kernel},
-};
-
-ScalarDispatchEntry inv_scalar_dispatch[] = {
-    {OP_ADD, launch_inv_scalar_add_kernel},
-    {OP_SUB, launch_inv_scalar_subtract_kernel},
-    {OP_MUL, launch_inv_scalar_multiply_kernel},
-    {OP_DIV, launch_inv_scalar_divide_kernel},
-    {OP_POW, launch_inv_scalar_power_kernel},
-    {OP_GT, launch_inv_scalar_greater_kernel},
-    {OP_LT, launch_inv_scalar_less_kernel},
-    {OP_EQ, launch_inv_scalar_equal_kernel},
-    {OP_NE, launch_inv_scalar_not_equal_kernel},
-    {OP_GE, launch_inv_scalar_greater_equal_kernel},
-    {OP_LE, launch_inv_scalar_less_equal_kernel},
-};
-
-BroadcastDispatchEntry broadcast_dispatch[] = {
-    {OP_ADD, launch_broadcast_add},
-    {OP_SUB, launch_broadcast_subtract},
-    {OP_MUL, launch_broadcast_multiply},
-    {OP_DIV, launch_broadcast_divide},
-    {OP_POW, launch_broadcast_power},
-    {OP_GT, launch_broadcast_greater},
-    {OP_LT, launch_broadcast_less},
-    {OP_EQ, launch_broadcast_equal},
-    {OP_NE, launch_broadcast_not_equal},
-    {OP_GE, launch_broadcast_greater_equal},
-    {OP_LE, launch_broadcast_less_equal}};
-
 UnaryDispatchEntry unary_dispatch[] = {
     {OP_EXP, launch_unary_exp_kernel},
     {OP_SQRT, launch_unary_sqrt_kernel},
@@ -76,38 +35,11 @@ ReductionArgDispatchEntry reduction_arg_dispatch[] = {
     {OP_ARG_MIN, launch_arg_min},
 };
 
-scalar_fn get_scalar_fn(operation_type_t op)
-{
-    for (int i = 0; i < sizeof(scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
-        if (scalar_dispatch[i].op == op)
-            return scalar_dispatch[i].fn;
-
-    return NULL;
-}
-
-scalar_fn get_inv_scalar_fn(operation_type_t op)
-{
-    for (int i = 0; i < sizeof(inv_scalar_dispatch) / sizeof(ScalarDispatchEntry); i++)
-        if (inv_scalar_dispatch[i].op == op)
-            return inv_scalar_dispatch[i].fn;
-
-    return NULL;
-}
-
 unary_fn get_unary_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(unary_dispatch) / sizeof(UnaryDispatchEntry); i++)
         if (unary_dispatch[i].op == op)
             return unary_dispatch[i].fn;
-
-    return NULL;
-}
-
-broadcast_fn get_broadcast_fn(operation_type_t op)
-{
-    for (int i = 0; i < sizeof(broadcast_dispatch) / sizeof(BroadcastDispatchEntry); i++)
-        if (broadcast_dispatch[i].op == op)
-            return broadcast_dispatch[i].fn;
 
     return NULL;
 }
@@ -143,15 +75,27 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
     if (!prepare_broadcast_operation(a, b, result_shape, &result_dims,
                                      a_strides, b_strides, &total_elements))
     {
+        zend_throw_error(NULL, "Broadcast failed: shapes %s and %s are incompatible",
+                         tensor_shape_as_string(a),
+                         tensor_shape_as_string(b));
         return NULL;
     }
 
-    dtype_t promoted_type = promote_types(a->dtype, b->dtype);
+    if (can_safely_cast_to(a->dtype, b->dtype) == 0)
+    {
+        zend_throw_error(NULL, "Failed to promote type %s to %s",
+                         dtype_to_string(a->dtype),
+                         dtype_to_string(b->dtype));
+    }
+
+    dtype_t promoted_type = promote_types_for_arithmetic(a->dtype, b->dtype, operation_type);
     tensor_t *result = cuda_tensor_create_empty_dtype(result_shape, result_dims, promoted_type);
     if (!result)
     {
-        zend_throw_error(NULL, "Broadcast failed: shapes %s and %s are incompatible",
+        zend_throw_error(NULL, "Failed to create result tensor for operation between %s%s and %s%s",
+                         dtype_to_string(a->dtype),
                          tensor_shape_as_string(a),
+                         dtype_to_string(b->dtype),
                          tensor_shape_as_string(b));
         return NULL;
     }
@@ -162,7 +106,7 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
         return NULL;
     }
 
-    launch_broadcast(a->data, b->data, result->data,
+    launch_broadcast(a->data, a->dtype, b->data, b->dtype, result->data,
                      promoted_type, operation_type,
                      a_strides, a->ndims,
                      b_strides, b->ndims,
@@ -173,24 +117,32 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
     return (status == cudaSuccess) ? result : NULL;
 }
 
-tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type)
+tensor_t *cuda_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
-    tensor_t *result = resolve_result_tensor(a);
+
+    dtype_t promoted_type = promote_scalar_for_arithmetic(a->dtype, scalar.dtype, operation_type);
+    tensor_t *result = cuda_tensor_create_empty_dtype(a->shape, a->ndims, promoted_type);
     if (!result)
     {
         php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
         return NULL;
     }
 
-    scalar_fn func = get_scalar_fn(operation_type);
-    if (func == NULL)
-    {
-        php_error_docref(NULL, E_ERROR, "Operation handler not found.");
-        return NULL;
-    }
+    launch_scalar(a->data,
+                  a->dtype,
+                  scalar,
+                  result->data,
+                  promoted_type,
+                  operation_type,
+                  a->offset,
+                  a->d_shape,
+                  a->d_strides,
+                  a->ndims,
+                  a->total_size,
+                  is_contiguous(a)
+                );
 
-    func(a->data, scalar, result->data, a->offset, a->shape, a->strides, a->ndims, a->total_size);
     cudaError_t status = cudaDeviceSynchronize();
 
     if (status != cudaSuccess)
@@ -203,24 +155,33 @@ tensor_t *cuda_scalar_op(tensor_t *a, float scalar, operation_type_t operation_t
     return result;
 }
 
-tensor_t *cuda_inv_scalar_op(tensor_t *a, float scalar, operation_type_t operation_type)
+tensor_t *cuda_inv_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
-    tensor_t *result = resolve_result_tensor(a);
+
+    dtype_t promoted_type = promote_scalar_for_arithmetic(a->dtype, scalar.dtype, operation_type);
+    tensor_t *result = cuda_tensor_create_empty_dtype(a->shape, a->ndims, promoted_type);
     if (!result)
     {
         php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
         return NULL;
     }
 
-    scalar_fn func = get_inv_scalar_fn(operation_type);
-    if (func == NULL)
-    {
-        php_error_docref(NULL, E_ERROR, "Operation handler not found.");
-        return NULL;
-    }
+    launch_scalar_inv(
+        a->data,
+        a->dtype,
+        scalar,
+        result->data,
+        promoted_type,
+        operation_type,
+        a->offset,
+        a->d_shape,
+        a->d_strides,
+        a->ndims,
+        a->total_size,
+        is_contiguous(a)
+    );
 
-    func(a->data, scalar, result->data, a->offset, a->shape, a->strides, a->ndims, a->total_size);
     cudaError_t status = cudaDeviceSynchronize();
 
     if (status != cudaSuccess)

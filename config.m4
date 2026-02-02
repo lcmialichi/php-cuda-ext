@@ -43,11 +43,11 @@ if test "$PHP_CUDA" != "no"; then
     CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu"
 
     AC_MSG_CHECKING([for CUDA kernels])
-    for f in $CUDA_FILES; do
-        $NVCC -arch=sm_60 -O2 -Xcompiler -fPIC -c $f -o ${f%.cu}.o || {
-            AC_MSG_ERROR([Failed to compile $f])
-        }
-    done
+        for f in $CUDA_FILES; do
+            $NVCC -arch=sm_50 -O3 --use_fast_math -Xcompiler -fPIC -Xcompiler -O3 -Xptxas -O3 -c $f -o ${f%.cu}.o || {
+                AC_MSG_ERROR([Failed to compile $f])
+            }
+        done
 
     AC_MSG_RESULT([yes])
 

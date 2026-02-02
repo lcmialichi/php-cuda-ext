@@ -42,7 +42,8 @@ class BenchmarkApplication
         if (isset($config["metadata"])) {
           $metadata = $config["metadata"][$i] ?? [];
         }
-
+        $cur = $i + 1;
+        echo "{$cur}/{$runCount} " .$benchmark::class . "::" . $config["handler"] . " Completed.\n";
         $result[] = $benchmark->run(
           name: $config["name"] ?? "Not defined",
           exec: [$benchmark, $config["handler"]],

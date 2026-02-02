@@ -20,7 +20,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 6,
                 "warmup" => true,
                 "name" => "CudaArray::zeros()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayZeros",
                 "metadata" => [
@@ -36,7 +36,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 6,
                 "warmup" => true,
                 "name" => "CudaArray::ones()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayOnes",
                 "metadata" => [
@@ -52,7 +52,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 6,
                 "warmup" => true,
                 "name" => "CudaArray::full()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayFull",
                 "metadata" => [
@@ -69,7 +69,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 3,
                 "warmup" => true,
                 "name" => "CudaArray::rand()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayRand",
                 "metadata" => [
@@ -85,7 +85,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 3,
                 "warmup" => true,
                 "name" => "CudaArray::concat()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayConcatAxisZero",
                 "metadata" => [
@@ -98,7 +98,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 3,
                 "warmup" => true,
                 "name" => "CudaArray::concat()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayConcatAxisOne",
                 "metadata" => [
@@ -111,7 +111,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::toHost() [GPU -> ContiguousArray]",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoHost",
                 "metadata" => $this->unaryMetadata()
@@ -120,7 +120,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::toArray() [GPU -> PHP Array]",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoArray",
                 "metadata" => $this->unaryMetadata()
@@ -129,7 +129,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::__construct() [PHP Array -> GPU]",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayConstructor",
                 "metadata" => $this->unaryMetadata()

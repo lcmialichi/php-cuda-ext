@@ -20,7 +20,7 @@ class CudaArrayShapeManiliplationBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::flatten()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayFlatten",
                 "metadata" => $this->unaryMetadata()
@@ -29,7 +29,7 @@ class CudaArrayShapeManiliplationBenchmark extends Benchmark
                 "run" => 12,
                 "warmup" => true,
                 "name" => "CudaArray::transpose()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayTranspose",
                 "metadata" => [
@@ -51,7 +51,7 @@ class CudaArrayShapeManiliplationBenchmark extends Benchmark
                 "run" => 12,
                 "warmup" => true,
                 "name" => "CudaArray::reshape()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayReshape",
                 "metadata" => [

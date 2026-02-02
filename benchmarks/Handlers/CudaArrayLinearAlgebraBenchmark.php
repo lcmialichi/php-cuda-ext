@@ -20,7 +20,7 @@ class CudaArrayLinearAlgebraBenchmark extends Benchmark
                 "run" => 8,
                 "warmup" => true,
                 "name" => "CudaArray::matmul()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayMatmul",
                 "metadata" => [

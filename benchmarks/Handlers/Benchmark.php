@@ -55,7 +55,7 @@ abstract class Benchmark implements BenchmarkInterface
     }
 
 
-    protected function warmup(callable $exec, array $args = [], int $times = 3): void
+    protected function warmup(callable $exec, array $args = [], int $times = 10): void
     {
         for ($i = 0; $i < $times; $i++) {
             $exec(...$args);

@@ -20,7 +20,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::add()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayAdd",
                 "metadata" => [
@@ -50,7 +50,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::subtract()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArraySubtract",
                 "metadata" => [
@@ -80,7 +80,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::multiply()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayMultiply",
                 "metadata" => [
@@ -110,7 +110,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::divide()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayDivide",
                 "metadata" => [
@@ -140,7 +140,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 20,
                 "warmup" => true,
                 "name" => "CudaArray::power()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayPower",
                 "metadata" => [
@@ -170,7 +170,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 10,
                 "warmup" => true,
                 "name" => "CudaArray::gt()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayGt",
                 "metadata" => [
@@ -190,7 +190,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 10,
                 "warmup" => true,
                 "name" => "CudaArray::lt()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayLt",
                 "metadata" => [
@@ -210,7 +210,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 10,
                 "warmup" => true,
                 "name" => "CudaArray::eq()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayEq",
                 "metadata" => [
@@ -230,7 +230,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 10,
                 "warmup" => true,
                 "name" => "CudaArray::ne()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayNe",
                 "metadata" => [
@@ -250,7 +250,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 10,
                 "warmup" => true,
                 "name" => "CudaArray::le()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayLe",
                 "metadata" => [
@@ -270,7 +270,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 10,
                 "warmup" => true,
                 "name" => "CudaArray::ge()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayGe",
                 "metadata" => [
@@ -290,7 +290,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::neg()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayNeg",
                 "metadata" => $this->unaryMetadata()
@@ -299,7 +299,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::floor()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayFloor",
                 "metadata" => $this->unaryMetadata()
@@ -308,7 +308,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::ceil()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayCeil",
                 "metadata" => $this->unaryMetadata()
@@ -317,7 +317,7 @@ class CudaArrayBasicMathOperations extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::round()",
-                "iterations" => 10,
+                "iterations" => 100,
                 "type" => "CUDA",
                 "handler" => "cudaArrayRound",
                 "metadata" => $this->unaryMetadata()

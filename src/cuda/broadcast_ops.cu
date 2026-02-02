@@ -12,18 +12,36 @@ extern "C" void launch_broadcast(
     int *result_shape, int result_dims,
     size_t total_elements, size_t a_offset, size_t b_offset)
 {
+
+    int is_same_type = (dtype_a == dtype) && (dtype_b == dtype) ? 1 : 0;
     DISPATCH_DTYPE(dtype, {
         DISPATCH_OP(op_type, {
-            launch_broadcast_kernel<scalar_t, bin_op_t>(
-                a, dtype_a,
-                b, dtype_b,
-                (scalar_t *)result,
-                a_strides, a_dims,
-                b_strides, b_dims,
-                result_shape, result_dims,
-                total_elements,
-                a_offset,
-                b_offset);
+            if (is_same_type == 1)
+            {
+                launch_broadcast_kernel<scalar_t, bin_op_t>(
+                    (scalar_t *)a,
+                    (scalar_t *)b,
+                    (scalar_t *)result,
+                    a_strides, a_dims,
+                    b_strides, b_dims,
+                    result_shape, result_dims,
+                    total_elements,
+                    a_offset,
+                    b_offset);
+            }
+            else
+            {
+                launch_broadcast_kernel_with_cast<scalar_t, bin_op_t>(
+                    a, dtype_a,
+                    b, dtype_b,
+                    (scalar_t *)result,
+                    a_strides, a_dims,
+                    b_strides, b_dims,
+                    result_shape, result_dims,
+                    total_elements,
+                    a_offset,
+                    b_offset);
+            }
         });
     });
 }

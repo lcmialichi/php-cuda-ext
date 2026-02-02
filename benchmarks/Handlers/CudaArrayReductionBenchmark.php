@@ -20,7 +20,7 @@ class CudaArrayReductionBenchmark extends Benchmark
                 "run" => 16,
                 "warmup" => true,
                 "name" => "CudaArray::sum()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArraySum",
                 "metadata" => $this->reductionMetadata()
@@ -29,7 +29,7 @@ class CudaArrayReductionBenchmark extends Benchmark
                 "run" => 16,
                 "warmup" => true,
                 "name" => "CudaArray::min()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayMin",
                 "metadata" => $this->reductionMetadata()
@@ -38,7 +38,7 @@ class CudaArrayReductionBenchmark extends Benchmark
                 "run" => 16,
                 "warmup" => true,
                 "name" => "CudaArray::prod()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayProd",
                 "metadata" => $this->reductionMetadata()
@@ -47,7 +47,7 @@ class CudaArrayReductionBenchmark extends Benchmark
                 "run" => 16,
                 "warmup" => true,
                 "name" => "CudaArray::argMax()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayArgMax",
                 "metadata" => $this->reductionMetadata()
@@ -56,7 +56,7 @@ class CudaArrayReductionBenchmark extends Benchmark
                 "run" => 16,
                 "warmup" => true,
                 "name" => "CudaArray::argMin()",
-                "iterations" => 10,
+                "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArrayArgMin",
                 "metadata" => $this->reductionMetadata()

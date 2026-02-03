@@ -4,6 +4,7 @@
 #include <time.h>
 #include <curand.h>
 #include "data_types.h"
+#include "factory_kernels.h"
 #include <stdbool.h>
 
 static void flatten_php_array(zval *data, float *flat_array, int *index);
@@ -93,15 +94,25 @@ int cuda_tensor_get_scalar_value(tensor_t *t, float *result_val, int index)
     return SUCCESS;
 }
 
-tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value, dtype_t dtype)
+tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, scalar_value_t value, dtype_t dtype)
 {
+    scalar_value_t scalar_value = cast_single_value(value, dtype);
+    if (scalar_value.dtype == DTYPE_UNKNOWN)
+    {
+        zend_throw_error(NULL, "Failed create CudaArray object with dtype: %s, received %s as value.",
+                         dtype_to_string(dtype),
+                         dtype_to_string(value.dtype));
+
+        return NULL;
+    }
+
     tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
         return NULL;
     }
 
-    launch_fill_kernel(tensor->data, value, tensor->total_size);
+    launch_assign_scalar_val_kernel(tensor->data, tensor->dtype, scalar_value, tensor->total_size);
     return tensor;
 }
 

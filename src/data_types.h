@@ -55,17 +55,40 @@ typedef struct
 #include "php.h"
 #include "operations_strctures.h"
 
+#define SCALAR_FROM_ZVAL(__zval__, __input__)            \
+    do                                                   \
+    {                                                    \
+        (__input__).dtype = dtype_from_zval((__zval__)); \
+        switch ((__input__).dtype)                       \
+        {                                                \
+        case DTYPE_INT64:                                \
+            (__input__).v.i64 = Z_LVAL_P((__zval__));    \
+            break;                                       \
+        case DTYPE_FLOAT64:                              \
+            (__input__).v.f64 = Z_DVAL_P((__zval__));    \
+            break;                                       \
+        case IS_TRUE:                                    \
+            (__input__).v.b = true;                      \
+            break;                                       \
+        case IS_FALSE:                                   \
+            (__input__).v.b = false;                     \
+            break;                                       \
+        default:                                         \
+            (__input__).dtype = DTYPE_UNKNOWN;            \
+        }                                                \
+    } while (0)
+
 dtype_t dtype_from_zval(zval *val);
 dtype_t promote_types(dtype_t a, dtype_t b);
 dtype_t promote_types_for_comparison(dtype_t a, dtype_t b);
 dtype_t promote_types_for_logical(dtype_t a, dtype_t b);
 dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op);
 dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b, operation_type_t op);
-
 #endif
 
 extern const dtype_info_t dtype_infos[DTYPE_COUNT];
 
+scalar_value_t cast_single_value(scalar_value_t value, dtype_t target_dtype);
 const char *dtype_to_string(dtype_t dtype);
 size_t dtype_size(dtype_t dtype);
 int dtype_is_floating(dtype_t dtype);

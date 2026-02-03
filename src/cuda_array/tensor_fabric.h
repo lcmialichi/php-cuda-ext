@@ -46,7 +46,7 @@ DEFINE_FLATTENER(_bool, bool)
 tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str);
 tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype);
 
-tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, float value, dtype_t dtype);
+tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, scalar_value_t value, dtype_t dtype);
 tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dtype_t dtype);
 tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, dtype_t dtype);
 tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[]);

@@ -24,7 +24,7 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
 static zval *cuda_array_read_dimension(zend_object *object, zval *offset, int type, zval *rv);
 static void cuda_array_write_dimension(zend_object *object, zval *offset, zval *value);
 static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis);
-static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value);
+static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, scalar_value_t scalar_value);
 static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long seed);
 
 static void reduction_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type, int return_arg);
@@ -191,12 +191,20 @@ ZEND_METHOD(CudaArray, le)
 
 ZEND_METHOD(CudaArray, zeros)
 {
-    static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "zeros", 0.0f);
+    scalar_value_t scalar_value;
+    scalar_value.v.f32 = 0.0f;
+    scalar_value.dtype = DTYPE_FLOAT32;
+
+    static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "zeros", scalar_value);
 }
 
 ZEND_METHOD(CudaArray, ones)
 {
-    static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ones", 1.0f);
+    scalar_value_t scalar_value;
+    scalar_value.v.f32 = 1.0f;
+    scalar_value.dtype = DTYPE_FLOAT32;
+
+    static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ones", scalar_value);
 }
 
 ZEND_METHOD(CudaArray, rand)
@@ -424,12 +432,12 @@ ZEND_METHOD(CudaArray, argMin)
 ZEND_METHOD(CudaArray, full)
 {
     zval *shape_array;
-    double value;
+    zval *value;
     zend_string *dtype_str = NULL;
 
     ZEND_PARSE_PARAMETERS_START(2, 3)
     Z_PARAM_ARRAY(shape_array)
-    Z_PARAM_DOUBLE(value)
+    Z_PARAM_ZVAL(value)
     Z_PARAM_OPTIONAL
     Z_PARAM_STR(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
@@ -456,8 +464,10 @@ ZEND_METHOD(CudaArray, full)
     }
 
     dtype_t dtype = parse_dtype_param(dtype_str);
+    scalar_value_t scalar_value;
+    SCALAR_FROM_ZVAL(value, scalar_value);
 
-    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, (float)value, dtype);
+    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, scalar_value, dtype);
     if (!tensor)
     {
         zend_throw_error(NULL, "Failed to create full tensor");
@@ -1227,23 +1237,11 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
     }
     else
     {
+
         scalar_value_t scalar_value;
-        scalar_value.dtype = dtype_from_zval(other_zv);
-        switch (scalar_value.dtype)
+        SCALAR_FROM_ZVAL(other_zv, scalar_value);
+        if (scalar_value.dtype == DTYPE_UNKNOWN)
         {
-        case DTYPE_INT64:
-            scalar_value.v.i64 = Z_LVAL_P(other_zv);
-            break;
-        case DTYPE_FLOAT64:
-            scalar_value.v.f64 = Z_DVAL_P(other_zv);
-            break;
-        case IS_TRUE:
-            scalar_value.v.b = true;
-            break;
-        case IS_FALSE:
-            scalar_value.v.b = false;
-            break;
-        default:
             zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
             RETURN_NULL();
         }
@@ -1321,24 +1319,11 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
         else
         {
             scalar_value_t scalar_value;
-            scalar_value.dtype = dtype_from_zval(op2);
-            switch (scalar_value.dtype)
+            SCALAR_FROM_ZVAL(op2, scalar_value);
+            if (scalar_value.dtype == DTYPE_UNKNOWN)
             {
-            case DTYPE_INT64:
-                scalar_value.v.i64 = Z_LVAL_P(op2);
-                break;
-            case DTYPE_FLOAT64:
-                scalar_value.v.f64 = Z_DVAL_P(op2);
-                break;
-            case IS_TRUE:
-                scalar_value.v.b = true;
-                break;
-            case IS_FALSE:
-                scalar_value.v.b = false;
-                break;
-            default:
                 zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
-                FAILURE;
+                return FAILURE;
             }
 
             result_tensor = cuda_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
@@ -1353,24 +1338,12 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
         }
 
         scalar_value_t scalar_value;
-        scalar_value.dtype = dtype_from_zval(op1);
-        switch (scalar_value.dtype)
+
+        SCALAR_FROM_ZVAL(op1, scalar_value);
+        if (scalar_value.dtype == DTYPE_UNKNOWN)
         {
-        case DTYPE_INT64:
-            scalar_value.v.i64 = Z_LVAL_P(op1);
-            break;
-        case DTYPE_FLOAT64:
-            scalar_value.v.f64 = Z_DVAL_P(op1);
-            break;
-        case IS_TRUE:
-            scalar_value.v.b = true;
-            break;
-        case IS_FALSE:
-            scalar_value.v.b = false;
-            break;
-        default:
             zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
-            FAILURE;
+            return FAILURE;
         }
 
         result_tensor = cuda_inv_scalar_op(this_obj->tensor_handle, scalar_value, operation_type);
@@ -1570,8 +1543,14 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
     create_result_object(return_value, tensor);
 }
 
-static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, float value)
+static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *method_name, scalar_value_t scalar_value)
 {
+    if (scalar_value.dtype == DTYPE_UNKNOWN)
+    {
+        zend_throw_error(NULL, "Invalid dtype: '%s' for scalar operation", dtype_to_string(scalar_value.dtype));
+        RETURN_NULL();
+    }
+
     zval *shape_array;
     zend_string *dtype_str = NULL;
 
@@ -1603,7 +1582,7 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
     }
 
     dtype_t dtype = parse_dtype_param(dtype_str);
-    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, value, dtype);
+    tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, scalar_value, dtype);
 
     if (!tensor)
     {

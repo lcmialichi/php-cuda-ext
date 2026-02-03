@@ -3,6 +3,20 @@
 #include <string.h>
 #include <stdbool.h>
 #include "operations.h"
+#include <stdio.h>
+
+#define FOR_EACH_DTYPE(V)          \
+    V(DTYPE_FLOAT32, float, f32)   \
+    V(DTYPE_FLOAT64, double, f64)  \
+    V(DTYPE_INT8, int8_t, i8)      \
+    V(DTYPE_INT16, int16_t, i16)   \
+    V(DTYPE_INT32, int32_t, i32)   \
+    V(DTYPE_INT64, int64_t, i64)   \
+    V(DTYPE_UINT8, uint8_t, u8)    \
+    V(DTYPE_UINT16, uint16_t, u16) \
+    V(DTYPE_UINT32, uint32_t, u32) \
+    V(DTYPE_UINT64, uint64_t, u64) \
+    V(DTYPE_BOOL, bool, b)
 
 const dtype_info_t dtype_infos[DTYPE_COUNT] = {
     [DTYPE_FLOAT32] = {
@@ -231,35 +245,103 @@ dtype_t promote_types(dtype_t a, dtype_t b)
     return (idx_a > idx_b) ? a : b;
 }
 
+scalar_value_t cast_single_value(scalar_value_t value, dtype_t target_dtype)
+{
+    scalar_value_t new_val;
+    new_val.dtype = target_dtype;
+
+    long double temp_val = 0;
+
+    switch (value.dtype)
+    {
+    case DTYPE_FLOAT32:
+        temp_val = (long double)value.v.f32;
+        break;
+    case DTYPE_FLOAT64:
+        temp_val = (long double)value.v.f64;
+        break;
+    case DTYPE_INT32:
+        temp_val = (long double)value.v.i32;
+        break;
+    case DTYPE_INT64:
+        temp_val = (long double)value.v.i64;
+        break;
+    case DTYPE_INT8:
+        temp_val = (long double)value.v.i8;
+        break;
+    case DTYPE_BOOL:
+        temp_val = (long double)value.v.b;
+        break;
+    default:
+        new_val.dtype = DTYPE_UNKNOWN;
+        return new_val;
+    }
+
+    switch (target_dtype)
+    {
+    case DTYPE_FLOAT32:
+        new_val.v.f32 = (float)temp_val;
+        break;
+    case DTYPE_FLOAT64:
+        new_val.v.f64 = (double)temp_val;
+        break;
+    case DTYPE_INT32:
+        new_val.v.i32 = (int32_t)temp_val;
+        break;
+    case DTYPE_INT64:
+        new_val.v.i64 = (int64_t)temp_val;
+        break;
+    case DTYPE_INT8:
+        new_val.v.i8 = (int8_t)temp_val;
+        break;
+    case DTYPE_BOOL:
+        new_val.v.b = (temp_val != 0);
+        break;
+    default:
+        new_val.dtype = DTYPE_UNKNOWN;
+        break;
+    }
+
+    return new_val;
+}
+
 dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op)
 {
-    if (op == OP_DIV || op == OP_POW) {
-        if (tensor_dtype == DTYPE_FLOAT64 || scalar_dtype == DTYPE_FLOAT64) {
+    if (op == OP_DIV || op == OP_POW)
+    {
+        if (tensor_dtype == DTYPE_FLOAT64 || scalar_dtype == DTYPE_FLOAT64)
+        {
             return DTYPE_FLOAT64;
         }
         return DTYPE_FLOAT32;
     }
 
-    if (tensor_dtype == scalar_dtype) {
+    if (tensor_dtype == scalar_dtype)
+    {
         return tensor_dtype;
     }
 
-    if (tensor_dtype == DTYPE_BOOL) {
-        if (dtype_is_floating(scalar_dtype)) {
+    if (tensor_dtype == DTYPE_BOOL)
+    {
+        if (dtype_is_floating(scalar_dtype))
+        {
             return DTYPE_FLOAT32;
         }
         return DTYPE_INT32;
     }
 
-    if (dtype_is_floating(tensor_dtype)) {
+    if (dtype_is_floating(tensor_dtype))
+    {
         return tensor_dtype;
     }
 
-    if (dtype_is_integer(tensor_dtype) && dtype_is_floating(scalar_dtype)) {
-        return DTYPE_FLOAT32; 
+    if (dtype_is_integer(tensor_dtype) && dtype_is_floating(scalar_dtype))
+    {
+        return DTYPE_FLOAT32;
     }
 
-    if (dtype_is_integer(tensor_dtype) && dtype_is_integer(scalar_dtype)) {
+    if (dtype_is_integer(tensor_dtype) && dtype_is_integer(scalar_dtype))
+    {
         return tensor_dtype;
     }
 

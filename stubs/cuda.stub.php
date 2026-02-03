@@ -221,7 +221,7 @@ class CudaArray implements \ArrayAccess
 
     public static function ones(array $shape, ?string $dtype = 'float32'): CudaArray {}
     public static function zeros(array $shape, ?string $dtype = 'float32'): CudaArray {}
-    public static function full(array $shape, float $value, ?string $dtype = 'float32'): CudaArray {}
+    public static function full(array $shape, float|int $value, ?string $dtype = 'float32'): CudaArray {}
 
     public static function rand(array $shape, ?float $min = null, ?float $max = null, ?string $dtype = 'float32'): CudaArray {}
 

@@ -178,6 +178,7 @@ tensor_t *cuda_tensor_create_rand(
     tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
+        zend_throw_error(NULL, "Unable to create random tensor.");
         return NULL;
     }
 
@@ -199,6 +200,7 @@ tensor_t *cuda_tensor_create_rand(
             dtype) != SUCCESS)
     {
 
+        zend_throw_error(NULL, "Kernel failed.");
         cuda_tensor_destroy(tensor);
         return NULL;
     }
@@ -237,11 +239,8 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
         stride *= shape[i];
     }
 
-    int *d_shape;
-    size_t *d_strides;
-
-    cudaMalloc((void **)&d_shape, ndims * sizeof(int));
-    cudaMalloc((void **)&d_strides, ndims * sizeof(size_t));
+    int *d_shape = cuda_mem_alloc(ndims * sizeof(int));
+    size_t *d_strides = cuda_mem_alloc(ndims * sizeof(size_t));
     cudaMemcpy(d_shape, tensor->shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_strides, tensor->strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
 
@@ -268,8 +267,8 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
             efree(tensor->strides);
         if (tensor->shape)
             efree(tensor->shape);
-        cudaFree(d_shape);
-        cudaFree(d_strides);
+        cuda_mem_free(d_shape);
+        cuda_mem_free(d_strides);
         efree(tensor);
         zend_throw_error(NULL, "Failed to allocate GPU memory for tensor.");
         return NULL;
@@ -283,8 +282,8 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
         if (err != cudaSuccess)
         {
             cuda_mem_free(tensor->data);
-            cudaFree(d_shape);
-            cudaFree(d_strides);
+            cuda_mem_free(d_shape);
+            cuda_mem_free(d_strides);
             efree(tensor->strides);
             efree(tensor->shape);
             efree(tensor);

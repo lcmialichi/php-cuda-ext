@@ -135,6 +135,12 @@ int set_rand_tensor_data(void *data,
     curandStatus_t status;
 
     float *temp = cuda_mem_alloc(sizeof(float) * size);
+    if (temp == NULL)
+    {
+        zend_throw_error(NULL, "CUDA Out of Memory: Failed to allocate temporary buffer for Random.");
+        return FAILURE;
+    }
+
     status = curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT);
     if (status != CURAND_STATUS_SUCCESS)
         return FAILURE;
@@ -158,13 +164,19 @@ int set_rand_tensor_data(void *data,
         return FAILURE;
     }
 
+    cudaDeviceSynchronize();
     launch_scale_range_kernel(temp, data, dtype, min_value, max_value, size);
     cudaError_t err = cudaDeviceSynchronize();
 
     destroy_curand_generator(generator);
     cuda_mem_free(temp);
 
-    return (err == cudaSuccess) ? SUCCESS : FAILURE;
+    if (err != cudaSuccess) {
+        zend_throw_error(NULL, "Kernel failed: %s", cudaGetErrorString(err));
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 tensor_t *cuda_tensor_create_rand(

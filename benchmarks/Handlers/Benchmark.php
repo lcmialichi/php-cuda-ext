@@ -54,7 +54,6 @@ abstract class Benchmark implements BenchmarkInterface
         return [($timeE - $timeS) / 1e6, $memoryE - $memoryS];
     }
 
-
     protected function warmup(callable $exec, array $args = [], int $times = 10): void
     {
         for ($i = 0; $i < $times; $i++) {

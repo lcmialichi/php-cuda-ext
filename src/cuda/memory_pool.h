@@ -1,8 +1,10 @@
 #ifndef MEMORY_POOL_H
 #define MEMORY_POOL_H
 
-#define MAX_CACHED_BLOCKS 100
-#define ALIGNMENT 512
+#define ALIGNMENT 256
+#define MAX_CACHED_BLOCKS 64
+#define SMALL_BLOCK_THRESHOLD (1024 * 1024)
+
 typedef struct AllocatedBlock {
     void* ptr;
     size_t size; 

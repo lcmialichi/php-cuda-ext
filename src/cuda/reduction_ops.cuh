@@ -41,80 +41,54 @@ __global__ void reduce_kernel(
     float *__restrict__ result,
     size_t input_base_offset)
 {
-    extern __shared__ float sdata[]; 
+    __shared__ float sdata[REDUCTION_BLOCK_SIZE / WARP_SIZE]; 
 
     Op op;
     ArgIdentity<Op> arg_identity;
 
     size_t idx_out = blockIdx.x;
-    if (idx_out >= d_reduce_params.total_elements_out)
-        return;
+    if (idx_out >= d_reduce_params.total_elements_out) return;
 
     int tid = threadIdx.x;
     int reduce_dim_size = d_reduce_params.reduce_dim_size;
     size_t axis_stride = d_reduce_params.d_strides[d_reduce_params.reduce_axis];
     
-    int coords[MAX_DIMS] = {0};
+    size_t base_flat_index = input_base_offset;
     size_t temp_idx = idx_out;
-    for (int i = d_reduce_params.ndims - 1; i >= 0; --i)
-    {
-        if (i != d_reduce_params.reduce_axis)
-        {
-            coords[i] = temp_idx % d_reduce_params.d_shape[i];
+    for (int i = d_reduce_params.ndims - 1; i >= 0; --i) {
+        if (i != d_reduce_params.reduce_axis) {
+            base_flat_index += (temp_idx % d_reduce_params.d_shape[i]) * d_reduce_params.d_strides[i];
             temp_idx /= d_reduce_params.d_shape[i];
         }
     }
 
-    size_t base_flat_index = get_linear_index(coords) + input_base_offset;
     float accumulator = arg_identity.get_init_val();
 
-    for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x)
-    {
-        size_t flat_index = base_flat_index + (size_t)current_idx * axis_stride;
-        float current_val = input[flat_index];
-        accumulator = op(accumulator, current_val);
+    for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x) {
+        accumulator = op(accumulator, input[base_flat_index + (size_t)current_idx * axis_stride]);
     }
-    
-    for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
-    {
+
+    for (int s = WARP_SIZE / 2; s > 0; s >>= 1) {
         accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
     }
 
     int warp_id = tid / WARP_SIZE;
     int lane_id = tid % WARP_SIZE;
 
-    if (lane_id == 0)
-    {
-        sdata[warp_id] = accumulator;
-    }
+    if (lane_id == 0) sdata[warp_id] = accumulator;
 
     __syncthreads(); 
-    
-    if (warp_id == 0)
-    {
-        int num_warps = blockDim.x / WARP_SIZE;
 
-        if (tid < num_warps)
-        {
-            accumulator = sdata[tid];
-        }
-        else 
-        {
-            accumulator = arg_identity.get_init_val();
-        }
+    if (warp_id == 0) {
+        accumulator = (tid < (blockDim.x / WARP_SIZE)) ? sdata[tid] : arg_identity.get_init_val();
 
-        for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
-        {
+        for (int s = WARP_SIZE / 2; s > 0; s >>= 1) {
             accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
         }
 
-        if (tid == 0)
-        {
-            result[idx_out] = accumulator;
-        }
+        if (tid == 0) result[idx_out] = accumulator;
     }
 }
-
 
 template <typename Op>
 __global__ void arg_reduce_kernel(

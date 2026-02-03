@@ -95,9 +95,11 @@ int dtype_is_floating(dtype_t dtype);
 int dtype_is_integer(dtype_t dtype);
 int dtype_is_signed(dtype_t dtype);
 int dtype_is_boolean(dtype_t dtype);
+int dtype_is_numeric_or_bool(dtype_t dtype);
 
 dtype_t dtype_from_string(const char *type_str);
 int can_safely_cast_to(dtype_t from, dtype_t to);
+int can_cast_unsafe(dtype_t from, dtype_t to);
 int is_valid_dtype_string(const char *type_str);
 
 #endif

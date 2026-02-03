@@ -152,7 +152,7 @@ tensor_t* cuda_tensor_create_with_dtype(int* shape, int ndims, dtype_t dtype) {
     
     size_t total_bytes = tensor->total_size * tensor->element_size;
     if (total_bytes > 0) {
-        tensor->data = tensor_mem_alloc(total_bytes);
+        tensor->data = cuda_mem_alloc(total_bytes);
         tensor->allocated_size = total_bytes;
     }
     
@@ -652,7 +652,7 @@ void cuda_tensor_destroy(tensor_t *tensor)
     {
         if (tensor->data && tensor->is_on_gpu)
         {
-            tensor_mem_free(tensor->data);
+            cuda_mem_free(tensor->data);
             tensor->data = NULL;
         }
         else if (tensor->data && !tensor->is_on_gpu)

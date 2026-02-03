@@ -1498,15 +1498,15 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
     zval *shape_array;
     zend_string *dtype_str = NULL;
 
-    double min = 0;
-    double max = 100;
+    zval *z_min = NULL;
+    zval *z_max = NULL;
 
-    ZEND_PARSE_PARAMETERS_START_EX(ZPP_ERROR_FAILURE, 1, 4)
+    ZEND_PARSE_PARAMETERS_START(1, 4)
     Z_PARAM_ARRAY(shape_array)
     Z_PARAM_OPTIONAL
-    Z_PARAM_DOUBLE(min)
-    Z_PARAM_DOUBLE(max)
-    Z_PARAM_STR(dtype_str)
+    Z_PARAM_ZVAL_OR_NULL(z_min)
+    Z_PARAM_ZVAL_OR_NULL(z_max)
+    Z_PARAM_STR_OR_NULL(dtype_str)
     ZEND_PARSE_PARAMETERS_END();
 
     int shape[10] = {0};
@@ -1530,9 +1530,22 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
         RETURN_NULL();
     }
 
+    scalar_value_t min_v = {.v.f32 = 0.00f, .dtype = DTYPE_FLOAT32};
+    scalar_value_t max_v = {.v.f32 = 100.00f, .dtype = DTYPE_FLOAT32};
+
+    if (z_min != NULL)
+    {
+        SCALAR_FROM_ZVAL(z_min, min_v);
+    }
+
+    if (z_max != NULL)
+    {
+        SCALAR_FROM_ZVAL(z_max, max_v);
+    }
+
     dtype_t dtype = parse_dtype_param(dtype_str);
 
-    tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, (float)min, (float)max, dtype, seed);
+    tensor_t *tensor = cuda_tensor_create_rand(shape, ndims, min_v, max_v, dtype, seed);
 
     if (!tensor)
     {

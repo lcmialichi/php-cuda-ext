@@ -124,11 +124,17 @@ void destroy_curand_generator(curandGenerator_t generator)
     }
 }
 
-int set_rand_tensor_data(float *data, size_t size, unsigned long long seed, float min_value, float max_value)
+int set_rand_tensor_data(void *data,
+                         size_t size,
+                         unsigned long long seed,
+                         scalar_value_t min_value,
+                         scalar_value_t max_value,
+                         dtype_t dtype)
 {
     curandGenerator_t generator = NULL;
     curandStatus_t status;
 
+    float *temp = cuda_mem_alloc(sizeof(float) * size);
     status = curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_DEFAULT);
     if (status != CURAND_STATUS_SUCCESS)
         return FAILURE;
@@ -137,6 +143,7 @@ int set_rand_tensor_data(float *data, size_t size, unsigned long long seed, floa
     {
         seed = (unsigned long long)time(NULL);
     }
+
     status = curandSetPseudoRandomGeneratorSeed(generator, seed);
     if (status != CURAND_STATUS_SUCCESS)
     {
@@ -144,30 +151,27 @@ int set_rand_tensor_data(float *data, size_t size, unsigned long long seed, floa
         return FAILURE;
     }
 
-    status = curandGenerateUniform(generator, data, size);
+    status = curandGenerateUniform(generator, temp, size);
     if (status != CURAND_STATUS_SUCCESS)
     {
         destroy_curand_generator(generator);
         return FAILURE;
     }
 
-    if (min_value != 0.0f || max_value != 1.0f)
-    {
-        if (launch_scale_kernel_host(data, size, min_value, max_value) != SUCCESS)
-        {
-            destroy_curand_generator(generator);
-            return FAILURE;
-        }
-    }
+    launch_scale_range_kernel(temp, data, dtype, min_value, max_value, size);
+    cudaError_t err = cudaDeviceSynchronize();
 
-    return SUCCESS;
+    destroy_curand_generator(generator);
+    cuda_mem_free(temp);
+
+    return (err == cudaSuccess) ? SUCCESS : FAILURE;
 }
 
 tensor_t *cuda_tensor_create_rand(
     int *shape,
     int ndims,
-    float min_value,
-    float max_value,
+    scalar_value_t min_value,
+    scalar_value_t max_value,
     dtype_t dtype,
     unsigned long long seed)
 {
@@ -177,12 +181,22 @@ tensor_t *cuda_tensor_create_rand(
         return NULL;
     }
 
+    if (can_cast_unsafe(min_value.dtype, dtype) != 1 || can_cast_unsafe(max_value.dtype, dtype) != 1)
+    {
+        zend_throw_error(NULL, "Failed to cast min and max value to dtype: %s.", dtype_to_string(dtype));
+        return NULL;
+    }
+
+    scalar_value_t casted_min = cast_single_value(min_value, dtype);
+    scalar_value_t casted_max = cast_single_value(max_value, dtype);
+
     if (set_rand_tensor_data(
             tensor->data,
             tensor->total_size,
             seed,
-            min_value,
-            max_value) != SUCCESS)
+            casted_min,
+            casted_max,
+            dtype) != SUCCESS)
     {
 
         cuda_tensor_destroy(tensor);
@@ -246,7 +260,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
     size_t required_bytes = tensor->total_size * element_size;
     tensor->allocated_size = required_bytes;
 
-    tensor->data = tensor_mem_alloc(required_bytes);
+    tensor->data = cuda_mem_alloc(required_bytes);
 
     if (!tensor->data)
     {
@@ -268,7 +282,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
                                      cudaMemcpyHostToDevice);
         if (err != cudaSuccess)
         {
-            tensor_mem_free(tensor->data);
+            cuda_mem_free(tensor->data);
             cudaFree(d_shape);
             cudaFree(d_strides);
             efree(tensor->strides);

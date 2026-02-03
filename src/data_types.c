@@ -189,6 +189,15 @@ int dtype_is_boolean(dtype_t dtype)
     return dtype_infos[dtype].is_boolean;
 }
 
+int dtype_is_numeric_or_bool(dtype_t dtype)
+{
+    if (dtype >= DTYPE_COUNT)
+        return 0;
+
+    dtype_info_t info = dtype_infos[dtype];
+    return info.is_boolean || info.is_integer || info.is_floating;
+}
+
 static const dtype_t type_hierarchy[] = {
     DTYPE_BOOL,
     DTYPE_UINT8,
@@ -393,51 +402,87 @@ dtype_t promote_types_for_logical(dtype_t a, dtype_t b)
     return DTYPE_BOOL;
 }
 
+int can_cast_unsafe(dtype_t from, dtype_t to)
+{
+    if (from == to)
+        return 1;
+    
+    if (!dtype_is_numeric_or_bool(from) || !dtype_is_numeric_or_bool(to))
+        return 0;
+    
+    if (from == DTYPE_BOOL || to == DTYPE_BOOL) {
+        return 1;
+    }
+    
+    if (dtype_is_integer(from) && dtype_is_integer(to)) {
+        return 1;
+    }
+    
+    if (dtype_is_floating(from) && dtype_is_floating(to)) {
+        return 1;
+    }
+    
+    if (dtype_is_integer(from) && dtype_is_floating(to)) {
+        return 1;
+    }
+    
+    if (dtype_is_floating(from) && dtype_is_integer(to)) {
+        return 1;
+    }
+    
+    return 0;
+}
+
 int can_safely_cast_to(dtype_t from, dtype_t to)
 {
     if (from == to)
         return 1;
-    if (from == DTYPE_BOOL)
+    
+    if (from == DTYPE_BOOL) {
         return 1;
+    }
 
-    if (dtype_is_floating(from) && dtype_is_integer(to))
-    {
+    if (dtype_is_floating(from) && dtype_is_integer(to)) {
         return 0;
     }
 
-    if (dtype_is_integer(from) && dtype_is_floating(to))
-    {
-        size_t from_size = dtype_size(from);
-        size_t to_size = dtype_size(to);
-
-        if (to == DTYPE_FLOAT32 && from_size <= 3)
-            return 1;
-        if (to == DTYPE_FLOAT64 && from_size <= 6)
-            return 1;
-        return 0;
+    if (dtype_is_integer(from) && dtype_is_floating(to)) {
+        size_t from_bits = dtype_size(from) * 8;
+        size_t to_mantissa_bits;
+        
+        if (to == DTYPE_FLOAT32) to_mantissa_bits = 24;
+        else if (to == DTYPE_FLOAT64) to_mantissa_bits = 53;
+        else return 0;
+        
+        if (dtype_is_signed(from)) from_bits--;
+        
+        return from_bits <= to_mantissa_bits;
     }
 
-    if (dtype_is_integer(from) && dtype_is_integer(to))
-    {
-        size_t from_size = dtype_size(from);
-        size_t to_size = dtype_size(to);
-
-        if (dtype_is_signed(from) == dtype_is_signed(to))
-        {
-            return to_size >= from_size;
+    if (dtype_is_integer(from) && dtype_is_integer(to)) {
+        size_t from_bits = dtype_size(from) * 8;
+        size_t to_bits = dtype_size(to) * 8;
+        
+        if (dtype_is_signed(from) == dtype_is_signed(to)) {
+            return to_bits >= from_bits;
         }
-
-        if (!dtype_is_signed(from) && dtype_is_signed(to))
-        {
-            return to_size > from_size;
+        
+        if (!dtype_is_signed(from) && dtype_is_signed(to)) {
+            return to_bits > from_bits;
         }
-
+        
+        if (dtype_is_signed(from) && !dtype_is_signed(to)) {
+            return 0;
+        }
+        
         return 0;
     }
 
-    if (dtype_is_floating(from) && dtype_is_floating(to))
-    {
-        return dtype_size(to) >= dtype_size(from);
+    // 6. Float → Float: destino >= origem em precisão
+    if (dtype_is_floating(from) && dtype_is_floating(to)) {
+        size_t from_mantissa = (from == DTYPE_FLOAT32) ? 24 : 53;
+        size_t to_mantissa = (to == DTYPE_FLOAT32) ? 24 : 53;
+        return to_mantissa >= from_mantissa;
     }
 
     return 0;

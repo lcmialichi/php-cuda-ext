@@ -1,5 +1,6 @@
 #ifndef FACTORY_KERNELS_CUH
 #define FACTORY_KERNELS_CUH
+
 #include "../data_types.h"
 
 template <typename T>
@@ -34,6 +35,26 @@ __global__ void assign_scalar_val_kernel(
 }
 
 template <typename T>
+__global__ void scale_kernel(const float *values,
+                             T *output_data,
+                             size_t size,
+                             T min_value,
+                             T max_value)
+{
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size)
+    {
+        float raw_rand = values[idx];
+        float f_min = (float)min_value;
+        float f_max = (float)max_value;
+
+        float scaled = f_min + (f_max - f_min) * raw_rand;
+
+        output_data[idx] = (T)scaled;
+    }
+}
+
+template <typename T>
 void launch_fill_kernel_with_scalar(T *base, T scalar, size_t total_elements)
 {
     int threads = 256;
@@ -43,6 +64,17 @@ void launch_fill_kernel_with_scalar(T *base, T scalar, size_t total_elements)
 
     assign_scalar_val_kernel<T><<<blocks, threads>>>(
         base, scalar, total_elements);
+}
+
+template <typename T>
+void launch_scale_kernel(float *values, T *data, size_t size, T min_value, T max_value)
+{
+    int threads = 256;
+    int blocks = (size + threads - 1) / threads;
+    if (blocks > 65535)
+        blocks = 65535;
+
+    scale_kernel<T><<<blocks, threads>>>(values, data, size, min_value, max_value);
 }
 
 #endif

@@ -144,7 +144,7 @@ static void *expand_pool_if_needed(size_t aligned_size)
     return base_ptr;
 }
 
-void *tensor_mem_alloc(size_t size)
+void *cuda_mem_alloc(size_t size)
 {
     if (!initialized || size == 0)
         return NULL;
@@ -410,7 +410,7 @@ static void __cache_release_block(void *ptr, size_t size)
     }
 }
 
-void tensor_mem_free(void *ptr)
+void cuda_mem_free(void *ptr)
 {
     if (!initialized || !ptr)
         return;

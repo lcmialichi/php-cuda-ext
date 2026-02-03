@@ -22,8 +22,8 @@ typedef struct CachedBlock {
 } CachedBlock;
 
 int tensor_mem_init(size_t size);
-void *tensor_mem_alloc(size_t size);
-void tensor_mem_free(void *ptr);
+void *cuda_mem_alloc(size_t size);
+void cuda_mem_free(void *ptr);
 void tensor_mem_destroy();
 
 #endif

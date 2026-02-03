@@ -54,8 +54,8 @@ tensor_t *cuda_tensor_create_int(const int shape[], int ndims, const int data[])
 tensor_t *cuda_tensor_create_rand(
     int *shape,
     int ndims,
-    float min_value,
-    float max_value,
+    scalar_value_t min_value,
+    scalar_value_t max_value,
     dtype_t dtype,
     unsigned long long seed);
 

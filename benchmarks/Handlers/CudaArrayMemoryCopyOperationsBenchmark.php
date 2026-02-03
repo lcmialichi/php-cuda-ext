@@ -77,7 +77,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                     ["shape" => "64x64x64"],
                     ["shape" => "128x128x128"],
                     ["shape" => "256x256x256"],
-                    ["shape" => "1024x128x64"],
+                    ["shape" => "   "],
                     ["shape" => "512x256x128"],
                 ]
             ],
@@ -114,7 +114,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoHost",
-                "metadata" => $this->unaryMetadata()
+                "metadata" => $this->transferMetadata()
             ],
             [
                 "run" => 7,
@@ -123,7 +123,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "iterations" => 50,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoArray",
-                "metadata" => $this->unaryMetadata()
+                "metadata" => $this->transferMetadata()
             ],
             [
                 "run" => 7,
@@ -147,6 +147,19 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
             ["shape" => "512x512", "type" => "2D"],
             ["shape" => "1024x512", "type" => "2D"],
             ["shape" => "1x180000", "type" => "2D"],
+        ];
+    }
+
+     private function transferMetadata(): array
+    {
+        return [
+            ["shape" => "16x16x16", "type" => "3D"],
+            ["shape" => "64x64x64", "type" => "3D"],
+            ["shape" => "1024x512x64", "type" => "3D"],
+            ["shape" => "512x512", "type" => "3D"],
+            ["shape" => "1024x512", "type" => "2D"],
+            ["shape" => "1x180000", "type" => "2D"],
+            ["shape" => "180000", "type" => "1D"],
         ];
     }
 

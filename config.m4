@@ -42,12 +42,21 @@ if test "$PHP_CUDA" != "no"; then
     
     CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu src/cuda/factory_kernels.cu"
 
-    AC_MSG_CHECKING([for CUDA kernels])
-        for f in $CUDA_FILES; do
-            $NVCC -arch=sm_50 -O3 --use_fast_math -Xcompiler -fPIC -Xcompiler -O3 -Xptxas -O3 -c $f -o ${f%.cu}.o || {
-                AC_MSG_ERROR([Failed to compile $f])
-            }
-        done
+    AC_MSG_CHECKING([for CUDA GPU architecture])
+    DETECTED_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '.')
+    
+    if test -z "$DETECTED_ARCH"; then
+        CUDA_ARCH_FLAG="sm_50" # Fallback
+    else
+        CUDA_ARCH_FLAG="sm_$DETECTED_ARCH"
+    fi
+    AC_MSG_RESULT([$CUDA_ARCH_FLAG])
+
+    for f in $CUDA_FILES; do
+        $NVCC -arch=$CUDA_ARCH_FLAG -O3 --use_fast_math -Xcompiler -fPIC -c $f -o ${f%.cu}.o || {
+            AC_MSG_ERROR([Failed to compile $f])
+        }
+    done
 
     AC_MSG_RESULT([yes])
 

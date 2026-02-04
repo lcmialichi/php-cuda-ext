@@ -291,7 +291,6 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
 
     smart_string_0(&program_hash_content);
 
-    // 5. Gerar o MD5 Final
     PHP_MD5_CTX context;
     unsigned char digest[16];
     char hexdigest[33];
@@ -372,10 +371,6 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
         snprintf(arch_opt, sizeof(arch_opt), "-arch=sm_%s", arch_num);
         g_cached_nvrtc_options[g_cached_option_count++] = estrdup(arch_opt);
     }
-
-    char opt_level[16];
-    snprintf(opt_level, sizeof(opt_level), "-O%ld", compiler->optimization_level);
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup(opt_level);
 
     if (compiler->debug_mode)
     {

@@ -72,6 +72,33 @@ static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
 static zend_bool module_should_use_async(int grid[3], int block[3]);
 static zend_bool module_validate_async_operation_count(cuda_module_object *module);
 
+
+static CUresult load_ptx(const char* ptx, CUmodule* module_out)
+{
+    CUresult result;
+    
+    result = cuModuleLoadData(module_out, ptx);
+    if (result == CUDA_SUCCESS) return result;
+    
+    CUjit_option options[3];
+    void* optionValues[3];
+    
+    options[0] = CU_JIT_FALLBACK_STRATEGY;
+    optionValues[0] = (void*)CU_PREFER_PTX; 
+    
+    options[1] = CU_JIT_OPTIMIZATION_LEVEL;
+    optionValues[1] = (void*)4;
+    
+    options[2] = CU_JIT_TARGET_FROM_CUCONTEXT;
+    optionValues[2] = (void*)1;
+    
+    result = cuModuleLoadDataEx(module_out, ptx, 
+                                3, options, optionValues);
+    
+    return result;
+}
+
+
 static void module_log_error(const char *format, ...)
 {
     va_list args;
@@ -590,8 +617,8 @@ static CUmodule module_get_or_load_module(cuda_module_object *module, zend_strin
 
     CUresult cu_result;
     CUmodule cu_module = NULL;
-
-    cu_result = cuModuleLoadDataEx(&cu_module, module->ptx_code, 0, NULL, NULL);
+    
+    cu_result = load_ptx(module->ptx_code, &cu_module);
     if (cu_result != CUDA_SUCCESS)
     {
         zend_throw_exception_ex(NULL, 0,

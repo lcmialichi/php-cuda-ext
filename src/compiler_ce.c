@@ -29,12 +29,12 @@ static char *read_entire_file(const char *filename, size_t *out_len);
 static char *extract_function_body_for_ast(const char *source, size_t source_len,
                                            uint32_t start_line, uint32_t end_line,
                                            size_t *out_len);
+
 static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t *out_len);
 static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src);
 static char *compute_program_hash(cuda_compiler_object *compiler);
 
 static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src);
-
 static int check_cuda_compatibility(cuda_compiler_object *compiler);
 static int get_max_compute_from_driver(int driver_version);
 static int validate_and_adjust_architecture(const char *desired_arch, int driver_version,
@@ -270,9 +270,6 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
     }
 
     char ptx_header[128];
-    snprintf(ptx_header, sizeof(ptx_header),
-             ".version 7.0\n.target sm_%s\n.address_size 64\n",
-             arch_num);
 
     smart_string_appendl(&program_hash_content, ptx_header, strlen(ptx_header));
     cuda_kernel_data *kernel;

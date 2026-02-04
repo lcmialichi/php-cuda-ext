@@ -23,7 +23,6 @@ class KernelDefinitions
 $compiler = new Compiler(target: 'sm_75');
 $module = $compiler->kernel([new KernelDefinitions(), 'scale'])->compile();
 $tensor = CudaArray::ones([512, 512, 512], dtype: 'float32');
-var_dump($module->getPtx());
 $factor = 1.6;
 $size = $tensor->getSize();
 $module->initialize();
@@ -44,5 +43,6 @@ $TS = hrtime(true);
 ($tensor + $factor) / 2;
 
 $TE = hrtime(true);
+
 
 var_dump(($ME - $MS) / 1e6, ($TE - $TS) / 1e6);

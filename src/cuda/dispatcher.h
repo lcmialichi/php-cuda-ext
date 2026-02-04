@@ -147,6 +147,73 @@
         return;                            \
     }
 
+#define DISPATCH_UNARY_OP(OP_TYPE, ...)      \
+    switch (OP_TYPE)                         \
+    {                                        \
+    case OP_EXP:                             \
+    {                                        \
+        typedef ExpOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_SQRT:                            \
+    {                                        \
+        typedef SqrtOpT<scalar_t> bin_op_t;  \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_LOG:                             \
+    {                                        \
+        typedef LogOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_SIN:                             \
+    {                                        \
+        typedef SinOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_COS:                             \
+    {                                        \
+        typedef CosOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_TAN:                             \
+    {                                        \
+        typedef TanOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_ABS:                             \
+    {                                        \
+        typedef AbsOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_FLOOR:                           \
+    {                                        \
+        typedef FloorOpT<scalar_t> bin_op_t; \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_CEIL:                            \
+    {                                        \
+        typedef CeilOpT<scalar_t> bin_op_t;  \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    case OP_ROUND:                           \
+    {                                        \
+        typedef RoundOpT<scalar_t> bin_op_t; \
+        __VA_ARGS__;                         \
+        break;                               \
+    }                                        \
+    default:                                 \
+        return;                              \
+    }
+
 #define DISPATCH_OP_REDUCTION(OP_TYPE, ...) \
     switch (OP_TYPE)                        \
     {                                       \
@@ -170,7 +237,7 @@
     }                                       \
     case OP_REDUCE_PROD:                    \
     {                                       \
-        typedef MulOpT<scalar_t> bin_op_t;   \
+        typedef MulOpT<scalar_t> bin_op_t;  \
         __VA_ARGS__;                        \
         break;                              \
     }                                       \

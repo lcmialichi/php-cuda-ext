@@ -13,10 +13,10 @@ struct UnaryParams
 
 __constant__ UnaryParams d_unary_params;
 
-template <typename Op>
+template <typename T, typename Op>
 __global__ void unary_kernel_strided(
-    const float *base,
-    float *result,
+    const T *base,
+    T *result,
     size_t base_offset,
     size_t total_size)
 {
@@ -34,14 +34,13 @@ __global__ void unary_kernel_strided(
         offset += coord * d_unary_params.strides[d];
     }
 
-    Op op;
-    result[base_offset + offset] = op(base[base_offset + offset]);
+    result[base_offset + offset] = Op::apply(base[base_offset + offset]);
 }
 
-template <typename Op>
-void launch_unary_op(
-    float *base,
-    float *result,
+template <typename T, typename Op>
+void launch_unary_op_kernel(
+    T *base,
+    T *result,
     size_t base_offset,
     int *shape,
     size_t *strides,
@@ -59,7 +58,7 @@ void launch_unary_op(
     h_params.ndims = ndims;
 
     cudaMemcpyToSymbol(d_unary_params, &h_params, sizeof(UnaryParams));
-    unary_kernel_strided<Op><<<blocks, threads>>>(
+    unary_kernel_strided<T, Op><<<blocks, threads>>>(
         base,
         result,
         base_offset,

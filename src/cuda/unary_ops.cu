@@ -1,31 +1,30 @@
 #include <cuda_runtime.h>
 #include "unary_ops.h"
 #include "unary_ops.cuh"
-#include "operation_functors.cuh"
+#include "new_ops_func.cuh"
+#include "dispatcher.h"
 
-extern "C"
+extern "C" void launch_unary_op(
+    void *base,
+    void *result,
+    size_t base_offset,
+    dtype_t result_dtype,
+    operation_type_t op_type,
+    int *shape,
+    size_t *strides,
+    int ndims,
+    size_t total_size)
 {
-#define DEFINE_UNARY_WRAPPER(name, Op)                                                     \
-    void name(float *base,                                                                 \
-              float *result,                                                               \
-              size_t base_offset,                                                          \
-              int *shape,                                                                  \
-              size_t *strides,                                                             \
-              int ndims,                                                                   \
-              size_t total_size)                                                           \
-    {                                                                                      \
-        launch_unary_op<Op>(base, result, base_offset, shape, strides, ndims, total_size); \
-    }
-
-    DEFINE_UNARY_WRAPPER(launch_unary_exp_kernel, ExpOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_sqrt_kernel, SqrtOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_log_kernel, LogOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_sin_kernel, SinOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_cos_kernel, CosOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_tan_kernel, TanOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_abs_kernel, AbsOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_neg_kernel, NegOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_floor_kernel, FloorOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_ceil_kernel, CeilOp)
-    DEFINE_UNARY_WRAPPER(launch_unary_round_kernel, RoundOp)
+    DISPATCH_DTYPE(result_dtype, {
+        DISPATCH_UNARY_OP(op_type, {
+            launch_unary_op_kernel<scalar_t, bin_op_t>(
+                (scalar_t *)base,
+                (scalar_t *)result,
+                base_offset,
+                shape,
+                strides,
+                ndims,
+                total_size);
+        });
+    });
 }

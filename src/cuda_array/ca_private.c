@@ -10,28 +10,6 @@
 #include "php.h"
 #include "tensor.h"
 
-UnaryDispatchEntry unary_dispatch[] = {
-    {OP_EXP, launch_unary_exp_kernel},
-    {OP_SQRT, launch_unary_sqrt_kernel},
-    {OP_LOG, launch_unary_log_kernel},
-    {OP_SIN, launch_unary_sin_kernel},
-    {OP_COS, launch_unary_cos_kernel},
-    {OP_TAN, launch_unary_tan_kernel},
-    {OP_ABS, launch_unary_abs_kernel},
-    {OP_FLOOR, launch_unary_floor_kernel},
-    {OP_CEIL, launch_unary_ceil_kernel},
-    {OP_ROUND, launch_unary_round_kernel},
-    {OP_NEG, launch_unary_neg_kernel}};
-
-unary_fn get_unary_fn(operation_type_t op)
-{
-    for (int i = 0; i < sizeof(unary_dispatch) / sizeof(UnaryDispatchEntry); i++)
-        if (unary_dispatch[i].op == op)
-            return unary_dispatch[i].fn;
-
-    return NULL;
-}
-
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
@@ -166,12 +144,6 @@ tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
 
-    unary_fn func = get_unary_fn(operation_type);
-    if (func == NULL)
-    {
-        php_error_docref(NULL, E_ERROR, "Operation handler not found.");
-        return NULL;
-    }
     tensor_t *result = resolve_result_tensor(a);
     if (!result)
     {
@@ -179,12 +151,11 @@ tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
         return NULL;
     }
 
-    func(a->data, result->data, a->offset, a->d_shape, a->d_strides, a->ndims, a->total_size);
-
+    launch_unary_op(a->data, result->data, a->offset, a->dtype, operation_type, a->d_shape, a->d_strides, a->ndims, a->total_size);
     cudaError_t status = cudaDeviceSynchronize();
     if (status != cudaSuccess)
     {
-        php_error_docref(NULL, E_WARNING, "Square root operation failed: %s", cudaGetErrorString(status));
+        php_error_docref(NULL, E_WARNING, "Unary operation failed: %s", cudaGetErrorString(status));
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -222,7 +193,7 @@ tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, operation_type_t ope
         axis,
         total_elements_out,
         input->offset);
-        
+
     if (!result)
     {
         zend_throw_error(NULL, "CudaArray creation failed during reduction.");

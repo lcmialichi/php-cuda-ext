@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include "ext/standard/php_standard.h"
 #include "ast_cuda_types.h"
+#include "nvidia_types.h"
 
 #define MAX_KERNEL_ERROR_LEN 1024
 #define ERROR_CHECK_INTERVAL 50
@@ -34,7 +35,6 @@ static zend_object *module_create_object(zend_class_entry *class_type);
 static void module_free_object(zend_object *object);
 static zend_bool module_initialize_cuda_context(cuda_module_object *module);
 static void module_cleanup_cuda_resources(cuda_module_object *module);
-static const char *module_get_cuda_error_string(CUresult result);
 static double module_get_current_time_ms(void);
 static const char *module_dtype_to_string(dtype_t dtype);
 static CUmodule module_get_or_load_module(cuda_module_object *module, zend_string *kernel_name);
@@ -91,151 +91,8 @@ static void module_check_cuda_error(cuda_module_object *module, CUresult result,
         zend_throw_exception_ex(NULL, 0,
                                 "CUDA error in %s: %s (code: %d)",
                                 context,
-                                module_get_cuda_error_string(result),
+                                get_cuda_error_string(result),
                                 result);
-    }
-}
-
-static const char *module_get_cuda_error_string(CUresult result)
-{
-    switch (result)
-    {
-    case CUDA_SUCCESS:
-        return "CUDA_SUCCESS";
-    case CUDA_ERROR_INVALID_VALUE:
-        return "CUDA_ERROR_INVALID_VALUE";
-    case CUDA_ERROR_OUT_OF_MEMORY:
-        return "CUDA_ERROR_OUT_OF_MEMORY";
-    case CUDA_ERROR_NOT_INITIALIZED:
-        return "CUDA_ERROR_NOT_INITIALIZED";
-    case CUDA_ERROR_DEINITIALIZED:
-        return "CUDA_ERROR_DEINITIALIZED";
-    case CUDA_ERROR_NO_DEVICE:
-        return "CUDA_ERROR_NO_DEVICE";
-    case CUDA_ERROR_INVALID_DEVICE:
-        return "CUDA_ERROR_INVALID_DEVICE";
-    case CUDA_ERROR_INVALID_IMAGE:
-        return "CUDA_ERROR_INVALID_IMAGE";
-    case CUDA_ERROR_INVALID_CONTEXT:
-        return "CUDA_ERROR_INVALID_CONTEXT";
-    case CUDA_ERROR_CONTEXT_ALREADY_CURRENT:
-        return "CUDA_ERROR_CONTEXT_ALREADY_CURRENT";
-    case CUDA_ERROR_MAP_FAILED:
-        return "CUDA_ERROR_MAP_FAILED";
-    case CUDA_ERROR_UNMAP_FAILED:
-        return "CUDA_ERROR_UNMAP_FAILED";
-    case CUDA_ERROR_ARRAY_IS_MAPPED:
-        return "CUDA_ERROR_ARRAY_IS_MAPPED";
-    case CUDA_ERROR_ALREADY_MAPPED:
-        return "CUDA_ERROR_ALREADY_MAPPED";
-    case CUDA_ERROR_NO_BINARY_FOR_GPU:
-        return "CUDA_ERROR_NO_BINARY_FOR_GPU";
-    case CUDA_ERROR_ALREADY_ACQUIRED:
-        return "CUDA_ERROR_ALREADY_ACQUIRED";
-    case CUDA_ERROR_NOT_MAPPED:
-        return "CUDA_ERROR_NOT_MAPPED";
-    case CUDA_ERROR_NOT_MAPPED_AS_ARRAY:
-        return "CUDA_ERROR_NOT_MAPPED_AS_ARRAY";
-    case CUDA_ERROR_NOT_MAPPED_AS_POINTER:
-        return "CUDA_ERROR_NOT_MAPPED_AS_POINTER";
-    case CUDA_ERROR_ECC_UNCORRECTABLE:
-        return "CUDA_ERROR_ECC_UNCORRECTABLE";
-    case CUDA_ERROR_UNSUPPORTED_LIMIT:
-        return "CUDA_ERROR_UNSUPPORTED_LIMIT";
-    case CUDA_ERROR_CONTEXT_ALREADY_IN_USE:
-        return "CUDA_ERROR_CONTEXT_ALREADY_IN_USE";
-    case CUDA_ERROR_PEER_ACCESS_UNSUPPORTED:
-        return "CUDA_ERROR_PEER_ACCESS_UNSUPPORTED";
-    case CUDA_ERROR_INVALID_PTX:
-        return "CUDA_ERROR_INVALID_PTX";
-    case CUDA_ERROR_INVALID_GRAPHICS_CONTEXT:
-        return "CUDA_ERROR_INVALID_GRAPHICS_CONTEXT";
-    case CUDA_ERROR_JIT_COMPILER_NOT_FOUND:
-        return "CUDA_ERROR_JIT_COMPILER_NOT_FOUND";
-    case CUDA_ERROR_UNSUPPORTED_PTX_VERSION:
-        return "CUDA_ERROR_UNSUPPORTED_PTX_VERSION";
-    case CUDA_ERROR_JIT_COMPILATION_DISABLED:
-        return "CUDA_ERROR_JIT_COMPILATION_DISABLED";
-    case CUDA_ERROR_INVALID_SOURCE:
-        return "CUDA_ERROR_INVALID_SOURCE";
-    case CUDA_ERROR_FILE_NOT_FOUND:
-        return "CUDA_ERROR_FILE_NOT_FOUND";
-    case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND:
-        return "CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND";
-    case CUDA_ERROR_SHARED_OBJECT_INIT_FAILED:
-        return "CUDA_ERROR_SHARED_OBJECT_INIT_FAILED";
-    case CUDA_ERROR_OPERATING_SYSTEM:
-        return "CUDA_ERROR_OPERATING_SYSTEM";
-    case CUDA_ERROR_INVALID_HANDLE:
-        return "CUDA_ERROR_INVALID_HANDLE";
-    case CUDA_ERROR_ILLEGAL_STATE:
-        return "CUDA_ERROR_ILLEGAL_STATE";
-    case CUDA_ERROR_NOT_FOUND:
-        return "CUDA_ERROR_NOT_FOUND";
-    case CUDA_ERROR_NOT_READY:
-        return "CUDA_ERROR_NOT_READY";
-    case CUDA_ERROR_ILLEGAL_ADDRESS:
-        return "CUDA_ERROR_ILLEGAL_ADDRESS";
-    case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES:
-        return "CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES";
-    case CUDA_ERROR_LAUNCH_TIMEOUT:
-        return "CUDA_ERROR_LAUNCH_TIMEOUT";
-    case CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING:
-        return "CUDA_ERROR_LAUNCH_INCOMPATIBLE_TEXTURING";
-    case CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED:
-        return "CUDA_ERROR_PEER_ACCESS_ALREADY_ENABLED";
-    case CUDA_ERROR_PEER_ACCESS_NOT_ENABLED:
-        return "CUDA_ERROR_PEER_ACCESS_NOT_ENABLED";
-    case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE:
-        return "CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE";
-    case CUDA_ERROR_CONTEXT_IS_DESTROYED:
-        return "CUDA_ERROR_CONTEXT_IS_DESTROYED";
-    case CUDA_ERROR_ASSERT:
-        return "CUDA_ERROR_ASSERT";
-    case CUDA_ERROR_TOO_MANY_PEERS:
-        return "CUDA_ERROR_TOO_MANY_PEERS";
-    case CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED:
-        return "CUDA_ERROR_HOST_MEMORY_ALREADY_REGISTERED";
-    case CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED:
-        return "CUDA_ERROR_HOST_MEMORY_NOT_REGISTERED";
-    case CUDA_ERROR_HARDWARE_STACK_ERROR:
-        return "CUDA_ERROR_HARDWARE_STACK_ERROR";
-    case CUDA_ERROR_ILLEGAL_INSTRUCTION:
-        return "CUDA_ERROR_ILLEGAL_INSTRUCTION";
-    case CUDA_ERROR_MISALIGNED_ADDRESS:
-        return "CUDA_ERROR_MISALIGNED_ADDRESS";
-    case CUDA_ERROR_INVALID_ADDRESS_SPACE:
-        return "CUDA_ERROR_INVALID_ADDRESS_SPACE";
-    case CUDA_ERROR_INVALID_PC:
-        return "CUDA_ERROR_INVALID_PC";
-    case CUDA_ERROR_LAUNCH_FAILED:
-        return "CUDA_ERROR_LAUNCH_FAILED";
-    case CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE:
-        return "CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE";
-    case CUDA_ERROR_NOT_PERMITTED:
-        return "CUDA_ERROR_NOT_PERMITTED";
-    case CUDA_ERROR_NOT_SUPPORTED:
-        return "CUDA_ERROR_NOT_SUPPORTED";
-    case CUDA_ERROR_SYSTEM_NOT_READY:
-        return "CUDA_ERROR_SYSTEM_NOT_READY";
-    case CUDA_ERROR_SYSTEM_DRIVER_MISMATCH:
-        return "CUDA_ERROR_SYSTEM_DRIVER_MISMATCH";
-    case CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE:
-        return "CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE";
-    case CUDA_ERROR_STREAM_CAPTURE_UNSUPPORTED:
-        return "CUDA_ERROR_STREAM_CAPTURE_UNSUPPORTED";
-    case CUDA_ERROR_STREAM_CAPTURE_INVALIDATED:
-        return "CUDA_ERROR_STREAM_CAPTURE_INVALIDATED";
-    case CUDA_ERROR_TIMEOUT:
-        return "CUDA_ERROR_TIMEOUT";
-    case CUDA_ERROR_GRAPH_EXEC_UPDATE_FAILURE:
-        return "CUDA_ERROR_GRAPH_EXEC_UPDATE_FAILURE";
-    case CUDA_ERROR_EXTERNAL_DEVICE:
-        return "CUDA_ERROR_EXTERNAL_DEVICE";
-    case CUDA_ERROR_UNKNOWN:
-        return "CUDA_ERROR_UNKNOWN";
-    default:
-        return "Unknown CUDA error";
     }
 }
 
@@ -370,7 +227,7 @@ static zend_bool module_initialize_global_cuda(cuda_module_object *module)
     {
         pthread_mutex_unlock(&g_cuda_global_init_mutex);
         module_log_error("Failed to initialize CUDA driver: %s",
-                         module_get_cuda_error_string(cu_result));
+                         get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -379,7 +236,7 @@ static zend_bool module_initialize_global_cuda(cuda_module_object *module)
     {
         pthread_mutex_unlock(&g_cuda_global_init_mutex);
         module_log_error("Failed to get CUDA device: %s",
-                         module_get_cuda_error_string(cu_result));
+                         get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -412,7 +269,7 @@ static void module_initialize_stream_pool(cuda_module_object *module)
         if (cu_result != CUDA_SUCCESS)
         {
             module_log_error("Failed to create stream %d for pool: %s",
-                             i, module_get_cuda_error_string(cu_result));
+                             i, get_cuda_error_string(cu_result));
             module->stream_pool->streams[i].stream = NULL;
         }
         else
@@ -440,7 +297,7 @@ static void module_destroy_stream_pool(cuda_module_object *module)
                 if (result != CUDA_SUCCESS && result != CUDA_ERROR_INVALID_HANDLE)
                 {
                     module_log_error("Failed to destroy stream from pool: %s",
-                                     module_get_cuda_error_string(result));
+                                     get_cuda_error_string(result));
                 }
             }
         }
@@ -534,7 +391,7 @@ static CUstream module_get_stream_from_pool(cuda_module_object *module)
         if (cu_result != CUDA_SUCCESS)
         {
             module_log_error("Failed to create stream: %s",
-                             module_get_cuda_error_string(cu_result));
+                             get_cuda_error_string(cu_result));
             return NULL;
         }
     }
@@ -645,7 +502,7 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module)
     {
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to create CUDA context: %s",
-                                module_get_cuda_error_string(cu_result));
+                                get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -680,7 +537,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
                 if (cu_result != CUDA_SUCCESS && cu_result != CUDA_ERROR_INVALID_HANDLE)
                 {
                     module_log_error("Failed to unload CUDA module: %s",
-                                     module_get_cuda_error_string(cu_result));
+                                     get_cuda_error_string(cu_result));
                 }
                 efree(cu_module_ptr);
             }
@@ -698,7 +555,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
         if (cu_result != CUDA_SUCCESS)
         {
             module_log_error("Failed to destroy CUDA stream: %s",
-                             module_get_cuda_error_string(cu_result));
+                             get_cuda_error_string(cu_result));
         }
         module->cu_stream = NULL;
     }
@@ -709,7 +566,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
         if (cu_result != CUDA_SUCCESS)
         {
             module_log_error("Failed to destroy CUDA context: %s",
-                             module_get_cuda_error_string(cu_result));
+                             get_cuda_error_string(cu_result));
         }
         module->cu_context = NULL;
     }
@@ -740,7 +597,7 @@ static CUmodule module_get_or_load_module(cuda_module_object *module, zend_strin
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to load PTX module for kernel '%s': %s",
                                 ZSTR_VAL(kernel_name),
-                                module_get_cuda_error_string(cu_result));
+                                get_cuda_error_string(cu_result));
         return NULL;
     }
 
@@ -854,7 +711,7 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
                 if (sync_result != CUDA_SUCCESS)
                 {
                     module_log_error("Failed to synchronize stream after timeout: %s",
-                                     module_get_cuda_error_string(sync_result));
+                                     get_cuda_error_string(sync_result));
                 }
                 else
                 {
@@ -1185,7 +1042,7 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to get kernel function '%s': %s",
                                 ZSTR_VAL(kernel->name),
-                                module_get_cuda_error_string(cu_result));
+                                get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -1202,7 +1059,7 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to launch kernel '%s': %s",
                                 ZSTR_VAL(kernel->name),
-                                module_get_cuda_error_string(cu_result));
+                                get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -2038,7 +1895,7 @@ ZEND_METHOD(CompiledModule, cancelOperation)
     if (cu_result != CUDA_SUCCESS && cu_result != CUDA_ERROR_NOT_READY)
     {
         module_log_error("Failed to synchronize stream before cancellation: %s",
-                         module_get_cuda_error_string(cu_result));
+                         get_cuda_error_string(cu_result));
     }
 
     op->is_active = 0;

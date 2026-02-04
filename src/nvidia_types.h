@@ -5,6 +5,6 @@
 #include <cuda.h>
 
 const char *get_nvrtc_error_string(nvrtcResult result);
-static const char *get_cuda_error_string(CUresult result);
+const char *get_cuda_error_string(CUresult result);
 
 #endif

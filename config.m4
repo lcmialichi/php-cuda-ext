@@ -60,8 +60,7 @@ if test "$PHP_CUDA" != "no"; then
     CURRENT_FILE=1
 
     for f in $CUDA_FILES; do
-        # O printf permite formatar a saída com espaços fixos
-        printf "  [%d/%d] Compiling: %-30s " "$CURRENT_FILE" "$TOTAL_FILES" "$f..."
+        printf "  [%d/%d] Compiling..." "$CURRENT_FILE" "$TOTAL_FILES"
         
         $NVCC -arch=$CUDA_ARCH_FLAG -O3 --use_fast_math -Xcompiler -fPIC -c $f -o ${f%.cu}.o  || {
             printf "\n"

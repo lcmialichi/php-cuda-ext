@@ -15,6 +15,10 @@ abstract class ParamAttribute
 
 class Compiler
 {
+    public function __construct(private ?string $target = null){
+
+    }
+
     public function kernel(callable $fn): static
     {
         return $this;

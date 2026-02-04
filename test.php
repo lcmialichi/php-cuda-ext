@@ -20,7 +20,7 @@ class KernelDefinitions
     }
 }
 
-$compiler = new Compiler();
+$compiler = new Compiler(target: 'sm_75');
 $module = $compiler->kernel([new KernelDefinitions(), 'scale'])->compile();
 $tensor = CudaArray::ones([512, 512, 512], dtype: 'float32');
 var_dump($module->getPtx());

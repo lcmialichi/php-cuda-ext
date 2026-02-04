@@ -30,6 +30,7 @@ typedef struct _cuda_compiler_object
 {
     zend_object std;
     char *target_device;
+    int target_auto_detected;
     int optimization_level;
     zend_bool debug_mode;
     zend_bool fast_math;
@@ -38,7 +39,6 @@ typedef struct _cuda_compiler_object
     HashTable *devices;
     HashTable *ptx_cache;
 } cuda_compiler_object;
-
 
 
 typedef struct _cuda_async_operation

@@ -483,7 +483,15 @@ static int check_cuda_compatibility(cuda_compiler_object *compiler)
                          "CUDA Runtime version (%.1f) is newer than Driver version (%.1f). "
                          "This may cause compatibility issues. Consider updating your NVIDIA driver.",
                          runtime_ver, driver_ver);
+    }
 
+    if (compiler->target_auto_detected == 0)
+    {
+        return 1;
+    }
+
+    if (runtime_version > driver_version)
+    {
         if (compiler->target_device)
         {
             efree(compiler->target_device);
@@ -495,7 +503,7 @@ static int check_cuda_compatibility(cuda_compiler_object *compiler)
         int minor = max_compute % 10;
 
         char safe_arch[16];
-        snprintf(safe_arch, sizeof(safe_arch), "sm_%d%d", major, minor);
+        snprintf(safe_arch, sizeof(safe_arch), "compute_%d%d", major, minor);
         compiler->target_device = estrdup(safe_arch);
 
         php_error_docref(NULL, E_NOTICE,
@@ -847,6 +855,7 @@ ZEND_METHOD(Compiler, __construct)
                              arch, compatible_arch);
         }
 
+        compiler->target_auto_detected = 0;
         compiler->target_device = estrdup(compatible_arch);
     }
     else
@@ -882,7 +891,7 @@ ZEND_METHOD(Compiler, __construct)
 
             snprintf(detected_arch, sizeof(detected_arch), "sm_%d%d", major, minor);
         }
-
+        compiler->target_auto_detected = 1;
         compiler->target_device = estrdup(detected_arch);
     }
 
@@ -1331,6 +1340,7 @@ static zend_object *compiler_create_object(zend_class_entry *class_type)
     compiler->optimization_level = 2;
     compiler->debug_mode = 0;
     compiler->fast_math = 1;
+    compiler->target_auto_detected = 0;
 
     return &compiler->std;
 }

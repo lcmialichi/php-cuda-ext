@@ -25,7 +25,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_get_kernels, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_get_devices, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_compiler_getCacheStats, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 static zend_function_entry compiler_methods[] = {
@@ -33,6 +33,7 @@ static zend_function_entry compiler_methods[] = {
     ZEND_ME(Compiler, kernel, arginfo_compiler_kernel, ZEND_ACC_PUBLIC)
     ZEND_ME(Compiler, compile, arginfo_compiler_compile, ZEND_ACC_PUBLIC)
     ZEND_ME(Compiler, getKernels, arginfo_compiler_get_kernels, ZEND_ACC_PUBLIC)
+    ZEND_ME(Compiler, getCacheStats, arginfo_compiler_getCacheStats, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

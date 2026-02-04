@@ -310,12 +310,16 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
     else
     {
         int device = 0;
-        if (cudaGetDevice(&device) != cudaSuccess) device = 0;
-        
+        if (cudaGetDevice(&device) != cudaSuccess)
+            device = 0;
+
         struct cudaDeviceProp prop;
-        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess) {
+        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess)
+        {
             snprintf(detected_arch, sizeof(detected_arch), "sm_%d%d", prop.major, prop.minor);
-        } else {
+        }
+        else
+        {
             snprintf(detected_arch, sizeof(detected_arch), "sm_75");
         }
         current_target = detected_arch;
@@ -571,11 +575,11 @@ ZEND_METHOD(Compiler, __construct)
     zend_bool fast_math = 1;
 
     ZEND_PARSE_PARAMETERS_START(0, 4)
-    Z_PARAM_OPTIONAL
-    Z_PARAM_STR_OR_NULL(target_str)
-    Z_PARAM_LONG(optimization)
-    Z_PARAM_BOOL(debug)
-    Z_PARAM_BOOL(fast_math)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_STR_OR_NULL(target_str)
+        Z_PARAM_LONG(optimization)
+        Z_PARAM_BOOL(debug)
+        Z_PARAM_BOOL(fast_math)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
@@ -592,7 +596,22 @@ ZEND_METHOD(Compiler, __construct)
     }
     else
     {
-        compiler->target_device = estrdup("sm_60");
+        char detected_arch[16];
+        int device;
+        if (cudaGetDevice(&device) != cudaSuccess)
+            device = 0;
+
+        struct cudaDeviceProp prop;
+        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess)
+        {
+            snprintf(detected_arch, sizeof(detected_arch), "sm_%d%d", prop.major, prop.minor);
+        }
+        else
+        {
+            snprintf(detected_arch, sizeof(detected_arch), "sm_75");
+        }
+
+        compiler->target_device = estrdup(detected_arch);
     }
 
     compiler->optimization_level = optimization;

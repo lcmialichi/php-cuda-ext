@@ -5,7 +5,7 @@ namespace Cuda;
 use Countable;
 use IteratorAggregate;
 
-#[\Attribute(Attribute::TARGET_PARAMETER)]
+#[\Attribute(\Attribute::TARGET_PARAMETER)]
 abstract class ParamAttribute
 {
     abstract public function getDtype(): string;
@@ -20,9 +20,14 @@ class Compiler
         return $this;
     }
 
-    public function compile(?string $target = '', bool $optimize = true, bool $debug = false)
+    public function compile(?string $target = '', bool $optimize = true, bool $debug = false): CompiledModule
     {
         return new CompiledModule();
+    }
+
+    public function getCacheStats(): array
+    {
+        return [];
     }
 }
 

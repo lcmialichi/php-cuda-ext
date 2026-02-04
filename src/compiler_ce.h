@@ -17,5 +17,6 @@ ZEND_METHOD(Compiler, __construct);
 ZEND_METHOD(Compiler, kernel);
 ZEND_METHOD(Compiler, compile);
 ZEND_METHOD(Compiler, getKernels);
+ZEND_METHOD(Compiler, getCacheStats);
 
 #endif

@@ -258,10 +258,21 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
     smart_string program_hash_content = {0};
     smart_string_alloc(&program_hash_content, 8192, 0);
 
+    const char *arch_num = "75";
+    if (compiler->target_device && strlen(compiler->target_device) > 3) {
+        arch_num = compiler->target_device + 3;
+    }
+    
+    char ptx_header[128];
+    snprintf(ptx_header, sizeof(ptx_header), 
+             ".version 7.0\n.target sm_%s\n.address_size 64\n", 
+             arch_num);
+    
+    smart_string_appendl(&program_hash_content, ptx_header, strlen(ptx_header));
     cuda_kernel_data *kernel;
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
-        if (kernel->cuda_code)
+        if (kernel && kernel->cuda_code)
         {
             smart_string_appendl(&program_hash_content, kernel->cuda_code, strlen(kernel->cuda_code));
             smart_string_appendc(&program_hash_content, ';');
@@ -279,6 +290,7 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
 
     smart_string_0(&program_hash_content);
 
+    // 5. Gerar o MD5 Final
     PHP_MD5_CTX context;
     unsigned char digest[16];
     char hexdigest[33];
@@ -287,8 +299,7 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
     PHP_MD5Update(&context, (const unsigned char *)program_hash_content.c, program_hash_content.len);
     PHP_MD5Final(digest, &context);
 
-    for (int i = 0; i < 16; i++)
-    {
+    for (int i = 0; i < 16; i++) {
         sprintf(hexdigest + (i * 2), "%02x", digest[i]);
     }
     hexdigest[32] = '\0';

@@ -21,6 +21,7 @@ class KernelDefinitions
 }
 
 $compiler = new Compiler();
+var_dump($compiler->getCacheStats());
 $module = $compiler->kernel([new KernelDefinitions(), 'scale'])->compile();
 $tensor = CudaArray::ones([512, 512, 512], dtype: 'float32');
 $factor = 1.6;

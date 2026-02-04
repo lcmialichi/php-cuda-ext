@@ -5,7 +5,7 @@ Items are prioritized but not yet scheduled.
 
 
 ## Matrix Operations
-- [ ] Implement `matmul` (GPU-accelerated matrix multiplication)
+- [ X ] Implement `matmul` (GPU-accelerated matrix multiplication)
   - Detect shapes and validate dimensional compatibility
   - Add broadcasting support if possible
   - Optimize for contiguous and non-contiguous tensors
@@ -32,7 +32,7 @@ $x[[0, 5]] = $x[[1, 6]];
 
 ## Data Types
 
-- [ ] Add support for float32 and float64
+- [ X ] Add support for float32 and float64
     - Introduce dtype field inside tensor_t
     - Implement type-aware kernels
     - Add casting and type promotion rules

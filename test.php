@@ -21,7 +21,7 @@ class KernelDefinitions
 }
 
 $compiler = new Compiler();
-$module = $compiler->kernel([new KernelDefinitions(), 'scale'])->compile(optimize: false);
+$module = $compiler->kernel([new KernelDefinitions(), 'scale'])->compile();
 $tensor = CudaArray::ones([512, 512, 512], dtype: 'float32');
 var_dump($module->getPtx());
 $factor = 1.6;

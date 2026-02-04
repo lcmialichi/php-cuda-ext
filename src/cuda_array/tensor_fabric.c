@@ -165,13 +165,23 @@ int set_rand_tensor_data(void *data,
     }
 
     cudaDeviceSynchronize();
-    launch_scale_range_kernel(temp, data, dtype, min_value, max_value, size);
+
+    if (dtype == DTYPE_BOOL)
+    {
+        launch_bernoulli_kernel(temp, data, size, 0.5f);
+    }
+    else
+    {
+        launch_scale_range_kernel(temp, data, dtype, min_value, max_value, size);
+    }
+
     cudaError_t err = cudaDeviceSynchronize();
 
     destroy_curand_generator(generator);
     cuda_mem_free(temp);
 
-    if (err != cudaSuccess) {
+    if (err != cudaSuccess)
+    {
         zend_throw_error(NULL, "Kernel failed: %s", cudaGetErrorString(err));
         return FAILURE;
     }

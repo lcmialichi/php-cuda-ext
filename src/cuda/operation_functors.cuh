@@ -215,47 +215,4 @@ struct ArgMinOp
     }
 };
 
-template <typename Op>
-struct ArgIdentity
-{
-    __device__ __forceinline__ float get_init_val() { return 0.0f; } 
-};
-
-template <>
-struct ArgIdentity<ArgMaxOp>
-{
-    __device__ __forceinline__ float get_init_val() { return -INFINITY; }
-};
-
-template <>
-struct ArgIdentity<ArgMinOp>
-{
-    __device__ __forceinline__ float get_init_val() { return INFINITY; }
-};
-
-template <>
-struct ArgIdentity<MaxOp>
-{
-    __device__ __forceinline__ float get_init_val() { return -INFINITY; }
-};
-
-template <>
-struct ArgIdentity<MinOp> 
-{
-    __device__ __forceinline__ float get_init_val() { return INFINITY; }
-};
-
-template <>
-struct ArgIdentity<MulOp>
-{
-   __device__ __forceinline__ float get_init_val(){return 1.0f;}
-};
-
-template <>
-struct ArgIdentity<AddOp>
-{
-    __device__ __forceinline__ float get_init_val() { return 0.0f; }
-};
-
-
 #endif

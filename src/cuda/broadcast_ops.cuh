@@ -129,11 +129,13 @@ void launch_broadcast_kernel_with_cast(void *a, dtype_t dtype_a, void *b, dtype_
 {
     BroadcastParams h_params = setup_params(a_strides, a_dims, b_strides, b_dims, result_shape, result_dims);
 
-    int threads = 256;
-    int blocks = (total_elements + threads - 1) / threads;
-    if (blocks > 65535) blocks = 65535;
+    int minGridSize;
+    int blockSize;
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, broadcast_kernel_with_cast<T, Op>, 0, 0);
 
-    broadcast_kernel_with_cast<T, Op><<<blocks, threads>>>(
+    int gridSize = (total_elements + blockSize - 1) / blockSize;
+
+    broadcast_kernel_with_cast<T, Op><<<gridSize, blockSize>>>(
         a, dtype_a, b, dtype_b, result,
         total_elements, h_params, a_base_offset, b_base_offset);
 }
@@ -149,11 +151,13 @@ void launch_broadcast_kernel(T *a, T *b, T *result,
 {
     BroadcastParams h_params = setup_params(a_strides, a_dims, b_strides, b_dims, result_shape, result_dims);
 
-    int threads = 256;
-    int blocks = (total_elements + threads - 1) / threads;
-    if (blocks > 65535) blocks = 65535;
+    int minGridSize;
+    int blockSize;
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, broadcast_kernel<T, Op>, 0, 0);
 
-    broadcast_kernel<T, Op><<<blocks, threads>>>(
+    int gridSize = (total_elements + blockSize - 1) / blockSize;
+
+    broadcast_kernel<T, Op><<<gridSize, blockSize>>>(
         a, b, result,
         total_elements, h_params, a_base_offset, b_base_offset);
 }

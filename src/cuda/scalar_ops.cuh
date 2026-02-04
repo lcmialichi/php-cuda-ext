@@ -110,11 +110,15 @@ void launch_inv_scalar_op(
     size_t total_size,
     int is_contiguous)
 {
-    int threads = 256;
-    int blocks = (total_size + threads - 1) / threads;
     if (is_contiguous == 1)
     {
-        scalar_kernel_contiguous_inv<T, Op><<<blocks, threads>>>(
+        int minGridSize;
+        int blockSize;
+        cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, scalar_kernel_contiguous_inv<T, Op>, 0, 0);
+
+        int gridSize = (total_size + blockSize - 1) / blockSize;
+
+        scalar_kernel_contiguous_inv<T, Op><<<gridSize, blockSize>>>(
             base,
             base_dtype,
             scalar,
@@ -124,7 +128,13 @@ void launch_inv_scalar_op(
         return;
     }
 
-    inv_scalar_kernel_strided<T, Op><<<blocks, threads>>>(
+    int minGridSize;
+    int blockSize;
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, inv_scalar_kernel_strided<T, Op>, 0, 0);
+
+    int gridSize = (total_size + blockSize - 1) / blockSize;
+
+    inv_scalar_kernel_strided<T, Op><<<gridSize, blockSize>>>(
         base,
         base_dtype,
         scalar,
@@ -147,15 +157,18 @@ void launch_scalar_op(
     size_t *d_strides,
     int ndims,
     size_t total_size,
-    int is_contiguous
-)
+    int is_contiguous)
 {
-    int threads = 256;
-    int blocks = (total_size + threads - 1) / threads;
 
     if (is_contiguous == 1)
     {
-        scalar_kernel_contiguous<T, Op><<<blocks, threads>>>(
+        int minGridSize;
+        int blockSize;
+        cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, scalar_kernel_contiguous<T, Op>, 0, 0);
+
+        int gridSize = (total_size + blockSize - 1) / blockSize;
+
+        scalar_kernel_contiguous<T, Op><<<gridSize, blockSize>>>(
             base,
             base_dtype,
             scalar,
@@ -165,7 +178,13 @@ void launch_scalar_op(
         return;
     }
 
-    scalar_kernel_strided<T, Op><<<blocks, threads>>>(
+    int minGridSize;
+    int blockSize;
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, scalar_kernel_strided<T, Op>, 0, 0);
+
+    int gridSize = (total_size + blockSize - 1) / blockSize;
+
+    scalar_kernel_strided<T, Op><<<gridSize, blockSize>>>(
         base,
         base_dtype,
         scalar,

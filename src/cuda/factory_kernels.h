@@ -6,6 +6,13 @@
 extern "C"
 {
 #endif
+
+    void launch_bernoulli_kernel(
+        float *values,
+        bool *base,
+        size_t total_elements,
+        float p);
+        
     void launch_assign_scalar_val_kernel(
         void *base,
         dtype_t dtype,

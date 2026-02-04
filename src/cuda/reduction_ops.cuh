@@ -1,6 +1,7 @@
 #include "cuda_runtime.h"
 #include <vector>
 #include <algorithm>
+#include "new_ops_func.cuh"
 #include <string.h>
 #include <float.h>
 #include <cstdint>
@@ -9,7 +10,6 @@
 #define MAX_DIMS 10
 #define REDUCTION_BLOCK_SIZE 256
 #define WARP_SIZE 32
-
 
 struct ReductionParams
 {
@@ -35,73 +35,14 @@ __device__ size_t get_linear_index(const int *coords)
     return index;
 }
 
-template <typename Op>
+template <typename T, typename Op>
 __global__ void reduce_kernel(
-    const float *__restrict__ input,
-    float *__restrict__ result,
+    const T *__restrict__ input,
+    T *__restrict__ result,
     size_t input_base_offset)
 {
-    __shared__ float sdata[REDUCTION_BLOCK_SIZE / WARP_SIZE]; 
-
-    Op op;
-    ArgIdentity<Op> arg_identity;
-
-    size_t idx_out = blockIdx.x;
-    if (idx_out >= d_reduce_params.total_elements_out) return;
-
-    int tid = threadIdx.x;
-    int reduce_dim_size = d_reduce_params.reduce_dim_size;
-    size_t axis_stride = d_reduce_params.d_strides[d_reduce_params.reduce_axis];
-    
-    size_t base_flat_index = input_base_offset;
-    size_t temp_idx = idx_out;
-    for (int i = d_reduce_params.ndims - 1; i >= 0; --i) {
-        if (i != d_reduce_params.reduce_axis) {
-            base_flat_index += (temp_idx % d_reduce_params.d_shape[i]) * d_reduce_params.d_strides[i];
-            temp_idx /= d_reduce_params.d_shape[i];
-        }
-    }
-
-    float accumulator = arg_identity.get_init_val();
-
-    for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x) {
-        accumulator = op(accumulator, input[base_flat_index + (size_t)current_idx * axis_stride]);
-    }
-
-    for (int s = WARP_SIZE / 2; s > 0; s >>= 1) {
-        accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
-    }
-
-    int warp_id = tid / WARP_SIZE;
-    int lane_id = tid % WARP_SIZE;
-
-    if (lane_id == 0) sdata[warp_id] = accumulator;
-
-    __syncthreads(); 
-
-    if (warp_id == 0) {
-        accumulator = (tid < (blockDim.x / WARP_SIZE)) ? sdata[tid] : arg_identity.get_init_val();
-
-        for (int s = WARP_SIZE / 2; s > 0; s >>= 1) {
-            accumulator = op(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
-        }
-
-        if (tid == 0) result[idx_out] = accumulator;
-    }
-}
-
-template <typename Op>
-__global__ void arg_reduce_kernel(
-    const float *__restrict__ input,
-    int *__restrict__ result_idx,
-    size_t input_base_offset)
-{
-    extern __shared__ char sdata_shared[]; 
-    float *sdata_vals = (float *)sdata_shared;
-    int *sdata_indices = (int *)&sdata_vals[blockDim.x];
-
-    Op op;
-    ArgIdentity<Op> arg_identity;
+    extern __shared__ char sdata_raw[];
+    T *sdata = (T *)sdata_raw;
 
     size_t idx_out = blockIdx.x;
     if (idx_out >= d_reduce_params.total_elements_out)
@@ -111,73 +52,140 @@ __global__ void arg_reduce_kernel(
     int reduce_dim_size = d_reduce_params.reduce_dim_size;
     size_t axis_stride = d_reduce_params.d_strides[d_reduce_params.reduce_axis];
 
-    int coords[MAX_DIMS] = {0};
+    size_t base_flat_index = input_base_offset;
     size_t temp_idx = idx_out;
     for (int i = d_reduce_params.ndims - 1; i >= 0; --i)
     {
         if (i != d_reduce_params.reduce_axis)
         {
-            coords[i] = temp_idx % d_reduce_params.d_shape[i];
+            base_flat_index += (temp_idx % d_reduce_params.d_shape[i]) * d_reduce_params.d_strides[i];
             temp_idx /= d_reduce_params.d_shape[i];
         }
     }
-    size_t base_flat_index = get_linear_index(coords) + input_base_offset;
 
-    float best_val = arg_identity.get_init_val();
-    int best_idx = -1; 
+    T accumulator = ArgIdentity<T, Op>::get_init_val();
 
     for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x)
     {
-        size_t flat_index = base_flat_index + (size_t)current_idx * axis_stride;
-        float current_val = input[flat_index];
-
-        if (op(current_val, best_val))
-        {
-            best_val = current_val;
-            best_idx = current_idx;
-        }
-        else if (current_val == best_val && current_idx < best_idx)
-        {
-            best_idx = current_idx;
-        }
+        accumulator = Op::apply(accumulator, input[base_flat_index + (size_t)current_idx * axis_stride]);
     }
 
-    sdata_vals[tid] = best_val;
-    sdata_indices[tid] = best_idx;
+    for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
+    {
+        accumulator = Op::apply(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
+    }
+
+    int warp_id = tid / WARP_SIZE;
+    int lane_id = tid % WARP_SIZE;
+
+    if (lane_id == 0)
+        sdata[warp_id] = accumulator;
+
     __syncthreads();
 
-    for (int s = blockDim.x / 2; s > 0; s >>= 1)
+    if (warp_id == 0)
     {
-        if (tid < s)
-        {
-            float val_s = sdata_vals[tid + s];
-            int idx_s = sdata_indices[tid + s];
-            
-            if (op(val_s, sdata_vals[tid]))
-            {
-                sdata_vals[tid] = val_s;
-                sdata_indices[tid] = idx_s;
-            }
-            else if (val_s == sdata_vals[tid] && idx_s < sdata_indices[tid])
-            {
-                sdata_indices[tid] = idx_s;
-            }
-        }
-        __syncthreads();
-    }
+        accumulator = (tid < (blockDim.x / WARP_SIZE)) ? sdata[tid] : ArgIdentity<T, Op>::get_init_val();
 
-    if (tid == 0)
-    {
-        result_idx[idx_out] = sdata_indices[0];
+        for (int s = 16; s > 0; s >>= 1)
+        {
+            accumulator = Op::apply(accumulator, __shfl_xor_sync(0xffffffff, accumulator, s));
+        }
+
+        if (tid == 0)
+            result[idx_out] = accumulator;
     }
 }
 
-template <typename Op>
-void launch_reduce_op(float *input, float *result,
-                      int *input_shape, int input_ndims,
-                      int *result_shape, size_t *input_strides, int result_ndims,
-                      int axis,
-                      size_t total_elements_out, size_t input_base_offset)
+template <typename T, typename Op>
+__global__ void arg_reduce_kernel(
+    const T *__restrict__ input,
+    int *__restrict__ result_idx,
+    size_t input_base_offset)
+{
+    extern __shared__ char sdata_raw[];
+    T *sdata_vals = (T *)sdata_raw;
+    
+    int num_warps = blockDim.x / 32;
+    size_t vals_bytes = num_warps * sizeof(T);
+    size_t indices_offset = (vals_bytes + 3) & ~3; 
+    int *sdata_indices = (int *)&sdata_raw[indices_offset];
+
+    size_t idx_out = blockIdx.x;
+    if (idx_out >= d_reduce_params.total_elements_out) return;
+
+    int tid = threadIdx.x;
+    int lane_id = tid % 32;
+    int warp_id = tid / 32;
+
+    size_t base_flat_index = input_base_offset;
+    size_t temp_idx = idx_out;
+    for (int i = d_reduce_params.ndims - 1; i >= 0; --i) {
+        if (i != d_reduce_params.reduce_axis) {
+            base_flat_index += (temp_idx % d_reduce_params.d_shape[i]) * d_reduce_params.d_strides[i];
+            temp_idx /= d_reduce_params.d_shape[i];
+        }
+    }
+
+    T best_val = ArgIdentity<T, Op>::get_init_val();
+    int best_idx = 0;
+    size_t axis_stride = d_reduce_params.d_strides[d_reduce_params.reduce_axis];
+    int dim_size = d_reduce_params.reduce_dim_size;
+
+    for (int i = tid; i < dim_size; i += blockDim.x) {
+        T val = input[base_flat_index + (size_t)i * axis_stride];
+        if (Op::apply(val, best_val)) {
+            best_val = val;
+            best_idx = i;
+        } else if (val == best_val && i < best_idx) {
+            best_idx = i;
+        }
+    }
+
+    for (int s = 16; s > 0; s >>= 1) {
+        T remote_val = __shfl_xor_sync(0xffffffff, best_val, s);
+        int remote_idx = __shfl_xor_sync(0xffffffff, best_idx, s);
+
+        if (Op::apply(remote_val, best_val)) {
+            best_val = remote_val;
+            best_idx = remote_idx;
+        } else if (remote_val == best_val && remote_idx < best_idx) {
+            best_idx = remote_idx;
+        }
+    }
+
+    if (lane_id == 0) {
+        sdata_vals[warp_id] = best_val;
+        sdata_indices[warp_id] = best_idx;
+    }
+    __syncthreads();
+
+    if (warp_id == 0) {
+        best_val = (tid < num_warps) ? sdata_vals[tid] : ArgIdentity<T, Op>::get_init_val();
+        best_idx = (tid < num_warps) ? sdata_indices[tid] : 0;
+
+        for (int s = 16; s > 0; s >>= 1) {
+            T remote_val = __shfl_xor_sync(0xffffffff, best_val, s);
+            int remote_idx = __shfl_xor_sync(0xffffffff, best_idx, s);
+
+            if (Op::apply(remote_val, best_val)) {
+                best_val = remote_val;
+                best_idx = remote_idx;
+            } else if (remote_val == best_val && remote_idx < best_idx) {
+                best_idx = remote_idx;
+            }
+        }
+
+        if (tid == 0) result_idx[idx_out] = best_idx;
+    }
+}
+
+template <typename T, typename Op>
+void launch_reduce_op_kernel(T *input, T *result,
+                             int *input_shape, int input_ndims,
+                             int *result_shape, size_t *input_strides, int result_ndims,
+                             int axis,
+                             size_t total_elements_out, size_t input_base_offset)
 {
     if (total_elements_out == 0)
         return;
@@ -187,28 +195,31 @@ void launch_reduce_op(float *input, float *result,
     h_params.reduce_axis = axis;
     h_params.total_elements_out = total_elements_out;
     h_params.reduce_dim_size = input_shape[axis];
-
     memcpy(h_params.d_shape, input_shape, input_ndims * sizeof(int));
     memcpy(h_params.d_strides, input_strides, input_ndims * sizeof(size_t));
 
     cudaMemcpyToSymbol(d_reduce_params, &h_params, sizeof(ReductionParams));
 
-    int threads = REDUCTION_BLOCK_SIZE;
-    int blocks = total_elements_out;
-    size_t shared_mem_size = threads * sizeof(float) / WARP_SIZE;
+    int minGridSize;
+    int threads;
 
-    reduce_kernel<Op><<<blocks, threads, shared_mem_size>>>(
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &threads, reduce_kernel<T, Op>, 0, 0);
+
+    int blocks = (total_elements_out < minGridSize) ? total_elements_out : minGridSize;
+    size_t shared_mem_size = (threads / 32) * sizeof(T);
+
+    reduce_kernel<T, Op><<<blocks, threads, shared_mem_size>>>(
         input, result, input_base_offset);
-    
+
     cudaDeviceSynchronize();
 }
 
-template <typename Op>
-void launch_arg_reduce(float *input, int *result_idx,
-                       int *input_shape, int input_ndims,
-                       size_t *input_strides,
-                       int axis,
-                       size_t total_elements_out, size_t input_base_offset)
+template <typename T, typename Op>
+void launch_arg_reduce_kernel(T *input, int *result_idx,
+                              int *input_shape, int input_ndims,
+                              size_t *input_strides,
+                              int axis,
+                              size_t total_elements_out, size_t input_base_offset)
 {
     if (total_elements_out == 0)
         return;
@@ -218,17 +229,29 @@ void launch_arg_reduce(float *input, int *result_idx,
     h_params.reduce_axis = axis;
     h_params.total_elements_out = total_elements_out;
     h_params.reduce_dim_size = input_shape[axis];
-
     memcpy(h_params.d_shape, input_shape, input_ndims * sizeof(int));
     memcpy(h_params.d_strides, input_strides, input_ndims * sizeof(size_t));
 
     cudaMemcpyToSymbol(d_reduce_params, &h_params, sizeof(ReductionParams));
 
-    int threads = REDUCTION_BLOCK_SIZE;
-    int blocks = total_elements_out;
-    size_t shared_mem_size = threads * (sizeof(float) + sizeof(int));
+    int minGridSize, blockSize;
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize,
+                                       arg_reduce_kernel<T, Op>, 0, 0);
 
-    arg_reduce_kernel<Op><<<blocks, threads, shared_mem_size>>>(
+    int threads = (blockSize >= 512) ? 512 : (blockSize >= 256) ? 256
+                                                                : 128;
+    if (threads < 32)
+        threads = 32;
+
+    int num_warps = threads / 32;
+
+    size_t vals_size = num_warps * sizeof(T);
+    size_t indices_offset = ((vals_size + 3) & ~3);
+    size_t shared_mem_size = indices_offset + (num_warps * sizeof(int));
+
+    int blocks = (int)total_elements_out;
+
+    arg_reduce_kernel<T, Op><<<blocks, threads, shared_mem_size>>>(
         input, result_idx, input_base_offset);
 
     cudaDeviceSynchronize();

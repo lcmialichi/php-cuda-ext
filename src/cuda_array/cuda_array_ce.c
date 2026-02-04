@@ -69,6 +69,9 @@ static void php_cuda_build_recursive(zval *result, void *data, int dim, tensor_t
             case DTYPE_UINT8:
                 ZVAL_LONG(&val, (zend_long)((uint8_t *)data)[child_offset]);
                 break;
+            case DTYPE_UINT16:
+                ZVAL_LONG(&val, (zend_long)((uint16_t *)data)[child_offset]);
+                break;
             case DTYPE_BOOL:
                 ZVAL_BOOL(&val, ((bool *)data)[child_offset]);
                 break;

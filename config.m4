@@ -45,20 +45,34 @@ if test "$PHP_CUDA" != "no"; then
     AC_MSG_CHECKING([for CUDA GPU architecture])
     DETECTED_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '.')
     
+    AC_MSG_CHECKING([for CUDA GPU architecture])
     if test -z "$DETECTED_ARCH"; then
-        CUDA_ARCH_FLAG="sm_50" # Fallback
+        CUDA_ARCH_FLAG="sm_50"
+        AC_MSG_RESULT([none detected, falling back to $CUDA_ARCH_FLAG])
     else
         CUDA_ARCH_FLAG="sm_$DETECTED_ARCH"
+        AC_MSG_RESULT([detected $CUDA_ARCH_FLAG])
     fi
-    AC_MSG_RESULT([$CUDA_ARCH_FLAG])
+
+    AC_MSG_RESULT([Compiling CUDA kernels:])
+
+    TOTAL_FILES=$(echo $CUDA_FILES | wc -w)
+    CURRENT_FILE=1
 
     for f in $CUDA_FILES; do
-        $NVCC -arch=$CUDA_ARCH_FLAG -O3 --use_fast_math -Xcompiler -fPIC -c $f -o ${f%.cu}.o || {
+        # O printf permite formatar a saída com espaços fixos
+        printf "  [%d/%d] Compiling: %-30s " "$CURRENT_FILE" "$TOTAL_FILES" "$f..."
+        
+        $NVCC -arch=$CUDA_ARCH_FLAG -O3 --use_fast_math -Xcompiler -fPIC -c $f -o ${f%.cu}.o  || {
+            printf "\n"
             AC_MSG_ERROR([Failed to compile $f])
         }
+        
+        printf "[OK]\n"
+        CURRENT_FILE=$((CURRENT_FILE + 1))
     done
 
-    AC_MSG_RESULT([yes])
+    AC_MSG_RESULT([all kernels compiled successfully])
 
     ar rcs libcudakernels.a src/cuda/*.o
 

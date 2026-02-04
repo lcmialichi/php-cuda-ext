@@ -23,41 +23,11 @@ UnaryDispatchEntry unary_dispatch[] = {
     {OP_ROUND, launch_unary_round_kernel},
     {OP_NEG, launch_unary_neg_kernel}};
 
-ReductionDispatchEntry reduction_dispatch[] = {
-    {OP_REDUCE_SUM, launch_reduce_sum},
-    {OP_REDUCE_MAX, launch_reduce_max},
-    {OP_REDUCE_MIN, launch_reduce_min},
-    {OP_REDUCE_PROD, launch_reduce_prod},
-};
-
-ReductionArgDispatchEntry reduction_arg_dispatch[] = {
-    {OP_ARG_MAX, launch_arg_max},
-    {OP_ARG_MIN, launch_arg_min},
-};
-
 unary_fn get_unary_fn(operation_type_t op)
 {
     for (int i = 0; i < sizeof(unary_dispatch) / sizeof(UnaryDispatchEntry); i++)
         if (unary_dispatch[i].op == op)
             return unary_dispatch[i].fn;
-
-    return NULL;
-}
-
-reduction_fn get_reduction_fn(operation_type_t op)
-{
-    for (int i = 0; i < sizeof(reduction_dispatch) / sizeof(ReductionDispatchEntry); i++)
-        if (reduction_dispatch[i].op == op)
-            return reduction_dispatch[i].fn;
-
-    return NULL;
-}
-
-reduction_arg_fn get_reduction_arg_fn(operation_type_t op)
-{
-    for (int i = 0; i < sizeof(reduction_arg_dispatch) / sizeof(ReductionArgDispatchEntry); i++)
-        if (reduction_arg_dispatch[i].op == op)
-            return reduction_arg_dispatch[i].fn;
 
     return NULL;
 }
@@ -140,8 +110,7 @@ tensor_t *cuda_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t op
                   a->d_strides,
                   a->ndims,
                   a->total_size,
-                  is_contiguous(a)
-                );
+                  is_contiguous(a));
 
     cudaError_t status = cudaDeviceSynchronize();
 
@@ -179,8 +148,7 @@ tensor_t *cuda_inv_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_
         a->d_strides,
         a->ndims,
         a->total_size,
-        is_contiguous(a)
-    );
+        is_contiguous(a));
 
     cudaError_t status = cudaDeviceSynchronize();
 
@@ -241,8 +209,20 @@ tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, operation_type_t ope
     if (!result)
         return NULL;
 
-    reduction_arg_fn func = get_reduction_arg_fn(operation_type);
-    func(input->data, result->data, input->shape, input->ndims, input->strides, axis, total_elements_out, input->offset);
+    launch_arg_reduction(
+        input->data,
+        result->data,
+        input->dtype,
+        operation_type,
+        input->shape,
+        input->ndims,
+        result->shape,
+        input->strides,
+        result->ndims,
+        axis,
+        total_elements_out,
+        input->offset);
+        
     if (!result)
     {
         zend_throw_error(NULL, "CudaArray creation failed during reduction.");
@@ -274,19 +254,9 @@ tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operati
     tensor_t *result = NULL;
     cudaError_t err = cudaSuccess;
 
-    reduction_fn func = get_reduction_fn(operation_type);
-    if (func == NULL)
-    {
-        zend_throw_error(NULL, "Reduction operation handler not found for type %d.", operation_type);
-        return NULL;
-    }
-
-    result = cuda_tensor_create_empty(result_shape_arr, result_ndims);
+    result = cuda_tensor_create_empty_dtype(result_shape_arr, result_ndims, input->dtype);
     if (!result)
         return NULL;
-
-    func(input->data, result->data, input->shape, input->ndims,
-         result_shape_arr, input->strides, result_ndims, axis, total_elements_out, input->offset);
 
     if (operation_type == OP_REDUCE_MEAN)
     {
@@ -294,11 +264,8 @@ tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operati
         zend_throw_error(NULL, "OP_REDUCE_MEAN not implemented yet.");
     }
 
-    if (!result)
-    {
-        zend_throw_error(NULL, "CudaArray creation failed during reduction.");
-        return NULL;
-    }
+    launch_reduction(input->data, result->data, input->dtype, operation_type, input->shape, input->ndims,
+                     result_shape_arr, input->strides, result_ndims, axis, total_elements_out, input->offset);
 
     err = cudaDeviceSynchronize();
     if (err != cudaSuccess)

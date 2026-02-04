@@ -17,6 +17,7 @@ static zend_always_inline void get_f64(void *p, zval *rv) { ZVAL_DOUBLE(rv, *(do
 static zend_always_inline void get_i32(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (int32_t *)p); }
 static zend_always_inline void get_i64(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (int64_t *)p); }
 static zend_always_inline void get_u8(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (uint8_t *)p); }
+static zend_always_inline void get_u16(void *p, zval *rv) { ZVAL_LONG(rv, (zend_long) * (uint16_t *)p); }
 static zend_always_inline void get_bool(void *p, zval *rv) { ZVAL_BOOL(rv, *(uint8_t *)p != 0); }
 
 static const dtype_getter_t dtype_getters[] = {
@@ -25,6 +26,7 @@ static const dtype_getter_t dtype_getters[] = {
     [DTYPE_INT32] = get_i32,
     [DTYPE_INT64] = get_i64,
     [DTYPE_UINT8] = get_u8,
+    [DTYPE_UINT16] = get_u16,
     [DTYPE_BOOL] = get_bool,
 };
 

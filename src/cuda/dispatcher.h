@@ -147,4 +147,54 @@
         return;                            \
     }
 
+#define DISPATCH_OP_REDUCTION(OP_TYPE, ...) \
+    switch (OP_TYPE)                        \
+    {                                       \
+    case OP_REDUCE_SUM:                     \
+    {                                       \
+        typedef AddOpT<scalar_t> bin_op_t;  \
+        __VA_ARGS__;                        \
+        break;                              \
+    }                                       \
+    case OP_REDUCE_MAX:                     \
+    {                                       \
+        typedef MaxOpT<scalar_t> bin_op_t;  \
+        __VA_ARGS__;                        \
+        break;                              \
+    }                                       \
+    case OP_REDUCE_MIN:                     \
+    {                                       \
+        typedef MinOpT<scalar_t> bin_op_t;  \
+        __VA_ARGS__;                        \
+        break;                              \
+    }                                       \
+    case OP_REDUCE_PROD:                    \
+    {                                       \
+        typedef MulOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                        \
+        break;                              \
+    }                                       \
+    default:                                \
+        return;                             \
+    }
+
+#define DISPATCH_OP_ARG_REDUCTION(OP_TYPE, ...) \
+    switch (OP_TYPE)                            \
+    {                                           \
+    case OP_ARG_MAX:                            \
+    {                                           \
+        typedef ArgMaxOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                            \
+        break;                                  \
+    }                                           \
+    case OP_ARG_MIN:                            \
+    {                                           \
+        typedef ArgMinOpT<scalar_t> bin_op_t;   \
+        __VA_ARGS__;                            \
+        break;                                  \
+    }                                           \
+    default:                                    \
+        return;                                 \
+    }
+
 #endif

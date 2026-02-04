@@ -48,11 +48,18 @@ __global__ void scale_kernel(const float *values,
         float f_min = (float)min_value;
         float f_max = (float)max_value;
 
-        float scaled = f_min + (f_max - f_min) * raw_rand;
-
-        output_data[idx] = (T)scaled;
+        if (std::is_integral<T>::value)
+        {
+            output_data[idx] = (T)roundf(fmaf(raw_rand, (f_max - f_min), f_min));
+        }
+        else
+        {
+            output_data[idx] = (T)fmaf(raw_rand, (f_max - f_min), f_min);
+        }
     }
 }
+
+__global__ void bernoulli_kernel(const float *values, bool *output_data, size_t size, float p);
 
 template <typename T>
 void launch_fill_kernel_with_scalar(T *base, T scalar, size_t total_elements)

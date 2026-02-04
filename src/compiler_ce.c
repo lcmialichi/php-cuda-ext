@@ -259,15 +259,16 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
     smart_string_alloc(&program_hash_content, 8192, 0);
 
     const char *arch_num = "75";
-    if (compiler->target_device && strlen(compiler->target_device) > 3) {
+    if (compiler->target_device && strlen(compiler->target_device) > 3)
+    {
         arch_num = compiler->target_device + 3;
     }
-    
+
     char ptx_header[128];
-    snprintf(ptx_header, sizeof(ptx_header), 
-             ".version 7.0\n.target sm_%s\n.address_size 64\n", 
+    snprintf(ptx_header, sizeof(ptx_header),
+             ".version 7.0\n.target sm_%s\n.address_size 64\n",
              arch_num);
-    
+
     smart_string_appendl(&program_hash_content, ptx_header, strlen(ptx_header));
     cuda_kernel_data *kernel;
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
@@ -299,7 +300,8 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
     PHP_MD5Update(&context, (const unsigned char *)program_hash_content.c, program_hash_content.len);
     PHP_MD5Final(digest, &context);
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 16; i++)
+    {
         sprintf(hexdigest + (i * 2), "%02x", digest[i]);
     }
     hexdigest[32] = '\0';
@@ -335,6 +337,17 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
         }
         current_target = detected_arch;
         compiler->target_device = detected_arch;
+    }
+
+    int driver_version = 0;
+    int runtime_version = 0;
+
+    cudaDriverGetVersion(&driver_version);
+    cudaRuntimeGetVersion(&runtime_version);
+
+    if (runtime_version > driver_version)
+    {
+        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-min-ptx-version=7.0");
     }
 
     if (g_cached_option_count > 0 &&
@@ -586,11 +599,11 @@ ZEND_METHOD(Compiler, __construct)
     zend_bool fast_math = 1;
 
     ZEND_PARSE_PARAMETERS_START(0, 4)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_STR_OR_NULL(target_str)
-        Z_PARAM_LONG(optimization)
-        Z_PARAM_BOOL(debug)
-        Z_PARAM_BOOL(fast_math)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR_OR_NULL(target_str)
+    Z_PARAM_LONG(optimization)
+    Z_PARAM_BOOL(debug)
+    Z_PARAM_BOOL(fast_math)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);

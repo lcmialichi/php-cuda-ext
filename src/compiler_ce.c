@@ -316,16 +316,23 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
     char detected_arch[16];
     const char *current_target;
 
-    if (compiler->target_device) {
+    if (compiler->target_device)
+    {
         current_target = compiler->target_device;
-    } else {
+    }
+    else
+    {
         int device = 0;
-        if (cudaGetDevice(&device) != cudaSuccess) device = 0;
+        if (cudaGetDevice(&device) != cudaSuccess)
+            device = 0;
 
         struct cudaDeviceProp prop;
-        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess) {
+        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess)
+        {
             snprintf(detected_arch, sizeof(detected_arch), "sm_%d%d", prop.major, prop.minor);
-        } else {
+        }
+        else
+        {
             snprintf(detected_arch, sizeof(detected_arch), "sm_75");
         }
         current_target = detected_arch;
@@ -346,8 +353,10 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
         return g_cached_option_count;
     }
 
-    for (int i = 0; i < g_cached_option_count; i++) {
-        if (g_cached_nvrtc_options[i]) {
+    for (int i = 0; i < g_cached_option_count; i++)
+    {
+        if (g_cached_nvrtc_options[i])
+        {
             efree((void *)g_cached_nvrtc_options[i]);
             g_cached_nvrtc_options[i] = NULL;
         }
@@ -356,26 +365,26 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
     const char *arch_num = (strncmp(current_target, "sm_", 3) == 0) ? current_target + 3 : "75";
     char arch_opt[64];
 
-    if (runtime_version > driver_version) {
-        snprintf(arch_opt, sizeof(arch_opt), "-arch=compute_%s", arch_num);
+   if (runtime_version > driver_version) {
+        snprintf(arch_opt, sizeof(arch_opt), "-arch=compute_70"); 
         g_cached_nvrtc_options[g_cached_option_count++] = estrdup(arch_opt);
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-min-ptx-version=8.0");
     } else {
         snprintf(arch_opt, sizeof(arch_opt), "-arch=sm_%s", arch_num);
         g_cached_nvrtc_options[g_cached_option_count++] = estrdup(arch_opt);
     }
 
-    // Otimização
     char opt_level[16];
     snprintf(opt_level, sizeof(opt_level), "-O%ld", compiler->optimization_level);
     g_cached_nvrtc_options[g_cached_option_count++] = estrdup(opt_level);
 
-    if (compiler->debug_mode) {
+    if (compiler->debug_mode)
+    {
         g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-G");
         g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-lineinfo");
     }
 
-    if (compiler->fast_math && !compiler->debug_mode) {
+    if (compiler->fast_math && !compiler->debug_mode)
+    {
         g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-use_fast_math");
     }
 

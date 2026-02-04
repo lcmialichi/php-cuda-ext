@@ -155,6 +155,8 @@ class ContiguousArray implements \ArrayAccess, Countable
 }
 
 /**
+ * 
+ * @property int|float|bool|null|string|CudaArray $cdata
  * <psalm
  * disallowLiteralKeysOnUnshapedArrays="[bool]"
  *>

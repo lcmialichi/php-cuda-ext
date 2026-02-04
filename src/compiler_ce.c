@@ -13,7 +13,7 @@
 #include "ext/hash/php_hash.h"
 #include "ext/standard/md5.h"
 #include <time.h>
-
+#include <cuda_runtime.h>
 #include <nvrtc.h>
 #include <cuda.h>
 #include <stdio.h>
@@ -300,7 +300,28 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
 
 static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char ***options_out)
 {
-    const char *current_target = compiler->target_device ? compiler->target_device : "sm_60";
+    char detected_arch[16];
+    const char *current_target;
+
+    if (compiler->target_device)
+    {
+        current_target = compiler->target_device;
+    }
+    else
+    {
+        int device = 0;
+        if (cudaGetDevice(&device) != cudaSuccess) device = 0;
+        
+        struct cudaDeviceProp prop;
+        if (cudaGetDeviceProperties(&prop, device) == cudaSuccess) {
+            snprintf(detected_arch, sizeof(detected_arch), "sm_%d%d", prop.major, prop.minor);
+        } else {
+            snprintf(detected_arch, sizeof(detected_arch), "sm_75");
+        }
+        current_target = detected_arch;
+        compiler->target_device = detected_arch;
+    }
+
     if (g_cached_option_count > 0 &&
         strcmp(g_cached_target, current_target) == 0 &&
         g_cached_opt_level == compiler->optimization_level &&
@@ -321,8 +342,10 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
     }
     g_cached_option_count = 0;
 
-    char arch_opt[128];
-    snprintf(arch_opt, sizeof(arch_opt), "-arch=%s", current_target);
+    const char *arch_num = (strncmp(current_target, "sm_", 3) == 0) ? current_target + 3 : "75";
+
+    char arch_opt[64];
+    snprintf(arch_opt, sizeof(arch_opt), "-arch=compute_%s", arch_num);
     g_cached_nvrtc_options[g_cached_option_count++] = estrdup(arch_opt);
 
     if (compiler->debug_mode)
@@ -526,9 +549,9 @@ static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src)
         if (src->parameters[i])
         {
             dst->parameters[i] = ecalloc(1, sizeof(func_parameter));
-            
+
             *dst->parameters[i] = *src->parameters[i];
-            dst->parameters[i]->name[MAX_P_NAME_LEN - 1] = '\0'; 
+            dst->parameters[i]->name[MAX_P_NAME_LEN - 1] = '\0';
         }
         else
         {

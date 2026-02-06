@@ -1,114 +1,83 @@
-
 <p align="center">
   <a href="https://github.com/lcmialichi/php-cuda-ext">
-    <img src="https://repository-images.githubusercontent.com/1091968129/520375bf-6506-4732-9834-9c5b51d9888b" alt="php-cuda-ext banner" width="500px">
+    <img src="https://repository-images.githubusercontent.com/1091968129/520375bf-6506-4732-9834-9c5b51d9888b"
+         alt="php-cuda-ext banner"
+         width="480">
   </a>
 </p>
 
+<h1 align="center">php-cuda-ext</h1>
+
 <p align="center">
-  <strong>Run high-performance GPU computing directly from PHP using NVIDIA CUDA.</strong>
+  Native PHP extension for GPU computing using NVIDIA CUDA
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/PHP-8.0+-purple?logo=php">
   <img src="https://img.shields.io/badge/CUDA-11.0%2B-76B900?logo=nvidia">
-  <img src="https://img.shields.io/badge/License-MIT-blue">
   <img src="https://img.shields.io/badge/Platform-Linux-red">
-</p>
-
-<p align="center">
-  <em>
-    No Python. No TensorFlow. No PyTorch.<br>
-    Just native PHP + CUDA.
-  </em>
+  <img src="https://img.shields.io/badge/License-MIT-blue">
 </p>
 
 ---
 
-## ⚠️ Project Status — Under development
+## Project Status
 
-> **This project is under active development.**
+> **Experimental / Under active development**
 
-- ❌ Not production-ready
-- ⚠️ API may change at any time
-- 🧪 Intended for research, experimentation, and advanced use cases
-
-Use at your own risk.
+- APIs are unstable and may change
+- Not recommended for production environments
+- Intended for research, prototyping, and advanced experimentation
 
 ---
 
-## What is php-cuda-ext?
+## Overview
 
-`php-cuda-ext` is a **native PHP extension written in C/C++** that provides **direct access to NVIDIA CUDA** from PHP userland.
+`php-cuda-ext` is a native PHP extension that enables **GPU-accelerated numerical computing, machine learning, and data science workloads directly from PHP** using NVIDIA CUDA.
 
-It enables **GPU-accelerated computing**, including:
-- Tensor operations
+The extension gives PHP developers **first-class access to GPU computing**, allowing applications written in PHP to operate on large-scale tensors, execute parallel numerical algorithms, and scale computational workloads beyond CPU limitations.
+
+With `php-cuda-ext`, PHP is no longer restricted to orchestration or I/O-bound tasks — it becomes a viable environment for:
+
+- Tensor-based computation
+- Data science pipelines
 - Machine learning primitives
-- Custom CUDA kernels (JIT-compiled)
-- High-performance numerical workloads
+- High-throughput numerical processing
+- GPU-accelerated experimentation and research
 
-All **without leaving PHP**.
-
----
-
-
-- ✅ Direct CUDA access from PHP
-- ✅ JIT compilation of CUDA kernels written in PHP
-- ✅ Operator overloading for GPU tensors
-- ✅ Async kernel execution and stream synchronization
-- ❌ No external ML frameworks
-- ❌ No Python runtime
-- ❌ No bindings to TensorFlow / PyTorch
-
-This is **GPU computing at the PHP language level**.
+All computations are executed natively on the GPU, without relying on external runtimes or language bridges.
 
 ---
 
-## 🖥️ Requirements
+## Design Goals
 
-To build and run this extension:
+- No Python dependency
+- No bindings to TensorFlow, PyTorch, or similar frameworks
+- Native PHP syntax and semantics
+- Explicit control over GPU execution
+- Emphasis on performance and transparency
 
-- NVIDIA GPU with CUDA support
-- NVIDIA Driver (compatible with CUDA Toolkit)
-- CUDA Toolkit **12.x recommended**
-- PHP **8.0+** (C extension enabled)
-- gcc / g++
-- make / autoconf
-- Linux (Ubuntu, Debian, Arch, CentOS, etc.)
+Rather than prescribing a fixed machine learning abstraction,
+`php-cuda-ext` focuses on providing the fundamental building blocks
+required to implement ML and data science systems directly in PHP.
 
----
-
-## ✨ Features
-
-- **JIT CUDA Compiler**
-  - Write CUDA kernels in PHP using PHP 8 Attributes
-  - Compiled to PTX at runtime
-
-- **CudaArray (GPU Tensors)**
-  - Multi-dimensional arrays stored entirely on the GPU
-  - Optimized memory layout and execution
-
-- **Operator Overloading**
-  - Use native operators: `+ - * / **`
-  - Expressions execute fully on the GPU
-
-- **Automatic Broadcasting**
-  - NumPy-like broadcasting rules
-
-- **Async Execution**
-  - Non-blocking kernel launches
-  - Stream synchronization and async operation tracking
-
-- **Advanced Memory Control**
-  - Shared memory
-  - Thread synchronization (`__syncthreads`)
-
-- **GPU Math Library**
-  - Trigonometry, logarithms, exponentials, intrinsics
+This approach favors flexibility, performance, and transparency over
+opinionated high-level APIs.
 
 ---
 
-## 🛠️ Installation & Compilation
+## Requirements
+
+- NVIDIA GPU with CUDA capability
+- NVIDIA Driver compatible with CUDA Toolkit
+- CUDA Toolkit **11.x+** (12.x recommended)
+- PHP **8.0+**
+- Linux (tested on Ubuntu / Debian-based systems)
+- `gcc`, `g++`, `make`, `autoconf`, `phpize`
+
+---
+
+## Installation
 
 Clone the repository:
 
@@ -117,93 +86,100 @@ git clone https://github.com/lcmialichi/php-cuda-ext.git
 cd php-cuda-ext
 ```
 
-## Compile and install:
+Compile and install:
+
 ```bash
 ./compile.sh
 ```
-The script automatically runs:
-- phpize
-- ./configure
-- make
-- make install
+
+The script runs:
+- ``phpize``
+- ``./configure``
+- ``make``
+- ``make install``
+
+Notice: the script will register cuda extension automatically
 
 Verify installation:
 ```bash
 php -m | grep cuda
 ```
 
-## Quick Start — GPU Tensors (CudaArray):
-### Operator Overloading
+## Core Concepts
+### CudaArray (GPU Tensor)
+``CudaArray`` represents an n-dimensional array stored entirely in GPU memory.
+
+- No implicit CPU ↔ GPU transfers
+- Contiguous memory layout
+- Supports broadcasting and element-wise operations
+- Designed for chained expressions
 
 ```php
 use Cuda\CudaArray;
 
-$a = CudaArray::ones([3, 3]);
-$b = CudaArray::full([3, 3], 2.0);
+$a = CudaArray::ones([3, 3], dtype: 'float32');
+$b = CudaArray::full([3, 3], 2.0); // default dtype = float32
 
-// Executes entirely on the GPU
 $result = ($a * 2.0 + $b) ** 2;
 ```
-Complex mathematical executed on the GPU.
 
-### Basic Operations
+All operations above are executed on the GPU.
+
+## Data Transfer
 
 ```php
-$ca = Cuda\CudaArray::ones([4, 4, 4]);
+// CPU → GPU
+$ca = new CudaArray([[1, 2], [3, 4]]);
 
-// Slicing & assignment
-$ca[0] = ($ca[1] * 2) + $ca[2];
+// GPU-only allocation
+$ones  = CudaArray::ones([1024, 1024]);
+$zeros = CudaArray::zeros([512]);
 
-// Reshape
-$newCa = $ca->reshape([64]);
+// GPU → CPU
+$data = $ca->toArray();
 
-// Transfer back to CPU
-$array = $newCa->toArray();
+// GPU → Contiguous list 
+$host = $ca->toHost();
+
+// Contiguous list → CPU memory
+$host->toGpu();
+
+// Contiguous list → PHP Array
+$host->toArray();
 ```
 
-## CudaArray API Overview
-
-### Math & Comparison
-- **Arithmetic**: ``add``, ``subtract``, ``multiply``, ``divide``, ``power``, ``neg``, ``matmul``
-- **Functions**: ``exp``, ``log``, ``sqrt``, ``abs``, ``ceil``, ``floor``, ``round``
-- **Trigonometry**: ``sin``, ``cos``, ``tan``
-- **Comparison**: ``gt``, ``lt``, ``eq``, ``ne``, ``ge``, ``le``
-- **info**: ``getNdims``, ``getShape``, ``getSize``,  ``getStrides``
-
+## Supported Operations
+### Arithmetic & Math
+- add, subtract, multiply, divide, power
+- exp, log, sqrt, abs
+- sin, cos, tan
 ### Reductions
-- ``sum(axis)``
-- ``min(axis)``
-- ``max(axis)``
-- ``prod(axis)``
-- ``argMax(axis)``
-- ``argMin(axis)``
+- sum(axis)
+- min(axis)
+- max(axis)
+- prod(axis)
+- argMax(axis)
+- argMin(axis)
+### Shape Manipulation
+- reshape(shape)
+- flatten()
+- transpose(axes)
+- concat(tensors, axis)
 
-### Shape & Manipulation
-- ``reshape(shape)``
-- ``flatten()``
-- ``transpose(axes)``
-- ``concat(tensors, axis)``
+## Supported Data types
+- float32, float64
+- uint8, uint16, uint32, uint32
+- int8, int16, int32, int64
+- bool
 
-## Creating Tensors
+## Custom CUDA Kernels (JIT)
+Custom kernels are defined using PHP 8 Attributes and compiled to PTX at runtime.
 
-```php
-// Transfers data from CPU → GPU
-$ca = new Cuda\CudaArray([[1, 2], [3, 4]]);
-
-// GPU-only creation (no PHP array transfer)
-$ca = Cuda\CudaArray::ones($shape);
-$ca = Cuda\CudaArray::zeros($shape);
-$ca = Cuda\CudaArray::full($shape, 1.5);
-$ca = Cuda\CudaArray::rand($shape, 0, 10);
-
-```
-
-## Custom CUDA Kernels (JIT Compilation)
-### Define kernels using PHP 8 Attributes.
+### Kernel Definition
 ```php
 use Cuda\Attr as Attr;
 
-class MyKernelDefinitions
+class Kernels
 {
     #[Attr\Kernel(name: 'v_add')]
     public function vectorAdd(
@@ -212,7 +188,6 @@ class MyKernelDefinitions
         #[Attr\TensorType] array &$c,
         #[Attr\IntType] int $n
     ): void {
-        /** @var \Cuda\Runtime $cuda */
         $idx = $cuda->globalIdx();
         if ($idx < $n) {
             $c[$idx] = $a[$idx] + $b[$idx];
@@ -220,19 +195,21 @@ class MyKernelDefinitions
     }
 }
 ```
-### Compile & Execute
+
+### Compilation & Execution
+
 ```php
 $compiler = new Cuda\Compiler();
-$defs = new MyKernelDefinitions();
+$compiler->kernel([new Kernels(), 'vectorAdd']);
 
-$compiler->kernel([$defs, 'vectorAdd']);
 $module = $compiler->compile();
 $module->initialize();
 
-$n = 1024 * 1024;
-$a = Cuda\CudaArray::ones([$n]);
-$b = Cuda\CudaArray::full([$n], 5.0);
-$c = Cuda\CudaArray::zeros([$n]);
+$n = 1_048_576;
+
+$a = CudaArray::ones([$n]);
+$b = CudaArray::full([$n], 5.0);
+$c = CudaArray::zeros([$n]);
 
 $module->run(
     'v_add',
@@ -242,81 +219,29 @@ $module->run(
         'grid'  => [(int)ceil($n / 256), 1, 1]
     ]
 );
-
 ```
 
-### Async Execution
+### Asynchronous Execution
 ```php
 $id = $module->runAsync('v_add', args: [...]);
 $module->sync();
 ```
+Multiple kernels can be queued and synchronized explicitly.
 
-### Advanced: Shared Memory & Synchronization
-```php
-// Inside a kernel method
-$cuda->__declare_shared($shared, 'float32', 256);
-$cuda->sync->threads(); // __syncthreads()
-$value = $cuda->math->sqrt($input[$idx]);
-```
-
-## CompiledModule API Overview
- - ``initialize()``
- - ``run()``
- - ``runAsync()``
- - ``sync()``
- - ``isFinished(id|null)``
- - ``getAsyncStatus(id|null)``
- - ``wait()``
- - ``getPendingOperations()``
- - ``cancelOperation(id)``
- - ``cleanup()``
- - ``hasKernel()``
- - ``getKernels()``
- - ``getPtx()``
-
-## 📚 Examples & Learning Path
-
-To help you get started, we provide a collection of documented examples in the [`/examples`](./examples) directory. These are organized from high-level abstractions to advanced custom kernel development:
-
-| Example | Description |
-| :--- | :--- |
-| **[Tensor Basics](./examples/01_basics_cuda_array.php)** | Initialization, VRAM allocation, and operator overloading. |
-| **[Math & Reductions](./examples/02_math_and_reductions.php)** | Parallel mathematical functions and data aggregations (sum, max). |
-| **[Shape Manipulation](./examples/03_advanced_manipulation.php)** | Reshaping, Transposition, and NumPy-style Broadcasting. |
-| **[Custom JIT Kernels](./examples/04_custom_jit_kernels.php)** | Writing CUDA kernels in PHP using Attributes and JIT compilation. |
-| **[Asynchronous Execution](./examples/05_jit_async_execution.php)** | Non-blocking kernel launches and stream synchronization. |
-
-Explore the [Examples README](./examples/README.md) for a technical overview of the GPU memory lifecycle and the JIT compilation pipeline.
-
-## 📊 Benchmarks
-### Run built-in benchmarks:
-```bash
-composer update
-
-php run_benchmarks.php
-```
+## Examples
+Documented examples are available in the /examples directory:
+- Tensor creation and basic operations
+- Broadcasting and shape manipulation
+- Reductions
+- Custom JIT kernels
+- Asynchronous execution
 
 ## Use Cases
-- Machine Learning & AI
-- Large-scale numerical computing
-- Image & video processing
+- Numerical computing
+- Image and signal processing
 - Scientific simulations
-- Physics engines & procedural generation
-- Quantitative finance & risk modeling
-
-## Contributing
-Contributions are welcome!
-- Bug reports
-- Performance improvements
-- New kernels
-- Documentation
+- Experimental machine learning pipelines
+- GPU-accelerated data processing in PHP
 
 ## License
- This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-- NVIDIA CUDA platform
-- PHP internals community
-- Early testers and contributors
----
-If you find this project interesting, consider starring the repository.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

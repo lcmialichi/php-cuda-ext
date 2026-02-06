@@ -1,5 +1,5 @@
 #include <cuda_runtime.h>
-#include "new_ops_func.cuh"
+#include "cuda_op_functors.cuh"
 #include "broadcast_ops.cuh"
 #include "broadcast_ops.h"
 #include "dispatcher.h"

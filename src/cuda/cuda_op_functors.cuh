@@ -1,5 +1,5 @@
-#ifndef NEW_OPS_FUNC_CUH
-#define NEW_OPS_FUNC_CUH
+#ifndef cuda_op_functors_CUH
+#define cuda_op_functors_CUH
 
 #include <cuda_runtime.h>
 #include <cmath>

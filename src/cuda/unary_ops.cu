@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include "unary_ops.h"
 #include "unary_ops.cuh"
-#include "new_ops_func.cuh"
+#include "cuda_op_functors.cuh"
 #include "dispatcher.h"
 
 extern "C" void launch_unary_op(

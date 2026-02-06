@@ -1,7 +1,7 @@
 #include "cuda_runtime.h"
 #include <vector>
 #include <algorithm>
-#include "new_ops_func.cuh"
+#include "cuda_op_functors.cuh"
 #include <string.h>
 #include <float.h>
 #include <cstdint>

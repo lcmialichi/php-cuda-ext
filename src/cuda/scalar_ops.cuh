@@ -2,7 +2,7 @@
 #define SCALAR_OPS_CUH
 
 #include <cuda_runtime.h>
-#include "new_ops_func.cuh"
+#include "cuda_op_functors.cuh"
 #include "cast.cuh"
 
 template <typename T, typename Op>

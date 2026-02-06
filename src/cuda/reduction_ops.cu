@@ -1,5 +1,4 @@
 #include <cuda_runtime.h>
-#include "operation_functors.cuh"
 #include "reduction_ops.cuh"
 #include "reduction_ops.h"
 #include "dispatcher.h"

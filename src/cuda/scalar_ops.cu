@@ -1,7 +1,6 @@
 #include <cuda_runtime.h>
 #include "scalar_ops.h"
 #include "scalar_ops.cuh"
-#include "operation_functors.cuh"
 #include "dispatcher.h"
 #include "../data_types.h"
 

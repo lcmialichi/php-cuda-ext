@@ -23,12 +23,10 @@
 
 ## Project Status
 
-> **Experimental / Under active development**
+> **Under active development**
 
 - APIs are unstable and may change
 - Not recommended for production environments
-- Intended for research, prototyping, and advanced experimentation
-
 ---
 
 ## Overview

@@ -181,50 +181,6 @@ cuda_function_match_t find_cuda_function_by_type(
     return result;
 }
 
-dtype_t string_to_dtype(const char *type_str)
-{
-    if (strcmp(type_str, "float") == 0 || strcmp(type_str, "float32") == 0)
-    {
-        return DTYPE_FLOAT32;
-    }
-    else if (strcmp(type_str, "double") == 0 || strcmp(type_str, "float64") == 0)
-    {
-        return DTYPE_FLOAT64;
-    }
-    else if (strcmp(type_str, "int") == 0 || strcmp(type_str, "int32") == 0)
-    {
-        return DTYPE_INT32;
-    }
-    else if (strcmp(type_str, "long") == 0 || strcmp(type_str, "int64") == 0)
-    {
-        return DTYPE_INT64;
-    }
-    else if (strcmp(type_str, "uint") == 0 || strcmp(type_str, "uint32") == 0)
-    {
-        return DTYPE_UINT32;
-    }
-    else if (strcmp(type_str, "ulong") == 0 || strcmp(type_str, "uint64") == 0)
-    {
-        return DTYPE_UINT64;
-    }
-    else if (strcmp(type_str, "bool") == 0)
-    {
-        return DTYPE_BOOL;
-    }
-    else if (strcmp(type_str, "char") == 0)
-    {
-        return DTYPE_INT8;
-    }
-    else if (strcmp(type_str, "short") == 0)
-    {
-        return DTYPE_INT16;
-    }
-    else
-    {
-        return DTYPE_UNKNOWN;
-    }
-}
-
 const cuda_function_info_t *find_cuda_function(const char *php_name)
 {
     for (int i = 0; cuda_functions[i].php_name != NULL; i++)

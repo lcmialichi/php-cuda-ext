@@ -13,6 +13,7 @@
 #include "ast_cuda_compiler.h"
 #include "zend_exceptions.h"
 #include "ast_cuda_builtins.h"
+#include "data_types.h"
 
 static void add_cuda_header(cuda_compilation_context_t *context, const char *header);
 static void cuda_compiler_error_ex(cuda_compilation_context_t *context, const char *format, ...);
@@ -496,7 +497,7 @@ static int handle_declare_shared_var(cuda_compilation_context_t *context, zend_a
     }
 
     const char *type_str = Z_STRVAL_P(type_zv);
-    dtype_t element_type = string_to_dtype(type_str);
+    dtype_t element_type = dtype_from_string(type_str);
 
     if (element_type == DTYPE_UNKNOWN)
     {
@@ -581,7 +582,7 @@ static int handle_declare_shared_array(cuda_compilation_context_t *context, zend
     }
 
     const char *type_str = Z_STRVAL_P(type_zv);
-    dtype_t element_type = string_to_dtype(type_str);
+    dtype_t element_type = dtype_from_string(type_str);
 
     if (element_type == DTYPE_UNKNOWN)
     {
@@ -684,7 +685,7 @@ static int handle_declare_shared_extern(cuda_compilation_context_t *context, zen
     }
 
     const char *type_str = Z_STRVAL_P(type_zv);
-    dtype_t element_type = string_to_dtype(type_str);
+    dtype_t element_type = dtype_from_string(type_str);
 
     if (element_type == DTYPE_UNKNOWN)
     {
@@ -1211,7 +1212,7 @@ static int handle_cuda_declare_shared(cuda_compilation_context_t *context, zend_
     }
 
     const char *type_str = Z_STRVAL_P(type_zv);
-    dtype_t element_type = string_to_dtype(type_str);
+    dtype_t element_type = dtype_from_string(type_str);
 
     if (element_type == DTYPE_UNKNOWN)
     {

@@ -12,7 +12,6 @@ extern "C" void launch_broadcast(
     int *result_shape, int result_dims,
     size_t total_elements, size_t a_offset, size_t b_offset)
 {
-
     int is_same_type = (dtype_a == dtype) && (dtype_b == dtype) ? 1 : 0;
     DISPATCH_DTYPE(dtype, {
         DISPATCH_OP(op_type, {

@@ -8,14 +8,14 @@ class KernelDefinitions
 {
     #[Cuda\Attr\Kernel(name: 'v_scale')]
     public function scale(
-        #[K\TensorType] &$data,
+        #[K\TensorType] array &$data,
         #[K\FloatType(bits: 32)] $factor,
         #[K\IntType] $n
     ): void {
         /** @var \Cuda\Runtime $cuda */
         $idx = $cuda->globalIdx();
         if ($idx < $n) {
-            $data[$idx] = $data[$idx] + $factor / 2 ;
+            $data[$idx] *= $factor;
         }
     }
 }
@@ -27,7 +27,7 @@ $factor = 1.6;
 $size = $tensor->getSize();
 $module->initialize();
 
-$threadsPerBlock = 256; 
+$threadsPerBlock = 256;
 $gridSize = (int) ceil($size / $threadsPerBlock);
 $MS = hrtime(true);
 
@@ -40,9 +40,12 @@ $module->run(
 $ME = hrtime(true);
 $TS = hrtime(true);
 
-($tensor + $factor) / 2;
+($tensor * $factor);
 
 $TE = hrtime(true);
 
 
-var_dump(($ME - $MS) / 1e6, ($TE - $TS) / 1e6);
+print_r([
+    "kernel" => ($ME - $MS) / 1e6,
+    "tensorXtensor" => ($TE - $TS) / 1e6
+]);

@@ -37,7 +37,6 @@ const cuda_function_info_t *find_cuda_function_by_category(const char *php_name,
 const cuda_function_info_t *find_cuda_function(const char *php_name);
 cuda_function_match_t find_cuda_function_by_type(const char *php_name, dtype_t arg_types[], uint32_t num_args);
 
-dtype_t string_to_dtype(const char *type_str);
 func_parameter *find_kernel_parameter(func_parameter_list_t *list, const char *name);
 zend_bool types_are_compatible(dtype_t t1, dtype_t t1_second, dtype_t t2, dtype_t t2_second);
 

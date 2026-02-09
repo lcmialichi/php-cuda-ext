@@ -11,6 +11,7 @@ This directory contains functional implementations of the extension's API. The e
 | `03_advanced_manipulation.php` | Tensor Geometry | Reshaping, Transposition, Broadcasting. |
 | `04_custom_jit_kernels.php` | JIT Compilation | PHP 8 Attributes, Kernel definitions, Grid/Block config. |
 | `05_jit_async_execution.php` | Concurrency | Non-blocking execution, Op polling, Stream sync. |
+| `06_serialize_compiled_module.php` | JIT Serialization | PHP Serialize CompiledModule object example |
 
 ## Execution Requirements
 

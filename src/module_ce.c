@@ -90,6 +90,55 @@ static size_t module_hash_launch_config(int grid[3], int block[3]);
 static void free_parameter_list(func_parameter_list_t *params);
 static void free_kernel_data(cuda_kernel_data *kernel);
 
+static func_parameter *create_parameter_from_array(HashTable *param_ht)
+{
+    zval *name_zv, *dtype_zv, *second_dtype_zv;
+
+    if (!(name_zv = zend_hash_str_find(param_ht, "name", 4)) ||
+        Z_TYPE_P(name_zv) != IS_STRING)
+    {
+        return NULL;
+    }
+
+    if (!(dtype_zv = zend_hash_str_find(param_ht, "dtype", 5)) ||
+        Z_TYPE_P(dtype_zv) != IS_LONG)
+    {
+        return NULL;
+    }
+
+    func_parameter *param = (func_parameter *)emalloc(sizeof(func_parameter));
+    if (!param)
+    {
+        return NULL;
+    }
+    memset(param, 0, sizeof(func_parameter));
+
+    size_t name_len = Z_STRLEN_P(name_zv);
+    if (name_len >= sizeof(param->name))
+    {
+        name_len = sizeof(param->name) - 1;
+    }
+
+    if (name_len > 0)
+    {
+        memcpy(param->name, Z_STRVAL_P(name_zv), name_len);
+        param->name[name_len] = '\0';
+    }
+
+    param->dtype = (dtype_t)Z_LVAL_P(dtype_zv);
+
+    if (param->dtype == DTYPE_LIST)
+    {
+        second_dtype_zv = zend_hash_str_find(param_ht, "second_dtype", 12);
+        if (second_dtype_zv && Z_TYPE_P(second_dtype_zv) == IS_LONG)
+        {
+            param->second_dtype = (dtype_t)Z_LVAL_P(second_dtype_zv);
+        }
+    }
+
+    return param;
+}
+
 static CUresult load_ptx(const char *ptx, CUmodule *module_out)
 {
     CUresult result;
@@ -1351,7 +1400,7 @@ ZEND_METHOD(CompiledModule, initialize)
 
     if (!module_ensure_ptx_loaded(module))
     {
-        RETURN_FALSE;   
+        RETURN_FALSE;
     }
 
     RETURN_TRUE;
@@ -2099,12 +2148,128 @@ ZEND_METHOD(CompiledModule, save)
 
 ZEND_METHOD(CompiledModule, __serialize)
 {
-    zend_throw_exception_ex(NULL, 0, "__serialize method not implemented");
+    cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
+    if (!module)
+        RETURN_EMPTY_ARRAY();
+
+    array_init(return_value);
+
+    if (module->ptx_code)
+    {
+        add_assoc_stringl(return_value, "ptx", module->ptx_code, module->ptx_size);
+    }
+
+    zval kernels_zv;
+    array_init(&kernels_zv);
+
+    if (module->kernel_functions)
+    {
+        zend_string *key;
+        cuda_kernel_data *kernel;
+
+        ZEND_HASH_FOREACH_STR_KEY_PTR(module->kernel_functions, key, kernel)
+        {
+            zval kernel_data;
+            array_init(&kernel_data);
+
+            add_assoc_str(&kernel_data, "name", zend_string_copy(kernel->name));
+
+            if (kernel->parameters && kernel->parameters->total > 0)
+            {
+                size_t p_size = sizeof(func_parameter);
+                size_t total_bytes = kernel->parameters->total * p_size;
+
+                zend_string *params_blob = zend_string_alloc(total_bytes, 0);
+                char *dest = ZSTR_VAL(params_blob);
+
+                for (int i = 0; i < kernel->parameters->total; i++)
+                {
+                    func_parameter *p = kernel->parameters->parameters[i];
+                    if (p)
+                    {
+                        memcpy(dest + (i * p_size), p, p_size);
+                    }
+                }
+
+                ZSTR_VAL(params_blob)
+                [total_bytes] = '\0';
+                add_assoc_str(&kernel_data, "params_blob", params_blob);
+                add_assoc_long(&kernel_data, "params_count", kernel->parameters->total);
+            }
+
+            zend_hash_update(Z_ARRVAL(kernels_zv), key, &kernel_data);
+        }
+        ZEND_HASH_FOREACH_END();
+    }
+
+    add_assoc_zval(return_value, "kernels", &kernels_zv);
 }
 
 ZEND_METHOD(CompiledModule, __unserialize)
 {
-    zend_throw_exception_ex(NULL, 0, "__unserialize method not implemented");
+    cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
+    HashTable *data;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_ARRAY_HT(data)
+    ZEND_PARSE_PARAMETERS_END();
+
+    module->from_serialize = 1;
+    zval *ptx_zv = zend_hash_str_find(data, "ptx", sizeof("ptx") - 1);
+    if (ptx_zv && Z_TYPE_P(ptx_zv) == IS_STRING)
+    {
+        module->ptx_code = estrndup(Z_STRVAL_P(ptx_zv), Z_STRLEN_P(ptx_zv));
+        module->ptx_size = Z_STRLEN_P(ptx_zv);
+    }
+
+    zval *kernels_zv = zend_hash_str_find(data, "kernels", sizeof("kernels") - 1);
+    if (kernels_zv && Z_TYPE_P(kernels_zv) == IS_ARRAY)
+    {
+
+        ALLOC_HASHTABLE(module->kernel_functions);
+        zend_hash_init(module->kernel_functions, zend_hash_num_elements(Z_ARRVAL_P(kernels_zv)), NULL, NULL, 0);
+
+        zval *kernel_entry;
+        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(kernels_zv), kernel_entry)
+        {
+            if (Z_TYPE_P(kernel_entry) != IS_ARRAY)
+                continue;
+
+            cuda_kernel_data *k = ecalloc(1, sizeof(cuda_kernel_data));
+
+            zval *name_zv = zend_hash_str_find(Z_ARRVAL_P(kernel_entry), "name", sizeof("name") - 1);
+            if (name_zv)
+                k->name = zend_string_copy(Z_STR_P(name_zv));
+
+            zval *blob_zv = zend_hash_str_find(Z_ARRVAL_P(kernel_entry), "params_blob", sizeof("params_blob") - 1);
+            zval *count_zv = zend_hash_str_find(Z_ARRVAL_P(kernel_entry), "params_count", sizeof("params_count") - 1);
+
+            if (blob_zv && count_zv && Z_TYPE_P(blob_zv) == IS_STRING)
+            {
+                uint32_t count = (uint32_t)zval_get_long(count_zv);
+                k->parameters = ecalloc(1, sizeof(func_parameter_list_t));
+                k->parameters->total = count;
+                k->parameters->parameters = ecalloc(count, sizeof(func_parameter *));
+
+                size_t p_size = sizeof(func_parameter);
+                char *src_ptr = Z_STRVAL_P(blob_zv);
+
+                for (uint32_t i = 0; i < count; i++)
+                {
+                    k->parameters->parameters[i] = ecalloc(1, p_size);
+                    memcpy(k->parameters->parameters[i], src_ptr + (i * p_size), p_size);
+                }
+            }
+
+            zend_hash_add_ptr(module->kernel_functions, k->name, k);
+        }
+        ZEND_HASH_FOREACH_END();
+    }
+
+    ALLOC_HASHTABLE(module->loaded_modules);
+    zend_hash_init(module->loaded_modules, 4, NULL, NULL, 0);
+    ALLOC_HASHTABLE(module->async_operations);
+    zend_hash_init(module->async_operations, 4, NULL, NULL, 0);
 }
 
 ZEND_METHOD(CompiledModule, getAsyncStatus)

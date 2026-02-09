@@ -62,14 +62,14 @@ class CompiledModule
         return true;
     }
 
-    public function run(string $name, array $config = [], array $args): bool
+    public function launch(string $name, array $config = [], array $args): bool
     {
-        return true;
+        return false;
     }
 
-    public function runAsync(string $name, array $config = [], array $args): int
+    public function launchAsync(string $name, array $config = [], array $args): int
     {
-        return true;
+        return false;
     }
 
     public function isFinished(?int $id = null): bool

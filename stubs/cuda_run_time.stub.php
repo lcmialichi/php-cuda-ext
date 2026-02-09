@@ -82,17 +82,21 @@ class Math
 
 class Atomic
 {
-    public function add(float &$address, float $val): float
+    public function add(array &$address, float|int $val): array
     {
+        return [];
     }
-    public function sub(float &$address, float $val): float
+    public function sub(array &$address, float|int $val): array
     {
+        return [];
     }
-    public function max(int &$address, int $val): int
+    public function max(array &$address, int $val): array
     {
+        return [];
     }
-    public function min(int &$address, int $val): int
+    public function min(array &$address, int $val): array
     {
+        return [];
     }
 }
 

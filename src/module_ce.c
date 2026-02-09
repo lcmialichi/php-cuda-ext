@@ -19,17 +19,26 @@
 #define MAX_KERNEL_ERROR_LEN 1024
 #define ERROR_CHECK_INTERVAL 50
 #define ASYNC_OP_TIMEOUT_MS 30000
-#define INITIAL_STREAM_POOL_SIZE 4
+#define INITIAL_STREAM_POOL_SIZE 1
 #define MAX_STREAM_POOL_SIZE 25
 #define MIN_KERNEL_SIZE_FOR_ASYNC 256
+#define LAUNCH_CACHE_SIZE 64
+#define BATCH_STREAM_TIMEOUT 1000
 
 extern zend_class_entry *cuda_array_ce;
 
 zend_class_entry *cuda_module_ce;
 static zend_object_handlers module_handlers;
 static pthread_mutex_t g_cuda_global_init_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t g_shared_context_mutex = PTHREAD_MUTEX_INITIALIZER;
 static zend_bool g_cuda_initialized = 0;
 static CUdevice g_primary_device = 0;
+static CUcontext g_shared_context = NULL;
+static int g_shared_context_refcount = 0;
+
+static launch_config_cache_t g_launch_cache[LAUNCH_CACHE_SIZE];
+static int g_launch_cache_index = 0;
+static pthread_mutex_t g_launch_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static zend_object *module_create_object(zend_class_entry *class_type);
 static void module_free_object(zend_object *object);
@@ -37,8 +46,9 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module);
 static void module_cleanup_cuda_resources(cuda_module_object *module);
 static double module_get_current_time_ms(void);
 static const char *module_dtype_to_string(dtype_t dtype);
-static CUmodule module_get_or_load_module(cuda_module_object *module, zend_string *kernel_name);
+static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zend_string *kernel_name);
 static zend_bool module_validate_launch_config(cuda_module_object *module, int grid[3], int block[3]);
+static zend_bool module_validate_launch_config_cached(int grid[3], int block[3]);
 static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *args, int argc,
                                                void ***cuda_args_ptr, void ***temp_buffers_ptr,
                                                int *temp_buffers_count_ptr);
@@ -62,8 +72,11 @@ static void module_cleanup_timeout_operations(cuda_module_object *module);
 static zend_bool module_validate_tensor_access(tensor_t *tensor, int total_threads);
 static void module_log_error(const char *format, ...);
 static CUstream module_get_stream_from_pool(cuda_module_object *module);
+static CUstream module_get_stream_with_expansion(cuda_module_object *module);
 static void module_return_stream_to_pool(cuda_module_object *module, CUstream stream);
 static void module_initialize_stream_pool(cuda_module_object *module);
+static void module_initialize_stream_pool_progressive(cuda_module_object *module);
+static void module_expand_stream_pool_async(cuda_module_object *module);
 static void module_destroy_stream_pool(cuda_module_object *module);
 static zend_bool module_initialize_global_cuda(cuda_module_object *module);
 static void module_prepare_launch_config(zval *config_zv, int grid[3], int block[3]);
@@ -71,33 +84,37 @@ static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
                                             void **temp_buffers, int temp_buffers_count);
 static zend_bool module_should_use_async(int grid[3], int block[3]);
 static zend_bool module_validate_async_operation_count(cuda_module_object *module);
+static void *module_async_init(void *arg);
+static zend_bool module_get_shared_context(cuda_module_object *module);
+static size_t module_hash_launch_config(int grid[3], int block[3]);
+static void free_parameter_list(func_parameter_list_t *params);
+static void free_kernel_data(cuda_kernel_data *kernel);
 
-
-static CUresult load_ptx(const char* ptx, CUmodule* module_out)
+static CUresult load_ptx(const char *ptx, CUmodule *module_out)
 {
     CUresult result;
-    
+
     result = cuModuleLoadData(module_out, ptx);
-    if (result == CUDA_SUCCESS) return result;
-    
+    if (result == CUDA_SUCCESS)
+        return result;
+
     CUjit_option options[3];
-    void* optionValues[3];
-    
+    void *optionValues[3];
+
     options[0] = CU_JIT_FALLBACK_STRATEGY;
-    optionValues[0] = (void*)CU_PREFER_PTX; 
-    
+    optionValues[0] = (void *)CU_PREFER_PTX;
+
     options[1] = CU_JIT_OPTIMIZATION_LEVEL;
-    optionValues[1] = (void*)4;
-    
+    optionValues[1] = (void *)4;
+
     options[2] = CU_JIT_TARGET_FROM_CUCONTEXT;
-    optionValues[2] = (void*)1;
-    
-    result = cuModuleLoadDataEx(module_out, ptx, 
+    optionValues[2] = (void *)1;
+
+    result = cuModuleLoadDataEx(module_out, ptx,
                                 3, options, optionValues);
-    
+
     return result;
 }
-
 
 static void module_log_error(const char *format, ...)
 {
@@ -149,6 +166,46 @@ static const char *module_dtype_to_string(dtype_t dtype)
     default:
         return "unknown";
     }
+}
+
+static size_t module_hash_launch_config(int grid[3], int block[3])
+{
+    size_t h = 0;
+    for (int i = 0; i < 3; i++)
+        h = h * 31 + grid[i];
+    for (int i = 0; i < 3; i++)
+        h = h * 31 + block[i];
+    return h;
+}
+
+static zend_bool module_validate_launch_config_cached(int grid[3], int block[3])
+{
+    pthread_mutex_lock(&g_launch_cache_mutex);
+
+    size_t hash = module_hash_launch_config(grid, block);
+
+    for (int i = 0; i < LAUNCH_CACHE_SIZE; i++)
+    {
+        if (g_launch_cache[i].hash == hash &&
+            memcmp(g_launch_cache[i].grid, grid, sizeof(int) * 3) == 0 &&
+            memcmp(g_launch_cache[i].block, block, sizeof(int) * 3) == 0)
+        {
+            zend_bool valid = g_launch_cache[i].valid;
+            pthread_mutex_unlock(&g_launch_cache_mutex);
+            return valid;
+        }
+    }
+
+    zend_bool valid = module_validate_launch_config(NULL, grid, block);
+
+    g_launch_cache[g_launch_cache_index].hash = hash;
+    memcpy(g_launch_cache[g_launch_cache_index].grid, grid, sizeof(int) * 3);
+    memcpy(g_launch_cache[g_launch_cache_index].block, block, sizeof(int) * 3);
+    g_launch_cache[g_launch_cache_index].valid = valid;
+    g_launch_cache_index = (g_launch_cache_index + 1) % LAUNCH_CACHE_SIZE;
+
+    pthread_mutex_unlock(&g_launch_cache_mutex);
+    return valid;
 }
 
 static zend_bool module_validate_tensor_access(tensor_t *tensor, int total_threads)
@@ -273,6 +330,67 @@ static zend_bool module_initialize_global_cuda(cuda_module_object *module)
     return 1;
 }
 
+static zend_bool module_get_shared_context(cuda_module_object *module)
+{
+    pthread_mutex_lock(&g_shared_context_mutex);
+
+    if (!g_shared_context)
+    {
+        if (!module_initialize_global_cuda(module))
+        {
+            pthread_mutex_unlock(&g_shared_context_mutex);
+            return 0;
+        }
+
+        unsigned int ctx_flags = CU_CTX_SCHED_AUTO | CU_CTX_MAP_HOST | CU_CTX_LMEM_RESIZE_TO_MAX;
+        CUresult result = cuCtxCreate(&g_shared_context, ctx_flags, g_primary_device);
+        if (result != CUDA_SUCCESS)
+        {
+            pthread_mutex_unlock(&g_shared_context_mutex);
+            return 0;
+        }
+    }
+
+    g_shared_context_refcount++;
+    module->cu_context = g_shared_context;
+    module->uses_shared_context = 1;
+
+    pthread_mutex_unlock(&g_shared_context_mutex);
+
+    return cuStreamCreate(&module->cu_stream, CU_STREAM_NON_BLOCKING) == CUDA_SUCCESS;
+}
+
+static void *module_async_init(void *arg)
+{
+    cuda_module_object *module = (cuda_module_object *)arg;
+
+    pthread_mutex_lock(&module->init_data.init_mutex);
+
+    if (!module_initialize_global_cuda(module))
+    {
+        module->init_data.init_complete = 0;
+        pthread_mutex_unlock(&module->init_data.init_mutex);
+        return NULL;
+    }
+
+    unsigned int ctx_flags = CU_CTX_SCHED_AUTO | CU_CTX_MAP_HOST;
+    CUresult cu_result = cuCtxCreate(&module->cu_context, ctx_flags, g_primary_device);
+
+    if (cu_result == CUDA_SUCCESS)
+    {
+        cuStreamCreate(&module->cu_stream, CU_STREAM_DEFAULT);
+        module_initialize_stream_pool_progressive(module);
+    }
+
+    module->init_data.init_complete = 1;
+    module->init_data.init_in_progress = 0;
+
+    pthread_cond_broadcast(&module->init_data.init_cond);
+    pthread_mutex_unlock(&module->init_data.init_mutex);
+
+    return NULL;
+}
+
 static void module_initialize_stream_pool(cuda_module_object *module)
 {
     if (!module->stream_pool)
@@ -286,7 +404,7 @@ static void module_initialize_stream_pool(cuda_module_object *module)
         return;
 
     module->stream_pool->actives = 0;
-    module->stream_pool->capacity = INITIAL_STREAM_POOL_SIZE;
+    module->stream_pool->capacity = MAX_STREAM_POOL_SIZE;
     module->stream_pool->size = INITIAL_STREAM_POOL_SIZE;
     module->stream_pool->streams = (pooled_stream_t *)ecalloc(module->stream_pool->capacity, sizeof(pooled_stream_t));
 
@@ -305,6 +423,149 @@ static void module_initialize_stream_pool(cuda_module_object *module)
             module->stream_pool->streams[i].last_used = module_get_current_time_ms();
         }
     }
+}
+
+static void module_initialize_stream_pool_progressive(cuda_module_object *module)
+{
+    if (!module->stream_pool)
+    {
+        module->stream_pool = (stream_pool_t *)emalloc(sizeof(stream_pool_t));
+        memset(module->stream_pool, 0, sizeof(stream_pool_t));
+        pthread_mutex_init(&module->stream_pool->mutex, NULL);
+
+        module->stream_pool->expand_threshold = 0.8;
+        module->stream_pool->expand_lock = 0;
+    }
+
+    if (module->stream_pool->streams)
+        return;
+
+    module->stream_pool->actives = 0;
+    module->stream_pool->capacity = MAX_STREAM_POOL_SIZE;
+    module->stream_pool->size = 1;
+
+    module->stream_pool->streams = (pooled_stream_t *)ecalloc(1, sizeof(pooled_stream_t));
+
+    CUresult cu_result = cuStreamCreate(&module->stream_pool->streams[0].stream, CU_STREAM_NON_BLOCKING);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        module_log_error("Failed to create initial stream for pool: %s",
+                         get_cuda_error_string(cu_result));
+        module->stream_pool->streams[0].stream = NULL;
+    }
+    else
+    {
+        module->stream_pool->streams[0].in_use = 0;
+        module->stream_pool->streams[0].last_used = module_get_current_time_ms();
+    }
+}
+
+static void *module_expand_stream_pool_thread(void *arg)
+{
+    cuda_module_object *module = (cuda_module_object *)arg;
+
+    pthread_mutex_lock(&module->stream_pool->mutex);
+
+    int current_size = module->stream_pool->size;
+    int target_size = current_size + 1;
+
+    if (target_size > module->stream_pool->capacity)
+    {
+        pthread_mutex_unlock(&module->stream_pool->mutex);
+        return NULL;
+    }
+
+    pooled_stream_t *new_streams = (pooled_stream_t *)erealloc(
+        module->stream_pool->streams,
+        target_size * sizeof(pooled_stream_t));
+
+    if (new_streams)
+    {
+        module->stream_pool->streams = new_streams;
+
+        CUresult cu_result = cuStreamCreate(
+            &module->stream_pool->streams[current_size].stream,
+            CU_STREAM_NON_BLOCKING);
+
+        if (cu_result == CUDA_SUCCESS)
+        {
+            module->stream_pool->streams[current_size].in_use = 0;
+            module->stream_pool->streams[current_size].last_used = module_get_current_time_ms();
+            module->stream_pool->size = target_size;
+        }
+    }
+
+    module->stream_pool->expand_lock = 0;
+    pthread_mutex_unlock(&module->stream_pool->mutex);
+
+    return NULL;
+}
+
+static void module_expand_stream_pool_async(cuda_module_object *module)
+{
+    if (!module->stream_pool || module->stream_pool->expand_lock)
+        return;
+
+    pthread_t expand_thread;
+    pthread_create(&expand_thread, NULL, module_expand_stream_pool_thread, module);
+    pthread_detach(expand_thread);
+}
+
+static zend_bool module_ensure_ptx_loaded(cuda_module_object *module)
+{
+    if (!module->ptx_code || module->ptx_size == 0) {
+        zend_throw_exception_ex(NULL, 0, "No PTX code available");
+        return 0;
+    }
+    
+    if (module->ptx_size < 10 || strstr(module->ptx_code, ".version") == NULL) {
+        zend_throw_exception_ex(NULL, 0, "Invalid PTX code format");
+        return 0;
+    }
+    
+    return 1;
+}
+
+static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
+{
+    if (module->cu_context)
+    {
+        return 1;
+    }
+
+    if (module_get_shared_context(module))
+    {
+        module_initialize_stream_pool_progressive(module);
+        return 1;
+    }
+
+    if (!module_initialize_global_cuda(module))
+    {
+        return 0;
+    }
+
+    unsigned int ctx_flags = CU_CTX_SCHED_AUTO | CU_CTX_MAP_HOST;
+    CUresult cu_result = cuCtxCreate(&module->cu_context, ctx_flags, g_primary_device);
+
+    if (cu_result != CUDA_SUCCESS)
+    {
+        zend_throw_exception_ex(NULL, 0,
+                                "Failed to create CUDA context: %s",
+                                get_cuda_error_string(cu_result));
+        return 0;
+    }
+
+    cu_result = cuStreamCreate(&module->cu_stream, CU_STREAM_DEFAULT);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        module_check_cuda_error(module, cu_result, "creating default stream");
+        cuCtxDestroy(module->cu_context);
+        module->cu_context = NULL;
+        return 0;
+    }
+
+    module_initialize_stream_pool_progressive(module);
+    return 1;
 }
 
 static void module_destroy_stream_pool(cuda_module_object *module)
@@ -427,6 +688,58 @@ static CUstream module_get_stream_from_pool(cuda_module_object *module)
     return stream;
 }
 
+static CUstream module_get_stream_with_expansion(cuda_module_object *module)
+{
+    if (!module->stream_pool)
+        return NULL;
+
+    CUstream stream = NULL;
+    double current_time = module_get_current_time_ms();
+
+    pthread_mutex_lock(&module->stream_pool->mutex);
+
+    if ((float)module->stream_pool->actives / module->stream_pool->size >
+            module->stream_pool->expand_threshold &&
+        module->stream_pool->size < module->stream_pool->capacity &&
+        !module->stream_pool->expand_lock)
+    {
+        module->stream_pool->expand_lock = 1;
+        pthread_mutex_unlock(&module->stream_pool->mutex);
+
+        module_expand_stream_pool_async(module);
+
+        pthread_mutex_lock(&module->stream_pool->mutex);
+    }
+
+    for (int i = 0; i < module->stream_pool->size; i++)
+    {
+        if (!module->stream_pool->streams[i].in_use &&
+            module->stream_pool->streams[i].stream != NULL)
+        {
+            module->stream_pool->streams[i].in_use = 1;
+            module->stream_pool->streams[i].last_used = current_time;
+            stream = module->stream_pool->streams[i].stream;
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&module->stream_pool->mutex);
+
+    if (!stream)
+    {
+        CUresult cu_result = cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING);
+        if (cu_result != CUDA_SUCCESS)
+        {
+            module_log_error("Failed to create stream: %s",
+                             get_cuda_error_string(cu_result));
+            return NULL;
+        }
+    }
+
+    module->stream_pool->actives++;
+    return stream;
+}
+
 static void free_parameter_list(func_parameter_list_t *params)
 {
     if (!params)
@@ -522,6 +835,12 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module)
         return 1;
     }
 
+    if (module_get_shared_context(module))
+    {
+        module_initialize_stream_pool_progressive(module);
+        return 1;
+    }
+
     unsigned int ctx_flags = CU_CTX_SCHED_AUTO | CU_CTX_MAP_HOST;
 
     cu_result = cuCtxCreate(&module->cu_context, ctx_flags, g_primary_device);
@@ -542,7 +861,7 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module)
         return 0;
     }
 
-    module_initialize_stream_pool(module);
+    module_initialize_stream_pool_progressive(module);
 
     return 1;
 }
@@ -589,50 +908,66 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
 
     if (module->cu_context)
     {
-        cu_result = cuCtxDestroy(module->cu_context);
-        if (cu_result != CUDA_SUCCESS)
+        if (module->uses_shared_context)
         {
-            module_log_error("Failed to destroy CUDA context: %s",
-                             get_cuda_error_string(cu_result));
+            pthread_mutex_lock(&g_shared_context_mutex);
+            g_shared_context_refcount--;
+            if (g_shared_context_refcount == 0 && g_shared_context)
+            {
+                cu_result = cuCtxDestroy(g_shared_context);
+                if (cu_result != CUDA_SUCCESS)
+                {
+                    module_log_error("Failed to destroy shared CUDA context: %s",
+                                     get_cuda_error_string(cu_result));
+                }
+                g_shared_context = NULL;
+            }
+            pthread_mutex_unlock(&g_shared_context_mutex);
+            module->cu_context = NULL;
+            module->uses_shared_context = 0;
         }
-        module->cu_context = NULL;
+        else
+        {
+            cu_result = cuCtxDestroy(module->cu_context);
+            if (cu_result != CUDA_SUCCESS)
+            {
+                module_log_error("Failed to destroy CUDA context: %s",
+                                 get_cuda_error_string(cu_result));
+            }
+            module->cu_context = NULL;
+        }
     }
 }
 
-static CUmodule module_get_or_load_module(cuda_module_object *module, zend_string *kernel_name)
+static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zend_string *kernel_name)
 {
-    if (!module->ptx_code || module->ptx_size == 0)
-    {
+    CUmodule *cached_module = (CUmodule *)zend_hash_find_ptr(module->loaded_modules, kernel_name);
+    if (cached_module) {
+        return *cached_module;
+    }
+    
+    if (!module->ptx_code || module->ptx_size == 0) {
         zend_throw_exception_ex(NULL, 0,
                                 "No PTX code available for kernel '%s'",
                                 ZSTR_VAL(kernel_name));
         return NULL;
     }
-
-    CUmodule *cached_module = (CUmodule *)zend_hash_find_ptr(module->loaded_modules, kernel_name);
-    if (cached_module)
-    {
-        return *cached_module;
-    }
-
-    CUresult cu_result;
-    CUmodule cu_module = NULL;
     
-    cu_result = load_ptx(module->ptx_code, &cu_module);
-    if (cu_result != CUDA_SUCCESS)
-    {
+    CUmodule cu_module = NULL;
+    CUresult result = load_ptx(module->ptx_code, &cu_module);
+    
+    if (result != CUDA_SUCCESS) {
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to load PTX module for kernel '%s': %s",
                                 ZSTR_VAL(kernel_name),
-                                get_cuda_error_string(cu_result));
+                                get_cuda_error_string(result));
         return NULL;
     }
-
+    
     CUmodule *module_ptr = (CUmodule *)emalloc(sizeof(CUmodule));
     *module_ptr = cu_module;
-
-    if (zend_hash_add_ptr(module->loaded_modules, kernel_name, module_ptr) == NULL)
-    {
+    
+    if (zend_hash_add_ptr(module->loaded_modules, kernel_name, module_ptr) == NULL) {
         efree(module_ptr);
         cuModuleUnload(cu_module);
         zend_throw_exception_ex(NULL, 0,
@@ -640,7 +975,7 @@ static CUmodule module_get_or_load_module(cuda_module_object *module, zend_strin
                                 ZSTR_VAL(kernel_name));
         return NULL;
     }
-
+    
     return cu_module;
 }
 
@@ -784,7 +1119,7 @@ static int module_create_async_operation(cuda_module_object *module,
     memcpy(op->grid, grid, sizeof(int) * 3);
     memcpy(op->block, block, sizeof(int) * 3);
 
-    op->stream = module_get_stream_from_pool(module);
+    op->stream = module_get_stream_with_expansion(module);
     if (!op->stream)
     {
         zend_throw_exception_ex(NULL, 0,
@@ -799,7 +1134,6 @@ static int module_create_async_operation(cuda_module_object *module,
     memset(op->error_message, 0, sizeof(op->error_message));
 
     zend_hash_index_update_ptr(module->async_operations, op->id, op);
-
     return op->id;
 }
 
@@ -882,107 +1216,13 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
     {
         func_parameter *param = kernel->parameters->parameters[i];
         zval *arg = &args[i];
-
-        switch (param->type)
+        if (param->dtype == DTYPE_LIST)
         {
-        case INPUT:
-        case PARAMETER:
-            if (param->dtype == DTYPE_LIST)
-            {
-                if (Z_TYPE_P(arg) != IS_OBJECT ||
-                    !instanceof_function(Z_OBJCE_P(arg), cuda_array_ce))
-                {
-                    zend_throw_exception_ex(NULL, 0,
-                                            "Argument %d '%s' must be a CudaArray",
-                                            i + 1, param->name);
-                    valid = 0;
-                    break;
-                }
-
-                cuda_array_obj *array_obj = (cuda_array_obj *)((char *)Z_OBJ_P(arg) - XtOffsetOf(cuda_array_obj, obj));
-                if (!array_obj->tensor_handle)
-                {
-                    zend_throw_exception_ex(NULL, 0,
-                                            "Argument %d '%s': CudaArray has no tensor data",
-                                            i + 1, param->name);
-                    valid = 0;
-                    break;
-                }
-
-                tensor_t *tensor = array_obj->tensor_handle;
-                if (tensor->dtype != param->second_dtype)
-                {
-                    const char *expected = module_dtype_to_string(param->second_dtype);
-                    const char *actual = module_dtype_to_string(tensor->dtype);
-                    zend_throw_exception_ex(NULL, 0,
-                                            "Argument %d '%s': expected dtype %s, got %s",
-                                            i + 1, param->name, expected, actual);
-                    valid = 0;
-                    break;
-                }
-
-                cuda_args[i] = &tensor->data;
-            }
-            else
-            {
-                switch (param->dtype)
-                {
-                case DTYPE_INT32:
-                {
-                    int *int_ptr = (int *)emalloc(sizeof(int));
-                    *int_ptr = (int)zval_get_long(arg);
-                    cuda_args[i] = int_ptr;
-                    temp_gpu_buffers[temp_buffers_count++] = int_ptr;
-                    break;
-                }
-                case DTYPE_FLOAT32:
-                {
-                    float *float_ptr = (float *)emalloc(sizeof(float));
-                    *float_ptr = (float)zval_get_double(arg);
-                    cuda_args[i] = float_ptr;
-                    temp_gpu_buffers[temp_buffers_count++] = float_ptr;
-                    break;
-                }
-                case DTYPE_FLOAT64:
-                {
-                    double *double_ptr = (double *)emalloc(sizeof(double));
-                    *double_ptr = zval_get_double(arg);
-                    cuda_args[i] = double_ptr;
-                    temp_gpu_buffers[temp_buffers_count++] = double_ptr;
-                    break;
-                }
-                case DTYPE_INT64:
-                {
-                    zend_long *long_ptr = (zend_long *)emalloc(sizeof(zend_long));
-                    *long_ptr = zval_get_long(arg);
-                    cuda_args[i] = long_ptr;
-                    temp_gpu_buffers[temp_buffers_count++] = long_ptr;
-                    break;
-                }
-                case DTYPE_BOOL:
-                {
-                    int *bool_ptr = (int *)emalloc(sizeof(int));
-                    *bool_ptr = zval_is_true(arg) ? 1 : 0;
-                    cuda_args[i] = bool_ptr;
-                    temp_gpu_buffers[temp_buffers_count++] = bool_ptr;
-                    break;
-                }
-                default:
-                    zend_throw_exception_ex(NULL, 0,
-                                            "Unsupported scalar dtype for argument %d",
-                                            i + 1);
-                    valid = 0;
-                    break;
-                }
-            }
-            break;
-
-        case OUTPUT:
             if (Z_TYPE_P(arg) != IS_OBJECT ||
                 !instanceof_function(Z_OBJCE_P(arg), cuda_array_ce))
             {
                 zend_throw_exception_ex(NULL, 0,
-                                        "Output argument %d '%s' must be a CudaArray",
+                                        "Argument %d '%s' must be a CudaArray",
                                         i + 1, param->name);
                 valid = 0;
                 break;
@@ -992,7 +1232,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
             if (!array_obj->tensor_handle)
             {
                 zend_throw_exception_ex(NULL, 0,
-                                        "Output argument %d '%s': CudaArray has no tensor data",
+                                        "Argument %d '%s': CudaArray has no tensor data",
                                         i + 1, param->name);
                 valid = 0;
                 break;
@@ -1004,22 +1244,65 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                 const char *expected = module_dtype_to_string(param->second_dtype);
                 const char *actual = module_dtype_to_string(tensor->dtype);
                 zend_throw_exception_ex(NULL, 0,
-                                        "Output argument %d '%s': expected dtype %s, got %s",
+                                        "Argument %d '%s': expected dtype %s, got %s",
                                         i + 1, param->name, expected, actual);
                 valid = 0;
                 break;
             }
 
             cuda_args[i] = &tensor->data;
-            tensor->is_dirty = 1;
-            break;
-
-        default:
-            zend_throw_exception_ex(NULL, 0,
-                                    "Unknown parameter type for argument %d",
-                                    i + 1);
-            valid = 0;
-            break;
+        }
+        else
+        {
+            switch (param->dtype)
+            {
+            case DTYPE_INT32:
+            {
+                int *int_ptr = (int *)emalloc(sizeof(int));
+                *int_ptr = (int)zval_get_long(arg);
+                cuda_args[i] = int_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                break;
+            }
+            case DTYPE_FLOAT32:
+            {
+                float *float_ptr = (float *)emalloc(sizeof(float));
+                *float_ptr = (float)zval_get_double(arg);
+                cuda_args[i] = float_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = float_ptr;
+                break;
+            }
+            case DTYPE_FLOAT64:
+            {
+                double *double_ptr = (double *)emalloc(sizeof(double));
+                *double_ptr = zval_get_double(arg);
+                cuda_args[i] = double_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = double_ptr;
+                break;
+            }
+            case DTYPE_INT64:
+            {
+                zend_long *long_ptr = (zend_long *)emalloc(sizeof(zend_long));
+                *long_ptr = zval_get_long(arg);
+                cuda_args[i] = long_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = long_ptr;
+                break;
+            }
+            case DTYPE_BOOL:
+            {
+                int *bool_ptr = (int *)emalloc(sizeof(int));
+                *bool_ptr = zval_is_true(arg) ? 1 : 0;
+                cuda_args[i] = bool_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = bool_ptr;
+                break;
+            }
+            default:
+                zend_throw_exception_ex(NULL, 0,
+                                        "Unsupported scalar dtype for argument %d",
+                                        i + 1);
+                valid = 0;
+                break;
+            }
         }
     }
 
@@ -1046,18 +1329,13 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
     CUresult cu_result;
     CUfunction cu_function;
 
-    if (!module_initialize_cuda_context(module))
-    {
-        return 0;
-    }
-
-    if (!module_validate_launch_config(module, grid, block))
+    if (!module_validate_launch_config_cached(grid, block))
     {
         zend_throw_exception_ex(NULL, 0, "Invalid grid/block configuration");
         return 0;
     }
 
-    CUmodule cu_module = module_get_or_load_module(module, kernel->name);
+    CUmodule cu_module = module_get_or_load_module_cached(module, kernel->name);
     if (!cu_module)
     {
         return 0;
@@ -1097,43 +1375,20 @@ ZEND_METHOD(CompiledModule, initialize)
 {
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
 
-    if (!module->ptx_code || module->ptx_size == 0)
-    {
-        zend_throw_exception_ex(NULL, 0, "No PTX code available");
-        RETURN_FALSE;
-    }
-
-    if (!module_initialize_cuda_context(module))
+    if (!module_ensure_cuda_initialized(module))
     {
         RETURN_FALSE;
     }
 
-    if (module->kernel_functions)
+    if (!module_ensure_ptx_loaded(module))
     {
-        zend_string *key;
-        cuda_kernel_data *kernel_data;
-
-        ZEND_HASH_FOREACH_STR_KEY_PTR(module->kernel_functions, key, kernel_data)
-        {
-            if (kernel_data)
-            {
-                CUmodule cu_module = module_get_or_load_module(module, kernel_data->name);
-                if (!cu_module)
-                {
-                    zend_throw_exception_ex(NULL, 0,
-                                            "Failed to pre-load kernel '%s'",
-                                            ZSTR_VAL(kernel_data->name));
-                    RETURN_FALSE;
-                }
-            }
-        }
-        ZEND_HASH_FOREACH_END();
+        RETURN_FALSE;
     }
 
     RETURN_TRUE;
 }
 
-ZEND_METHOD(CompiledModule, run)
+ZEND_METHOD(CompiledModule, launch)
 {
     zend_string *kernel_name;
     zval *config_zv = NULL;
@@ -1147,6 +1402,11 @@ ZEND_METHOD(CompiledModule, run)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
+    if (!module_ensure_cuda_initialized(module))
+    {
+        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        RETURN_FALSE;
+    }
 
     if (!module->ptx_code || module->ptx_size == 0)
     {
@@ -1240,7 +1500,7 @@ ZEND_METHOD(CompiledModule, run)
     RETURN_BOOL(success);
 }
 
-ZEND_METHOD(CompiledModule, runAsync)
+ZEND_METHOD(CompiledModule, launchAsync)
 {
     zend_string *kernel_name;
     zval *config_zv = NULL;
@@ -1254,14 +1514,16 @@ ZEND_METHOD(CompiledModule, runAsync)
     ZEND_PARSE_PARAMETERS_END();
 
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
-    if (!module->ptx_code || module->ptx_size == 0)
+
+    if (!module_ensure_cuda_initialized(module))
     {
-        zend_throw_exception_ex(NULL, 0, "No PTX code available");
+        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
         RETURN_FALSE;
     }
 
-    if (!module_initialize_cuda_context(module))
+    if (!module->ptx_code || module->ptx_size == 0)
     {
+        zend_throw_exception_ex(NULL, 0, "No PTX code available");
         RETURN_FALSE;
     }
 
@@ -1321,18 +1583,6 @@ ZEND_METHOD(CompiledModule, runAsync)
     int grid[3], block[3];
     module_prepare_launch_config(config_zv, grid, block);
 
-    if (!module_should_use_async(grid, block))
-    {
-        zend_throw_exception_ex(NULL, 0,
-                                "Kernel too small for async execution. Use run() instead.");
-        if (args)
-        {
-            efree(args);
-        }
-
-        RETURN_FALSE;
-    }
-
     void **cuda_args = NULL;
     void **temp_gpu_buffers = NULL;
     int temp_buffers_count = 0;
@@ -1342,8 +1592,9 @@ ZEND_METHOD(CompiledModule, runAsync)
                                                             &temp_buffers_count);
     if (!args_prepared)
     {
-        if (args)
+        if (args){
             efree(args);
+        }
         RETURN_FALSE;
     }
 
@@ -1382,6 +1633,156 @@ ZEND_METHOD(CompiledModule, runAsync)
         module_cleanup_async_operation_by_id(module, op_id);
         RETURN_FALSE;
     }
+}
+
+ZEND_METHOD(CompiledModule, runAsyncBatch)
+{
+    zval *operations;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_ARRAY(operations)
+    ZEND_PARSE_PARAMETERS_END();
+
+    cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
+
+    if (!module_ensure_cuda_initialized(module))
+    {
+        RETURN_FALSE;
+    }
+
+    CUstream batch_stream = module_get_stream_with_expansion(module);
+    if (!batch_stream)
+    {
+        zend_throw_exception_ex(NULL, 0, "Failed to get stream for batch operations");
+        RETURN_FALSE;
+    }
+
+    array_init(return_value);
+
+    zval *op_item;
+    int op_index = 0;
+
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(operations), op_item)
+    {
+        if (Z_TYPE_P(op_item) != IS_ARRAY)
+        {
+            continue;
+        }
+
+        zval *kernel_name_zv = zend_hash_str_find(Z_ARR_P(op_item), "kernel", sizeof("kernel") - 1);
+        zval *args_zv = zend_hash_str_find(Z_ARR_P(op_item), "args", sizeof("args") - 1);
+        zval *config_zv = zend_hash_str_find(Z_ARR_P(op_item), "config", sizeof("config") - 1);
+
+        if (!kernel_name_zv || Z_TYPE_P(kernel_name_zv) != IS_STRING)
+        {
+            continue;
+        }
+
+        zend_string *kernel_name = Z_STR_P(kernel_name_zv);
+        cuda_kernel_data *kernel = zend_hash_find_ptr(module->kernel_functions, kernel_name);
+
+        if (!kernel)
+        {
+            add_next_index_bool(return_value, 0);
+            continue;
+        }
+
+        int argc = 0;
+        zval *args = NULL;
+
+        if (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY)
+        {
+            HashTable *ht = Z_ARRVAL_P(args_zv);
+            argc = zend_hash_num_elements(ht);
+
+            if (argc > 0)
+            {
+                args = (zval *)emalloc(sizeof(zval) * argc);
+                int i = 0;
+                zval *val;
+
+                ZEND_HASH_FOREACH_VAL(ht, val)
+                {
+                    ZVAL_COPY(&args[i++], val);
+                }
+                ZEND_HASH_FOREACH_END();
+            }
+        }
+
+        int expected_args = kernel->parameters ? kernel->parameters->total : 0;
+        if (expected_args != argc)
+        {
+            if (args)
+                efree(args);
+            add_next_index_bool(return_value, 0);
+            continue;
+        }
+
+        int grid[3], block[3];
+        module_prepare_launch_config(config_zv, grid, block);
+
+        void **cuda_args = NULL;
+        void **temp_gpu_buffers = NULL;
+        int temp_buffers_count = 0;
+
+        zend_bool args_prepared = module_prepare_cuda_arguments(kernel, args, argc,
+                                                                &cuda_args, &temp_gpu_buffers,
+                                                                &temp_buffers_count);
+        if (!args_prepared)
+        {
+            if (args)
+                efree(args);
+            add_next_index_bool(return_value, 0);
+            continue;
+        }
+
+        CUmodule cu_module = module_get_or_load_module_cached(module, kernel_name);
+        if (!cu_module)
+        {
+            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+            add_next_index_bool(return_value, 0);
+            continue;
+        }
+
+        CUfunction cu_function;
+        if (cuModuleGetFunction(&cu_function, cu_module, ZSTR_VAL(kernel_name)) != CUDA_SUCCESS)
+        {
+            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+            add_next_index_bool(return_value, 0);
+            continue;
+        }
+
+        CUresult result = cuLaunchKernel(cu_function,
+                                         grid[0], grid[1], grid[2],
+                                         block[0], block[1], block[2],
+                                         0,
+                                         batch_stream,
+                                         cuda_args,
+                                         NULL);
+
+        if (result == CUDA_SUCCESS)
+        {
+            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+            add_next_index_bool(return_value, 1);
+            module->kernel_execution_count++;
+        }
+        else
+        {
+            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+            add_next_index_bool(return_value, 0);
+        }
+
+        op_index++;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    CUresult sync_result = cuStreamSynchronize(batch_stream);
+    if (sync_result != CUDA_SUCCESS)
+    {
+        module_check_cuda_error(module, sync_result, "batch stream synchronization");
+    }
+
+    module_return_stream_to_pool(module, batch_stream);
 }
 
 ZEND_METHOD(CompiledModule, sync)
@@ -1967,6 +2368,20 @@ ZEND_METHOD(CompiledModule, cleanup)
 static void module_free_object(zend_object *object)
 {
     cuda_module_object *module = Z_CUDA_MODULE_FROM_OBJ(object);
+
+    if (module->init_data.init_in_progress)
+    {
+        pthread_mutex_lock(&module->init_data.init_mutex);
+        if (module->init_data.init_in_progress)
+        {
+            pthread_join(module->init_data.init_thread, NULL);
+        }
+        pthread_mutex_unlock(&module->init_data.init_mutex);
+    }
+
+    pthread_mutex_destroy(&module->init_data.init_mutex);
+    pthread_cond_destroy(&module->init_data.init_cond);
+
     if (module->async_operations)
     {
         module_cleanup_all_async_operations(module);
@@ -2046,6 +2461,13 @@ static zend_object *module_create_object(zend_class_entry *class_type)
     module->kernel_execution_count = 0;
     module->total_execution_time_ms = 0.0;
 
+    module->uses_shared_context = 0;
+
+    module->init_data.init_in_progress = 0;
+    module->init_data.init_complete = 0;
+    pthread_mutex_init(&module->init_data.init_mutex, NULL);
+    pthread_cond_init(&module->init_data.init_cond, NULL);
+
     return &module->std;
 }
 
@@ -2068,5 +2490,16 @@ int module_init(void)
 void module_shutdown(void)
 {
     g_cuda_initialized = 0;
+
+    pthread_mutex_lock(&g_shared_context_mutex);
+    if (g_shared_context)
+    {
+        cuCtxDestroy(g_shared_context);
+        g_shared_context = NULL;
+    }
+    pthread_mutex_unlock(&g_shared_context_mutex);
+
     pthread_mutex_destroy(&g_cuda_global_init_mutex);
+    pthread_mutex_destroy(&g_shared_context_mutex);
+    pthread_mutex_destroy(&g_launch_cache_mutex);
 }

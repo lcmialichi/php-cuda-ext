@@ -209,7 +209,7 @@ $a = CudaArray::ones([$n]);
 $b = CudaArray::full([$n], 5.0);
 $c = CudaArray::zeros([$n]);
 
-$module->run(
+$module->launch(
     'v_add',
     args: [$a, $b, $c, $n],
     config: [
@@ -221,7 +221,7 @@ $module->run(
 
 ### Asynchronous Execution
 ```php
-$id = $module->runAsync('v_add', args: [...]);
+$id = $module->launchAsync('v_add', args: [...]);
 $module->sync();
 ```
 Multiple kernels can be queued and synchronized explicitly.

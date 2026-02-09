@@ -361,6 +361,7 @@ static int compile_argument_list(cuda_compilation_context_t *context,
                                  zend_ast *args_ast,
                                  char **arg_strings,
                                  dtype_t *arg_types,
+                                 dtype_t *arg_second_types,
                                  uint32_t max_args)
 {
     if (!args_ast || args_ast->kind != ZEND_AST_ARG_LIST)
@@ -392,6 +393,7 @@ static int compile_argument_list(cuda_compilation_context_t *context,
         }
 
         arg_types[i] = context->last_evaluated_first_dtype;
+        arg_second_types[i] = context->last_evaluated_second_dtype;
         smart_string_0(&temp_buffer);
         arg_strings[i] = estrdup(temp_buffer.c);
 
@@ -785,7 +787,8 @@ static int handle_warp_functions(cuda_compilation_context_t *context,
 
     char *arg_strings[4] = {NULL};
     dtype_t arg_types[4] = {DTYPE_UNKNOWN};
-    uint32_t num_args = compile_argument_list(context, args_ast, arg_strings, arg_types, 4);
+    dtype_t arg_second_types[4] = {DTYPE_UNKNOWN};
+    uint32_t num_args = compile_argument_list(context, args_ast, arg_strings, arg_types, arg_second_types, 4);
 
     if (num_args != func->num_params)
     {
@@ -1411,15 +1414,13 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
 
     char *arg_strings[4] = {NULL};
     dtype_t arg_types[4] = {DTYPE_UNKNOWN};
-    uint32_t num_args = compile_argument_list(context, args_ast, arg_strings, arg_types, 4);
-
-    // if (num_args == 0 && args_ast != NULL)
-    // {
-    //     return 0;
-    // }
+    dtype_t arg_second_types[4] = {DTYPE_UNKNOWN};
+    int pointers[4] = {0, 0, 0, 0};
+    uint32_t num_args = compile_argument_list(context, args_ast, arg_strings, arg_types, arg_second_types, 4);
 
     const char *cuda_func_name = NULL;
     dtype_t return_type = DTYPE_UNKNOWN;
+    dtype_t return_second_dtype = DTYPE_UNKNOWN;
 
     if (category == FUNC_CATEGORY_MATH)
     {
@@ -1451,7 +1452,12 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
     else if (category == FUNC_CATEGORY_ATOMIC)
     {
         cuda_func_name = func_info->cuda_name_i32;
-        return_type = func_info->return_type_i32;
+        return_type = arg_types[0];
+        return_second_dtype = arg_second_types[0];
+        if (arg_types[0] != DTYPE_LIST)
+        {
+            pointers[0] = 1;
+        }
     }
     else if (category == FUNC_CATEGORY_SYNC)
     {
@@ -1488,6 +1494,10 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
     {
         if (arg_strings[i])
         {
+            if (pointers[i] == 1)
+            {
+                smart_string_appends(context->cuda_code_buffer, "&");
+            }
             smart_string_appends(context->cuda_code_buffer, arg_strings[i]);
             efree(arg_strings[i]);
         }
@@ -1500,7 +1510,7 @@ static int handle_cuda_method_by_category(cuda_compilation_context_t *context,
     smart_string_appendc(context->cuda_code_buffer, ')');
 
     context->last_evaluated_first_dtype = return_type;
-    context->last_evaluated_second_dtype = DTYPE_UNKNOWN;
+    context->last_evaluated_second_dtype = return_second_dtype;
     context->current_cuda_object = CUDA_OBJ_NONE;
 
     return 1;

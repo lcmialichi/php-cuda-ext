@@ -43,7 +43,6 @@ class HeavyWorkload
 $compiler = new Compiler();
 $compiler->kernel([new HeavyWorkload(), 'compute']);
 $module = $compiler->compile();
-$module->initialize();
 
 // --- 2. Data & Configuration ---
 
@@ -63,7 +62,7 @@ $config = [
  * runAsync() returns an operation ID immediately.
  * The PHP engine does not wait for the GPU to finish.
  */
-$opId = $module->runAsync('heavy_math', args: [$data, $rows, $cols], config: $config);
+$opId = $module->launchAsync('heavy_math', args: [$data, $rows, $cols], config: $config);
 // --- 4. Concurrent CPU Processing ---
 
 /**

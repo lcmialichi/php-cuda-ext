@@ -1,4 +1,3 @@
-
 #ifndef KERNEL_TYPES_H
 #define KERNEL_TYPES_H
 
@@ -39,7 +38,6 @@ typedef struct _cuda_compiler_object
     HashTable *devices;
     HashTable *ptx_cache;
 } cuda_compiler_object;
-
 
 typedef struct _cuda_async_operation
 {
@@ -82,7 +80,35 @@ typedef struct {
     int size;
     int capacity;
     pthread_mutex_t mutex;
+    float expand_threshold;
+    int expand_lock;
 } stream_pool_t;
+
+typedef struct {
+    int grid[3];
+    int block[3];
+    size_t hash;
+    zend_bool valid;
+} launch_config_cache_t;
+
+typedef struct {
+    pthread_t init_thread;
+    zend_bool init_in_progress;
+    zend_bool init_complete;
+    pthread_mutex_t init_mutex;
+    pthread_cond_t init_cond;
+} async_init_t;
+
+typedef struct {
+    zend_string *kernel_name;
+    void **cuda_args;
+    void **temp_buffers;
+    int temp_buffers_count;
+    int grid[3];
+    int block[3];
+    int argc;
+    void *kernel_data;
+} batch_operation_t;
 
 typedef struct _cuda_module_object
 {
@@ -108,11 +134,15 @@ typedef struct _cuda_module_object
     double total_execution_time_ms;
 
     stream_pool_t *stream_pool;
-    int stream_pool_size;
-    int stream_pool_capacity;
-    pthread_mutex_t stream_pool_mutex;
-
-    HashTable *module_cache;
+    zend_bool uses_shared_context;
+    
+    async_init_t init_data;
+    
+    HashTable *config_cache;
+    
+    int stream_expansions;
+    double init_time_ms;
+    zend_bool is_warmed_up;
 
 } cuda_module_object;
 

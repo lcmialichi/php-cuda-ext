@@ -51,6 +51,6 @@ $launchConfig = [
 ];
 
 // Launch the custom kernel
-$module->run('v_scale', args: [$gpuData, 10, $size], config: $launchConfig);
+$module->launch('v_scale', args: [$gpuData, 10, $size], config: $launchConfig);
 
 var_dump($gpuData->toArray()[0]); // Expected: 10.0

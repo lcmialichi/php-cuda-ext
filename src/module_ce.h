@@ -17,6 +17,7 @@ ZEND_METHOD(CompiledModule, __serialize);
 ZEND_METHOD(CompiledModule, __unserialize);
 ZEND_METHOD(CompiledModule, launch);
 ZEND_METHOD(CompiledModule, launchAsync);
+ZEND_METHOD(CompiledModule, launchAsyncBatch);
 ZEND_METHOD(CompiledModule, sync);
 ZEND_METHOD(CompiledModule, isFinished);
 ZEND_METHOD(CompiledModule, getStats);

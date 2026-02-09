@@ -126,6 +126,7 @@ All operations above are executed on the GPU.
 ## Data Transfer
 
 ```php
+use Cuda\CudaArray;
 // CPU → GPU
 $ca = new CudaArray([[1, 2], [3, 4]]);
 
@@ -144,6 +145,15 @@ $host->toGpu();
 
 // Contiguous list → PHP Array
 $host->toArray();
+
+// Save to file (PHP serialization)
+file_put_contents('/data/array.ser', serialize($host));
+
+// Load from file
+$restored = unserialize(file_get_contents('/data/array.ser')); // Cuda\ContiguousArray
+
+// Convert back to GPU when needed
+$gpu_restored = $restored->toGpu(); // Cuda\CudaArray
 ```
 
 ## Supported Operations

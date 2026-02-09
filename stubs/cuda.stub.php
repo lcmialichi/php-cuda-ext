@@ -72,12 +72,18 @@ class CompiledModule
         return false;
     }
 
+    public function launchAsyncBatch(array $operations): bool|array
+    {
+        return false;
+    }
+
+
     public function isFinished(?int $id = null): bool
     {
         return true;
     }
 
-    public function sync(): bool
+    public function sync(?int $id = null): bool
     {
         return true;
     }

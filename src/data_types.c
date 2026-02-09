@@ -356,6 +356,7 @@ dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype
 
     return tensor_dtype;
 }
+
 dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b, operation_type_t op)
 {
     if (op == OP_DIV || op == OP_POW)
@@ -478,7 +479,6 @@ int can_safely_cast_to(dtype_t from, dtype_t to)
         return 0;
     }
 
-    // 6. Float → Float: destino >= origem em precisão
     if (dtype_is_floating(from) && dtype_is_floating(to)) {
         size_t from_mantissa = (from == DTYPE_FLOAT32) ? 24 : 53;
         size_t to_mantissa = (to == DTYPE_FLOAT32) ? 24 : 53;

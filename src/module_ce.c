@@ -15,15 +15,17 @@
 #include "ext/standard/php_standard.h"
 #include "ast_cuda_types.h"
 #include "nvidia_types.h"
+#include <stdbool.h>
 
 #define MAX_KERNEL_ERROR_LEN 1024
 #define ERROR_CHECK_INTERVAL 50
 #define ASYNC_OP_TIMEOUT_MS 30000
 #define INITIAL_STREAM_POOL_SIZE 1
-#define MAX_STREAM_POOL_SIZE 25
+#define MAX_STREAM_POOL_SIZE 100
 #define MIN_KERNEL_SIZE_FOR_ASYNC 256
 #define LAUNCH_CACHE_SIZE 64
 #define BATCH_STREAM_TIMEOUT 1000
+#define ASYNC_OP_POOL_SIZE 32
 
 extern zend_class_entry *cuda_array_ce;
 
@@ -82,9 +84,7 @@ static zend_bool module_initialize_global_cuda(cuda_module_object *module);
 static void module_prepare_launch_config(zval *config_zv, int grid[3], int block[3]);
 static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
                                             void **temp_buffers, int temp_buffers_count);
-static zend_bool module_should_use_async(int grid[3], int block[3]);
 static zend_bool module_validate_async_operation_count(cuda_module_object *module);
-static void *module_async_init(void *arg);
 static zend_bool module_get_shared_context(cuda_module_object *module);
 static size_t module_hash_launch_config(int grid[3], int block[3]);
 static void free_parameter_list(func_parameter_list_t *params);
@@ -268,12 +268,6 @@ static void module_prepare_launch_config(zval *config_zv, int grid[3], int block
     }
 }
 
-static zend_bool module_should_use_async(int grid[3], int block[3])
-{
-    int total_threads = grid[0] * grid[1] * grid[2] * block[0] * block[1] * block[2];
-    return total_threads >= MIN_KERNEL_SIZE_FOR_ASYNC;
-}
-
 static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
                                             void **temp_buffers, int temp_buffers_count)
 {
@@ -358,37 +352,6 @@ static zend_bool module_get_shared_context(cuda_module_object *module)
     pthread_mutex_unlock(&g_shared_context_mutex);
 
     return cuStreamCreate(&module->cu_stream, CU_STREAM_NON_BLOCKING) == CUDA_SUCCESS;
-}
-
-static void *module_async_init(void *arg)
-{
-    cuda_module_object *module = (cuda_module_object *)arg;
-
-    pthread_mutex_lock(&module->init_data.init_mutex);
-
-    if (!module_initialize_global_cuda(module))
-    {
-        module->init_data.init_complete = 0;
-        pthread_mutex_unlock(&module->init_data.init_mutex);
-        return NULL;
-    }
-
-    unsigned int ctx_flags = CU_CTX_SCHED_AUTO | CU_CTX_MAP_HOST;
-    CUresult cu_result = cuCtxCreate(&module->cu_context, ctx_flags, g_primary_device);
-
-    if (cu_result == CUDA_SUCCESS)
-    {
-        cuStreamCreate(&module->cu_stream, CU_STREAM_DEFAULT);
-        module_initialize_stream_pool_progressive(module);
-    }
-
-    module->init_data.init_complete = 1;
-    module->init_data.init_in_progress = 0;
-
-    pthread_cond_broadcast(&module->init_data.init_cond);
-    pthread_mutex_unlock(&module->init_data.init_mutex);
-
-    return NULL;
 }
 
 static void module_initialize_stream_pool(cuda_module_object *module)
@@ -513,16 +476,18 @@ static void module_expand_stream_pool_async(cuda_module_object *module)
 
 static zend_bool module_ensure_ptx_loaded(cuda_module_object *module)
 {
-    if (!module->ptx_code || module->ptx_size == 0) {
+    if (!module->ptx_code || module->ptx_size == 0)
+    {
         zend_throw_exception_ex(NULL, 0, "No PTX code available");
         return 0;
     }
-    
-    if (module->ptx_size < 10 || strstr(module->ptx_code, ".version") == NULL) {
+
+    if (module->ptx_size < 10 || strstr(module->ptx_code, ".version") == NULL)
+    {
         zend_throw_exception_ex(NULL, 0, "Invalid PTX code format");
         return 0;
     }
-    
+
     return 1;
 }
 
@@ -942,32 +907,36 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
 static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zend_string *kernel_name)
 {
     CUmodule *cached_module = (CUmodule *)zend_hash_find_ptr(module->loaded_modules, kernel_name);
-    if (cached_module) {
+    if (cached_module)
+    {
         return *cached_module;
     }
-    
-    if (!module->ptx_code || module->ptx_size == 0) {
+
+    if (!module->ptx_code || module->ptx_size == 0)
+    {
         zend_throw_exception_ex(NULL, 0,
                                 "No PTX code available for kernel '%s'",
                                 ZSTR_VAL(kernel_name));
         return NULL;
     }
-    
+
     CUmodule cu_module = NULL;
     CUresult result = load_ptx(module->ptx_code, &cu_module);
-    
-    if (result != CUDA_SUCCESS) {
+
+    if (result != CUDA_SUCCESS)
+    {
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to load PTX module for kernel '%s': %s",
                                 ZSTR_VAL(kernel_name),
                                 get_cuda_error_string(result));
         return NULL;
     }
-    
+
     CUmodule *module_ptr = (CUmodule *)emalloc(sizeof(CUmodule));
     *module_ptr = cu_module;
-    
-    if (zend_hash_add_ptr(module->loaded_modules, kernel_name, module_ptr) == NULL) {
+
+    if (zend_hash_add_ptr(module->loaded_modules, kernel_name, module_ptr) == NULL)
+    {
         efree(module_ptr);
         cuModuleUnload(cu_module);
         zend_throw_exception_ex(NULL, 0,
@@ -975,7 +944,7 @@ static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zen
                                 ZSTR_VAL(kernel_name));
         return NULL;
     }
-    
+
     return cu_module;
 }
 
@@ -1290,8 +1259,8 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
             }
             case DTYPE_BOOL:
             {
-                int *bool_ptr = (int *)emalloc(sizeof(int));
-                *bool_ptr = zval_is_true(arg) ? 1 : 0;
+                bool *bool_ptr = (bool *)emalloc(sizeof(bool));
+                *bool_ptr = zval_is_true(arg) ? true : false;
                 cuda_args[i] = bool_ptr;
                 temp_gpu_buffers[temp_buffers_count++] = bool_ptr;
                 break;
@@ -1382,7 +1351,7 @@ ZEND_METHOD(CompiledModule, initialize)
 
     if (!module_ensure_ptx_loaded(module))
     {
-        RETURN_FALSE;
+        RETURN_FALSE;   
     }
 
     RETURN_TRUE;
@@ -1592,12 +1561,12 @@ ZEND_METHOD(CompiledModule, launchAsync)
                                                             &temp_buffers_count);
     if (!args_prepared)
     {
-        if (args){
+        if (args)
+        {
             efree(args);
         }
         RETURN_FALSE;
     }
-
     int op_id = module_create_async_operation(module, kernel_name,
                                               cuda_args, temp_gpu_buffers,
                                               temp_buffers_count, grid, block, argc);
@@ -1635,7 +1604,7 @@ ZEND_METHOD(CompiledModule, launchAsync)
     }
 }
 
-ZEND_METHOD(CompiledModule, runAsyncBatch)
+ZEND_METHOD(CompiledModule, launchAsyncBatch)
 {
     zval *operations;
 

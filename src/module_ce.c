@@ -73,7 +73,6 @@ static void module_cleanup_all_async_operations(cuda_module_object *module);
 static void module_cleanup_timeout_operations(cuda_module_object *module);
 static zend_bool module_validate_tensor_access(tensor_t *tensor, int total_threads);
 static void module_log_error(const char *format, ...);
-static CUstream module_get_stream_from_pool(cuda_module_object *module);
 static CUstream module_get_stream_with_expansion(cuda_module_object *module);
 static void module_return_stream_to_pool(cuda_module_object *module, CUstream stream);
 static void module_initialize_stream_pool(cuda_module_object *module);
@@ -86,7 +85,7 @@ static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
                                             void **temp_buffers, int temp_buffers_count);
 static zend_bool module_validate_async_operation_count(cuda_module_object *module);
 static zend_bool module_get_shared_context(cuda_module_object *module);
-static size_t module_hash_launch_config(int grid[3], int block[3]);
+static void module_hash_launch_config(int grid[3], int block[3], size_t *hash);
 static void free_parameter_list(func_parameter_list_t *params);
 static void free_kernel_data(cuda_kernel_data *kernel);
 
@@ -217,41 +216,39 @@ static const char *module_dtype_to_string(dtype_t dtype)
     }
 }
 
-static size_t module_hash_launch_config(int grid[3], int block[3])
+static void module_hash_launch_config(int grid[3], int block[3], size_t *hash)
 {
-    size_t h = 0;
-    for (int i = 0; i < 3; i++)
-        h = h * 31 + grid[i];
-    for (int i = 0; i < 3; i++)
-        h = h * 31 + block[i];
-    return h;
+    *hash = ((size_t)grid[0] << 32) | (grid[1] << 16) | grid[2];
+    *hash ^= ((size_t)block[0] << 32) | (block[1] << 16) | block[2];
 }
 
 static zend_bool module_validate_launch_config_cached(int grid[3], int block[3])
 {
-    pthread_mutex_lock(&g_launch_cache_mutex);
-
-    size_t hash = module_hash_launch_config(grid, block);
+    size_t hash;
+    module_hash_launch_config(grid, block, &hash);
 
     for (int i = 0; i < LAUNCH_CACHE_SIZE; i++)
     {
-        if (g_launch_cache[i].hash == hash &&
-            memcmp(g_launch_cache[i].grid, grid, sizeof(int) * 3) == 0 &&
-            memcmp(g_launch_cache[i].block, block, sizeof(int) * 3) == 0)
+        if (g_launch_cache[i].hash == hash)
         {
-            zend_bool valid = g_launch_cache[i].valid;
-            pthread_mutex_unlock(&g_launch_cache_mutex);
-            return valid;
+            if (g_launch_cache[i].grid[0] == grid[0] && g_launch_cache[i].block[0] == block[0])
+            {
+                return g_launch_cache[i].valid;
+            }
         }
     }
 
+    pthread_mutex_lock(&g_launch_cache_mutex);
+
     zend_bool valid = module_validate_launch_config(NULL, grid, block);
 
-    g_launch_cache[g_launch_cache_index].hash = hash;
-    memcpy(g_launch_cache[g_launch_cache_index].grid, grid, sizeof(int) * 3);
-    memcpy(g_launch_cache[g_launch_cache_index].block, block, sizeof(int) * 3);
-    g_launch_cache[g_launch_cache_index].valid = valid;
-    g_launch_cache_index = (g_launch_cache_index + 1) % LAUNCH_CACHE_SIZE;
+    int idx = g_launch_cache_index;
+    g_launch_cache[idx].hash = hash;
+    memcpy(g_launch_cache[idx].grid, grid, sizeof(int) * 3);
+    memcpy(g_launch_cache[idx].block, block, sizeof(int) * 3);
+    g_launch_cache[idx].valid = valid;
+
+    g_launch_cache_index = (idx + 1) % LAUNCH_CACHE_SIZE;
 
     pthread_mutex_unlock(&g_launch_cache_mutex);
     return valid;
@@ -447,18 +444,19 @@ static void module_initialize_stream_pool_progressive(cuda_module_object *module
 
         module->stream_pool->expand_threshold = 0.8;
         module->stream_pool->expand_lock = 0;
+        module->stream_pool->capacity = MAX_STREAM_POOL_SIZE;
+
+        module->stream_pool->streams = (pooled_stream_t *)ecalloc(MAX_STREAM_POOL_SIZE, sizeof(pooled_stream_t));
     }
 
-    if (module->stream_pool->streams)
+    if (module->stream_pool->size > 0 && module->stream_pool->streams[0].stream != NULL)
         return;
 
     module->stream_pool->actives = 0;
-    module->stream_pool->capacity = MAX_STREAM_POOL_SIZE;
     module->stream_pool->size = 1;
 
-    module->stream_pool->streams = (pooled_stream_t *)ecalloc(1, sizeof(pooled_stream_t));
-
     CUresult cu_result = cuStreamCreate(&module->stream_pool->streams[0].stream, CU_STREAM_NON_BLOCKING);
+
     if (cu_result != CUDA_SUCCESS)
     {
         module_log_error("Failed to create initial stream for pool: %s",
@@ -543,9 +541,7 @@ static zend_bool module_ensure_ptx_loaded(cuda_module_object *module)
 static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
 {
     if (module->cu_context)
-    {
         return 1;
-    }
 
     if (module_get_shared_context(module))
     {
@@ -553,28 +549,20 @@ static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
         return 1;
     }
 
-    if (!module_initialize_global_cuda(module))
+    CUresult cu_result = cuDevicePrimaryCtxRetain(&module->cu_context, g_primary_device);
+
+    if (cu_result != CUDA_SUCCESS)
     {
         return 0;
     }
 
-    unsigned int ctx_flags = CU_CTX_SCHED_AUTO | CU_CTX_MAP_HOST;
-    CUresult cu_result = cuCtxCreate(&module->cu_context, ctx_flags, g_primary_device);
+    cuCtxPushCurrent(module->cu_context);
+
+    cu_result = cuStreamCreate(&module->cu_stream, CU_STREAM_NON_BLOCKING);
 
     if (cu_result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0,
-                                "Failed to create CUDA context: %s",
-                                get_cuda_error_string(cu_result));
-        return 0;
-    }
-
-    cu_result = cuStreamCreate(&module->cu_stream, CU_STREAM_DEFAULT);
-    if (cu_result != CUDA_SUCCESS)
-    {
-        module_check_cuda_error(module, cu_result, "creating default stream");
-        cuCtxDestroy(module->cu_context);
-        module->cu_context = NULL;
+        cuDevicePrimaryCtxRelease(g_primary_device);
         return 0;
     }
 
@@ -628,80 +616,6 @@ static zend_bool module_validate_async_operation_count(cuda_module_object *modul
     return 1;
 }
 
-static CUstream module_get_stream_from_pool(cuda_module_object *module)
-{
-    if (!module->stream_pool)
-        return NULL;
-
-    CUstream stream = NULL;
-    double current_time = module_get_current_time_ms();
-
-    pthread_mutex_lock(&module->stream_pool->mutex);
-
-    for (int i = 0; i < module->stream_pool->size; i++)
-    {
-        if (!module->stream_pool->streams[i].in_use &&
-            module->stream_pool->streams[i].stream != NULL)
-        {
-            module->stream_pool->streams[i].in_use = 1;
-            module->stream_pool->streams[i].last_used = current_time;
-            stream = module->stream_pool->streams[i].stream;
-            break;
-        }
-    }
-
-    if (!stream && module->stream_pool->size < MAX_STREAM_POOL_SIZE)
-    {
-        if (module->stream_pool->size >= module->stream_pool->capacity)
-        {
-            int new_capacity = module->stream_pool->capacity * 2;
-            if (new_capacity > MAX_STREAM_POOL_SIZE)
-                new_capacity = MAX_STREAM_POOL_SIZE;
-
-            pooled_stream_t *new_streams = (pooled_stream_t *)erealloc(
-                module->stream_pool->streams,
-                new_capacity * sizeof(pooled_stream_t));
-
-            if (new_streams)
-            {
-                module->stream_pool->streams = new_streams;
-                module->stream_pool->capacity = new_capacity;
-            }
-        }
-
-        if (module->stream_pool->size < module->stream_pool->capacity)
-        {
-            CUresult cu_result = cuStreamCreate(
-                &module->stream_pool->streams[module->stream_pool->size].stream,
-                CU_STREAM_NON_BLOCKING);
-
-            if (cu_result == CUDA_SUCCESS)
-            {
-                module->stream_pool->streams[module->stream_pool->size].in_use = 1;
-                module->stream_pool->streams[module->stream_pool->size].last_used = current_time;
-                stream = module->stream_pool->streams[module->stream_pool->size].stream;
-                module->stream_pool->size++;
-            }
-        }
-    }
-
-    pthread_mutex_unlock(&module->stream_pool->mutex);
-
-    if (!stream)
-    {
-        CUresult cu_result = cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING);
-        if (cu_result != CUDA_SUCCESS)
-        {
-            module_log_error("Failed to create stream: %s",
-                             get_cuda_error_string(cu_result));
-            return NULL;
-        }
-    }
-
-    module->stream_pool->actives++;
-    return stream;
-}
-
 static CUstream module_get_stream_with_expansion(cuda_module_object *module)
 {
     if (!module->stream_pool)
@@ -727,30 +641,34 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
 
     for (int i = 0; i < module->stream_pool->size; i++)
     {
-        if (!module->stream_pool->streams[i].in_use &&
-            module->stream_pool->streams[i].stream != NULL)
+        if (module->stream_pool->streams[i].stream != NULL)
         {
-            module->stream_pool->streams[i].in_use = 1;
-            module->stream_pool->streams[i].last_used = current_time;
-            stream = module->stream_pool->streams[i].stream;
-            break;
+            if (!module->stream_pool->streams[i].in_use ||
+                cuStreamQuery(module->stream_pool->streams[i].stream) == CUDA_SUCCESS)
+            {
+                module->stream_pool->streams[i].in_use = 1;
+                module->stream_pool->streams[i].last_used = current_time;
+                stream = module->stream_pool->streams[i].stream;
+                break;
+            }
         }
+    }
+
+    if (stream)
+    {
+        module->stream_pool->actives++;
     }
 
     pthread_mutex_unlock(&module->stream_pool->mutex);
 
     if (!stream)
     {
-        CUresult cu_result = cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING);
-        if (cu_result != CUDA_SUCCESS)
+        if (module->stream_pool->size > 0)
         {
-            module_log_error("Failed to create stream: %s",
-                             get_cuda_error_string(cu_result));
-            return NULL;
+            stream = module->stream_pool->streams[0].stream;
         }
     }
 
-    module->stream_pool->actives++;
     return stream;
 }
 
@@ -999,49 +917,22 @@ static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zen
 
 static zend_bool module_validate_launch_config(cuda_module_object *module, int grid[3], int block[3])
 {
-    int max_threads, max_block_dims[3], max_grid_dims[3];
-    CUresult cu_result;
+    static int max_threads = 0, max_block[3], max_grid[3];
+    static zend_bool limits_loaded = 0;
 
-    cu_result = cuDeviceGetAttribute(&max_threads, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
-
-    cu_result = cuDeviceGetAttribute(&max_block_dims[0], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
-
-    cu_result = cuDeviceGetAttribute(&max_block_dims[1], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
-
-    cu_result = cuDeviceGetAttribute(&max_block_dims[2], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
-
-    cu_result = cuDeviceGetAttribute(&max_grid_dims[0], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
-
-    cu_result = cuDeviceGetAttribute(&max_grid_dims[1], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
-
-    cu_result = cuDeviceGetAttribute(&max_grid_dims[2], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, g_primary_device);
-    if (cu_result != CUDA_SUCCESS)
-        return 0;
+    if (!limits_loaded)
+    {
+        cuDeviceGetAttribute(&max_threads, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, g_primary_device);
+        cuDeviceGetAttribute(&max_block[0], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, g_primary_device);
+        cuDeviceGetAttribute(&max_block[1], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, g_primary_device);
+        cuDeviceGetAttribute(&max_block[2], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, g_primary_device);
+        cuDeviceGetAttribute(&max_grid[0], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, g_primary_device);
+        cuDeviceGetAttribute(&max_grid[1], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, g_primary_device);
+        cuDeviceGetAttribute(&max_grid[2], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, g_primary_device);
+        limits_loaded = 1;
+    }
 
     if (block[0] <= 0 || block[1] <= 0 || block[2] <= 0)
-    {
-        return 0;
-    }
-
-    if (block[0] > max_block_dims[0] || block[1] > max_block_dims[1] || block[2] > max_block_dims[2])
-    {
-        return 0;
-    }
-
-    int total_threads_per_block = block[0] * block[1] * block[2];
-    if (total_threads_per_block > max_threads)
     {
         return 0;
     }
@@ -1051,7 +942,17 @@ static zend_bool module_validate_launch_config(cuda_module_object *module, int g
         return 0;
     }
 
-    if (grid[0] > max_grid_dims[0] || grid[1] > max_grid_dims[1] || grid[2] > max_grid_dims[2])
+    if (block[0] > max_block[0] || block[1] > max_block[1] || block[2] > max_block[2])
+    {
+        return 0;
+    }
+
+    if (grid[0] > max_grid[0] || grid[1] > max_grid[1] || grid[2] > max_grid[2])
+    {
+        return 0;
+    }
+
+    if ((block[0] * block[1] * block[2]) > max_threads)
     {
         return 0;
     }
@@ -1427,21 +1328,23 @@ ZEND_METHOD(CompiledModule, autoGrid)
         cuda_array_obj *ca_obj = Z_CUDA_ARRAY_P(z_input);
         if (!ca_obj->tensor_handle)
         {
-            zend_throw_exception_ex(NULL, 0, "parameter elements of type Cuda\\CudaArray has no tensor data");
+            zend_throw_exception_ex(NULL, 0, "CudaArray has no tensor data");
+            return;
         }
-
         total_elements = ca_obj->tensor_handle->total_size;
     }
     else
     {
         zend_throw_exception_ex(NULL, 0, "invalid parameter type: 'elements'");
+        return;
     }
 
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
     cuda_kernel_data *kernel = zend_hash_str_find_ptr(module->kernel_functions, kernel_name_str, kernel_name_len);
+
     if (!kernel)
     {
-        zend_throw_exception_ex(NULL, 0, "Kernel '%s' not found in module", kernel_name_str);
+        zend_throw_exception_ex(NULL, 0, "Kernel '%s' not found", kernel_name_str);
         return;
     }
 
@@ -1453,7 +1356,7 @@ ZEND_METHOD(CompiledModule, autoGrid)
     CUresult res = cuModuleGetFunction(&cu_func, cu_module, kernel_name_str);
     if (res != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to get function for occupancy: %s", get_cuda_error_string(res));
+        zend_throw_exception_ex(NULL, 0, "Failed to get function: %s", get_cuda_error_string(res));
         return;
     }
 
@@ -1462,7 +1365,7 @@ ZEND_METHOD(CompiledModule, autoGrid)
 
     if (res != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0, "Occupancy calculation failed: %s", get_cuda_error_string(res));
+        zend_throw_exception_ex(NULL, 0, "Occupancy failed: %s", get_cuda_error_string(res));
         return;
     }
 
@@ -1470,19 +1373,19 @@ ZEND_METHOD(CompiledModule, autoGrid)
 
     array_init(return_value);
 
-    zval grid_array, block_array;
-    array_init(&grid_array);
-    add_next_index_long(&grid_array, grid_size);
-    add_next_index_long(&grid_array, 1);
-    add_next_index_long(&grid_array, 1);
+    zval grid_arr, block_arr;
 
-    array_init(&block_array);
-    add_next_index_long(&block_array, block_size);
-    add_next_index_long(&block_array, 1);
-    add_next_index_long(&block_array, 1);
+    array_init(&grid_arr);
+    add_next_index_long(&grid_arr, grid_size);
+    add_next_index_long(&grid_arr, 1);
+    add_next_index_long(&grid_arr, 1);
+    add_assoc_zval(return_value, "grid", &grid_arr);
 
-    add_assoc_zval(return_value, "grid", &grid_array);
-    add_assoc_zval(return_value, "block", &block_array);
+    array_init(&block_arr);
+    add_next_index_long(&block_arr, block_size);
+    add_next_index_long(&block_arr, 1);
+    add_next_index_long(&block_arr, 1);
+    add_assoc_zval(return_value, "block", &block_arr);
 }
 
 ZEND_METHOD(CompiledModule, launch)
@@ -1772,7 +1675,9 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
         if (!kernel_name_zv || Z_TYPE_P(kernel_name_zv) != IS_STRING)
         {
-            continue;
+            zend_throw_exception_ex(NULL, 0,
+                                    "Must provide 'kernel' for launchAsyncBatch operation");
+            RETURN_FALSE;
         }
 
         zend_string *kernel_name = Z_STR_P(kernel_name_zv);
@@ -1780,8 +1685,10 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
         if (!kernel)
         {
-            add_next_index_bool(return_value, 0);
-            continue;
+            zend_throw_exception_ex(NULL, 0,
+                                    "Kernel '%s' not found in compiled module",
+                                    ZSTR_VAL(kernel_name));
+            RETURN_FALSE;
         }
 
         int argc = 0;

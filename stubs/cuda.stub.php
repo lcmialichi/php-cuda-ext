@@ -22,7 +22,7 @@ class Compiler
         return $this;
     }
 
-    public function compile(?string $target = '', bool $optimize = true, bool $debug = false): CompiledModule
+    public function compile(bool $optimize = true, bool $debug = false): CompiledModule
     {
         return new CompiledModule();
     }
@@ -30,16 +30,6 @@ class Compiler
     public function getCacheStats(): array
     {
         return [];
-    }
-}
-
-class Device
-{
-    public function __invoke() {}
-
-    public static function fn(callable $callable): static
-    {
-        return new self();
     }
 }
 
@@ -132,6 +122,13 @@ class CompiledModule
     public function getPtx() {}
 
     public function save(string $path) {}
+
+    public function __serialize(): array
+    {
+        return [];
+    }
+
+    public function __unserialize(array $data): void {}
 }
 
 class Kernel {}
@@ -173,11 +170,7 @@ class ContiguousArray implements \ArrayAccess, Countable
 }
 
 /**
- * 
  * @property int|float|bool|null|string|CudaArray $cdata
- * <psalm
- * disallowLiteralKeysOnUnshapedArrays="[bool]"
- *>
  */
 class CudaArray implements \ArrayAccess
 {

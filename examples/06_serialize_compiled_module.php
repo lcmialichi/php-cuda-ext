@@ -23,18 +23,18 @@ if (file_exists($cachePath)) {
     $module = unserialize(file_get_contents($cachePath));
 } else {
     echo "LOG: Cache miss. Initiating NVRTC compilation...\n";
-    
+
     $compiler = new Compiler();
-    
+
     // Define the kernel logic using PHP Attributes for Type Marshalling
-    $compiler->kernel(#[K\Kernel(name: 'v_scale')] function(
+    $compiler->kernel(#[K\Kernel(name: 'v_scale')] function (
         #[K\TensorType] &$data,
         #[K\IntType] $factor,
         #[K\IntType] $n
-    ) {
+    ): void {
         /** @var \Cuda\Runtime $cuda */
         $idx = $cuda->globalIdx();
-        
+
         if ($idx < $n) {
             $data[$idx] *= $factor;
         }
@@ -47,6 +47,7 @@ if (file_exists($cachePath)) {
     if (!is_dir(dirname($cachePath))) {
         mkdir(dirname($cachePath), 0755, true);
     }
+    
     file_put_contents($cachePath, serialize($module));
     echo "LOG: Module successfully compiled and cached.\n";
 }
@@ -57,6 +58,8 @@ if (file_exists($cachePath)) {
  * GPU VRAM. If omitted, the extension will automatically perform 
  * "Lazy Initialization" during the first kernel launch.
  * * Explicit calls are recommended for catching CUDA context errors early.
+ * 
+ *  @var CompiledModule $module 
  */
 $module->initialize();
 
@@ -65,13 +68,12 @@ $module->initialize();
 $elementCount = 1_000_000;
 $gpuBuffer = CudaArray::ones([$elementCount]);
 
-$launchConfig = [
-    'block' => [256, 1, 1],
-    'grid'  => [(int) ceil($elementCount / 256), 1, 1]
-];
-
 // Launching the kernel. If not initialized yet, lazy-loading happens here.
-$module->launch('v_scale', args: [$gpuBuffer, 10, $elementCount], config: $launchConfig);
+$module->launch(
+    'v_scale',
+    args: [$gpuBuffer, 10, $elementCount],
+    config: $module->autoGrid('v_scale', $gpuBuffer)
+);
 
 // Synchronize and verify results
 $result = $gpuBuffer->toHost();

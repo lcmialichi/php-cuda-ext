@@ -1246,7 +1246,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                 break;
             }
 
-            cuda_array_obj *array_obj = (cuda_array_obj *)((char *)Z_OBJ_P(arg) - XtOffsetOf(cuda_array_obj, obj));
+            cuda_array_obj *array_obj = Z_CUDA_ARRAY_P(arg);
             if (!array_obj->tensor_handle)
             {
                 zend_throw_exception_ex(NULL, 0,
@@ -1404,6 +1404,85 @@ ZEND_METHOD(CompiledModule, initialize)
     }
 
     RETURN_TRUE;
+}
+
+ZEND_METHOD(CompiledModule, autoGrid)
+{
+    char *kernel_name_str;
+    size_t kernel_name_len;
+    zval *z_input;
+    zend_long total_elements = 0;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+    Z_PARAM_STRING(kernel_name_str, kernel_name_len)
+    Z_PARAM_ZVAL(z_input)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (Z_TYPE_P(z_input) == IS_LONG)
+    {
+        total_elements = Z_LVAL_P(z_input);
+    }
+    else if (Z_TYPE_P(z_input) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z_input), cuda_array_ce))
+    {
+        cuda_array_obj *ca_obj = Z_CUDA_ARRAY_P(z_input);
+        if (!ca_obj->tensor_handle)
+        {
+            zend_throw_exception_ex(NULL, 0, "parameter elements of type Cuda\\CudaArray has no tensor data");
+        }
+
+        total_elements = ca_obj->tensor_handle->total_size;
+    }
+    else
+    {
+        zend_throw_exception_ex(NULL, 0, "invalid parameter type: 'elements'");
+    }
+
+    cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
+    cuda_kernel_data *kernel = zend_hash_str_find_ptr(module->kernel_functions, kernel_name_str, kernel_name_len);
+    if (!kernel)
+    {
+        zend_throw_exception_ex(NULL, 0, "Kernel '%s' not found in module", kernel_name_str);
+        return;
+    }
+
+    CUmodule cu_module = module_get_or_load_module_cached(module, kernel->name);
+    if (!cu_module)
+        return;
+
+    CUfunction cu_func;
+    CUresult res = cuModuleGetFunction(&cu_func, cu_module, kernel_name_str);
+    if (res != CUDA_SUCCESS)
+    {
+        zend_throw_exception_ex(NULL, 0, "Failed to get function for occupancy: %s", get_cuda_error_string(res));
+        return;
+    }
+
+    int min_grid_size, block_size;
+    res = cuOccupancyMaxPotentialBlockSize(&min_grid_size, &block_size, cu_func, NULL, 0, 0);
+
+    if (res != CUDA_SUCCESS)
+    {
+        zend_throw_exception_ex(NULL, 0, "Occupancy calculation failed: %s", get_cuda_error_string(res));
+        return;
+    }
+
+    int grid_size = (total_elements + block_size - 1) / block_size;
+
+    array_init(return_value);
+
+    zval grid_array, block_array;
+    array_init(&grid_array);
+    add_next_index_long(&grid_array, grid_size);
+    add_next_index_long(&grid_array, 1);
+    add_next_index_long(&grid_array, 1);
+
+    array_init(&block_array);
+    add_next_index_long(&block_array, block_size);
+    add_next_index_long(&block_array, 1);
+    add_next_index_long(&block_array, 1);
+
+    add_assoc_zval(return_value, "grid", &grid_array);
+    add_assoc_zval(return_value, "block", &block_array);
 }
 
 ZEND_METHOD(CompiledModule, launch)

@@ -15,9 +15,7 @@ abstract class ParamAttribute
 
 class Compiler
 {
-    public function __construct(private ?string $target = null){
-
-    }
+    public function __construct(private ?string $target = null) {}
 
     public function kernel(callable $fn): static
     {
@@ -60,6 +58,11 @@ class CompiledModule
     public function initialize(): bool
     {
         return true;
+    }
+
+    public function autoGrid(string $kernel, int|CudaArray $elements): array
+    {
+        return [];
     }
 
     public function launch(string $name, array $config = [], array $args): bool

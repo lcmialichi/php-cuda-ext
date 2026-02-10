@@ -1,5 +1,7 @@
 cuda_build
 cuda_build/**
+examples/cache
+examples/cache/**
 .vscode
 serialized_module.cudas
 /vendor/

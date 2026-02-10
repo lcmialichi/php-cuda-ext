@@ -14,6 +14,11 @@ ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, config, IS_ARRAY, 1, "[]")
 ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, args, IS_ARRAY, 1, "[]")
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_module_autoGrid, 0, 0, 1)
+ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+ZEND_ARG_TYPE_MASK(0, elements, MAY_BE_LONG | MAY_BE_OBJECT, NULL)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_module_launchAsync, 0, 0, 1)
 ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
 ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, config, IS_ARRAY, 1, "[]")
@@ -77,6 +82,7 @@ ZEND_END_ARG_INFO()
 
 static const zend_function_entry module_methods[] = {
     ZEND_ME(CompiledModule, initialize, arginfo_module_initialize, ZEND_ACC_PUBLIC)
+    ZEND_ME(CompiledModule, autoGrid, arginfo_module_autoGrid, ZEND_ACC_PUBLIC)
         ZEND_ME(CompiledModule, launch, arginfo_module_launch, ZEND_ACC_PUBLIC)
             ZEND_ME(CompiledModule, launchAsync, arginfo_module_launchAsync, ZEND_ACC_PUBLIC)
             ZEND_ME(CompiledModule, launchAsyncBatch, arginfo_module_launchAsyncBatch, ZEND_ACC_PUBLIC)

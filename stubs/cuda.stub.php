@@ -286,3 +286,72 @@ class CudaArray implements \ArrayAccess
 
     function offsetUnset(mixed $offset): void {}
 }
+
+/**
+ * Abstract base class to enable mathematical operator overloading.
+ * * When inherited, any arithmetic operations performed on the object 
+ * will be dispatched to the corresponding magic methods.
+ */
+abstract class Number
+{
+    /**
+     * Handles the Addition (+) operation.
+     * * @param mixed $left The left-hand operand of the expression.
+     * @param mixed $right The right-hand operand of the expression.
+     * @return mixed Usually returns a new instance of the inheriting class.
+     */
+    abstract public function __add(mixed $left, mixed $right): mixed;
+
+    /**
+     * Handles the Subtraction (-) operation.
+     * * @param mixed $left The left-hand operand of the expression.
+     * @param mixed $right The right-hand operand of the expression.
+     * @return mixed
+     */
+    abstract public function __sub(mixed $left, mixed $right): mixed;
+
+    /**
+     * Handles the Multiplication (*) operation.
+     * * @param mixed $left The left-hand operand of the expression.
+     * @param mixed $right The right-hand operand of the expression.
+     * @return mixed
+     */
+    abstract public function __mul(mixed $left, mixed $right): mixed;
+
+    /**
+     * Handles the Division (/) operation.
+     * * @param mixed $left The left-hand operand of the expression.
+     * @param mixed $right The right-hand operand of the expression.
+     * @return mixed
+     */
+    abstract public function __div(mixed $left, mixed $right): mixed;
+
+    /**
+     * Handles the Modulo (%) operation.
+     * * @param mixed $left The left-hand operand of the expression.
+     * @param mixed $right The right-hand operand of the expression.
+     * @return mixed
+     */
+    abstract public function __mod(mixed $left, mixed $right): mixed;
+
+    /**
+     * Handles the Exponentiation (**) operation.
+     * * @param mixed $left The left-hand operand of the expression.
+     * @param mixed $right The right-hand operand of the expression.
+     * @return mixed
+     */
+    abstract public function __pow(mixed $left, mixed $right): mixed;
+
+
+    /**
+     * Handles increment operations (++$a or $a++)
+     * @return void
+     */
+    abstract public function __inc(): void;
+
+    /**
+     * Handles decrement operations (--$a or $a--)
+     * @return void
+     */
+    abstract public function __dec(): void;
+}

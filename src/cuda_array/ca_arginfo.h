@@ -176,6 +176,7 @@ static zend_class_entry *register_cuda_array_class(void)
     zend_class_entry ce;
     INIT_CLASS_ENTRY(ce, CA_CLASS_NAME, cuda_array_methods);
     cuda_array_ce = zend_register_internal_class(&ce);
+    cuda_array_ce->ce_flags |= ZEND_ACC_FINAL;
 
     return cuda_array_ce;
 }

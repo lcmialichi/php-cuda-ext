@@ -977,17 +977,18 @@ int cuda_array_init(size_t mb)
         return 0;
     }
 
-    zend_class_entry *cuda_array_ce = register_cuda_array_class();
-
-    cuda_array_ce->create_object = cuda_array_create_object;
-
     memcpy(&cuda_array_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+
     cuda_array_handlers.offset = XtOffsetOf(cuda_array_obj, obj);
     cuda_array_handlers.free_obj = cuda_array_free_object;
     cuda_array_handlers.clone_obj = cuda_array_clone_obj;
     cuda_array_handlers.do_operation = cuda_array_do_operation;
     cuda_array_handlers.read_dimension = cuda_array_read_dimension;
     cuda_array_handlers.write_dimension = cuda_array_write_dimension;
+
+    zend_class_entry *ce = register_cuda_array_class();
+    ce->create_object = cuda_array_create_object;
+
     return 1;
 }
 
@@ -1074,6 +1075,10 @@ static zend_object *cuda_array_create_object(zend_class_entry *class_type)
     zend_object_std_init(&obj->obj, class_type);
     object_properties_init(&obj->obj, class_type);
 
+    if (cuda_array_handlers.do_operation == NULL) {
+        php_error_docref(NULL, E_WARNING, "CRÍTICO: do_operation está NULL na criação!");
+    }
+    
     obj->obj.handlers = &cuda_array_handlers;
     obj->tensor_handle = NULL;
     obj->shape = NULL;
@@ -1306,7 +1311,7 @@ static zend_result cuda_array_do_operation(zend_uchar opcode, zval *result, zval
 
     tensor_t *result_tensor = NULL;
 
-    if (Z_TYPE_P(op1) == IS_OBJECT && Z_OBJCE_P(op1) == cuda_array_ce)
+    if (Z_TYPE_P(op1) == IS_OBJECT && instanceof_function(Z_OBJCE_P(op1), cuda_array_ce))
     {
         cuda_array_obj *this_obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(op1));
         if (!this_obj || this_obj->tensor_handle == NULL)

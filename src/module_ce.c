@@ -88,6 +88,7 @@ static zend_bool module_get_shared_context(cuda_module_object *module);
 static void module_hash_launch_config(int grid[3], int block[3], size_t *hash);
 static void free_parameter_list(func_parameter_list_t *params);
 static void free_kernel_data(cuda_kernel_data *kernel);
+static void module_ensure_context_set(cuda_module_object *module);
 
 static func_parameter *create_parameter_from_array(HashTable *param_ht)
 {
@@ -180,10 +181,11 @@ static void module_check_cuda_error(cuda_module_object *module, CUresult result,
 {
     if (result != CUDA_SUCCESS)
     {
+        const char *error_str = get_cuda_error_string(result);
         zend_throw_exception_ex(NULL, 0,
                                 "CUDA error in %s: %s (code: %d)",
                                 context,
-                                get_cuda_error_string(result),
+                                error_str ? error_str : "Unknown error",
                                 result);
     }
 }
@@ -387,6 +389,7 @@ static zend_bool module_get_shared_context(cuda_module_object *module)
         if (result != CUDA_SUCCESS)
         {
             pthread_mutex_unlock(&g_shared_context_mutex);
+            module_log_error("Failed to create shared CUDA context: %s", get_cuda_error_string(result));
             return 0;
         }
     }
@@ -397,7 +400,26 @@ static zend_bool module_get_shared_context(cuda_module_object *module)
 
     pthread_mutex_unlock(&g_shared_context_mutex);
 
-    return cuStreamCreate(&module->cu_stream, CU_STREAM_NON_BLOCKING) == CUDA_SUCCESS;
+    if (!module->cu_stream)
+    {
+        CUresult stream_result = cuStreamCreate(&module->cu_stream, CU_STREAM_NON_BLOCKING);
+        if (stream_result != CUDA_SUCCESS)
+        {
+            pthread_mutex_lock(&g_shared_context_mutex);
+            g_shared_context_refcount--;
+            if (g_shared_context_refcount == 0 && g_shared_context)
+            {
+                cuCtxDestroy(g_shared_context);
+                g_shared_context = NULL;
+            }
+            pthread_mutex_unlock(&g_shared_context_mutex);
+            module->cu_context = NULL;
+            module->uses_shared_context = 0;
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 static void module_initialize_stream_pool(cuda_module_object *module)
@@ -430,6 +452,7 @@ static void module_initialize_stream_pool(cuda_module_object *module)
         {
             module->stream_pool->streams[i].in_use = 0;
             module->stream_pool->streams[i].last_used = module_get_current_time_ms();
+            module->stream_pool->streams[i].context = module->cu_context;
         }
     }
 }
@@ -467,12 +490,26 @@ static void module_initialize_stream_pool_progressive(cuda_module_object *module
     {
         module->stream_pool->streams[0].in_use = 0;
         module->stream_pool->streams[0].last_used = module_get_current_time_ms();
+        module->stream_pool->streams[0].context = module->cu_context;
     }
 }
 
 static void *module_expand_stream_pool_thread(void *arg)
 {
     cuda_module_object *module = (cuda_module_object *)arg;
+    CUcontext old_context = NULL;
+    CUresult cu_result;
+
+    cu_result = cuCtxPushCurrent(module->cu_context);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        module_log_error("Failed to set context in expansion thread: %s",
+                         get_cuda_error_string(cu_result));
+        pthread_mutex_lock(&module->stream_pool->mutex);
+        module->stream_pool->expand_lock = 0;
+        pthread_mutex_unlock(&module->stream_pool->mutex);
+        return NULL;
+    }
 
     pthread_mutex_lock(&module->stream_pool->mutex);
 
@@ -482,31 +519,26 @@ static void *module_expand_stream_pool_thread(void *arg)
     if (target_size > module->stream_pool->capacity)
     {
         pthread_mutex_unlock(&module->stream_pool->mutex);
+        cuCtxPopCurrent(&old_context);
         return NULL;
     }
 
-    pooled_stream_t *new_streams = (pooled_stream_t *)erealloc(
-        module->stream_pool->streams,
-        target_size * sizeof(pooled_stream_t));
+    cu_result = cuStreamCreate(
+        &module->stream_pool->streams[current_size].stream,
+        CU_STREAM_NON_BLOCKING);
 
-    if (new_streams)
+    if (cu_result == CUDA_SUCCESS)
     {
-        module->stream_pool->streams = new_streams;
-
-        CUresult cu_result = cuStreamCreate(
-            &module->stream_pool->streams[current_size].stream,
-            CU_STREAM_NON_BLOCKING);
-
-        if (cu_result == CUDA_SUCCESS)
-        {
-            module->stream_pool->streams[current_size].in_use = 0;
-            module->stream_pool->streams[current_size].last_used = module_get_current_time_ms();
-            module->stream_pool->size = target_size;
-        }
+        module->stream_pool->streams[current_size].in_use = 0;
+        module->stream_pool->streams[current_size].context = module->cu_context;
+        module->stream_pool->streams[current_size].last_used = module_get_current_time_ms();
+        module->stream_pool->size = target_size;
     }
 
     module->stream_pool->expand_lock = 0;
     pthread_mutex_unlock(&module->stream_pool->mutex);
+
+    cuCtxPopCurrent(&old_context);
 
     return NULL;
 }
@@ -538,10 +570,30 @@ static zend_bool module_ensure_ptx_loaded(cuda_module_object *module)
     return 1;
 }
 
+static void module_ensure_context_set(cuda_module_object *module)
+{
+    if (!module->cu_context)
+        return;
+        
+    CUcontext current = NULL;
+    CUresult result = cuCtxGetCurrent(&current);
+    if (result != CUDA_SUCCESS || current != module->cu_context)
+    {
+        result = cuCtxSetCurrent(module->cu_context);
+        if (result != CUDA_SUCCESS)
+        {
+            module_check_cuda_error(module, result, "setting context");
+        }
+    }
+}
+
 static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
 {
     if (module->cu_context)
+    {
+        module_ensure_context_set(module);
         return 1;
+    }
 
     if (module_get_shared_context(module))
     {
@@ -549,20 +601,24 @@ static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
         return 1;
     }
 
-    CUresult cu_result = cuDevicePrimaryCtxRetain(&module->cu_context, g_primary_device);
-
-    if (cu_result != CUDA_SUCCESS)
+    if (!module_initialize_global_cuda(module))
     {
         return 0;
     }
 
-    cuCtxPushCurrent(module->cu_context);
+    CUresult cu_result = cuDevicePrimaryCtxRetain(&module->cu_context, g_primary_device);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        module_log_error("Failed to retain primary context: %s", get_cuda_error_string(cu_result));
+        return 0;
+    }
 
     cu_result = cuStreamCreate(&module->cu_stream, CU_STREAM_NON_BLOCKING);
-
     if (cu_result != CUDA_SUCCESS)
     {
         cuDevicePrimaryCtxRelease(g_primary_device);
+        module->cu_context = NULL;
+        module_log_error("Failed to create stream: %s", get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -608,6 +664,9 @@ static void module_destroy_stream_pool(cuda_module_object *module)
 
 static zend_bool module_validate_async_operation_count(cuda_module_object *module)
 {
+    if (!module->stream_pool)
+        return 0;
+        
     if (module->stream_pool->actives >= MAX_STREAM_POOL_SIZE)
     {
         return 0;
@@ -623,6 +682,29 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
 
     CUstream stream = NULL;
     double current_time = module_get_current_time_ms();
+    CUcontext old_context = NULL;
+    CUresult cu_result;
+
+    cu_result = cuCtxGetCurrent(&old_context);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        module_log_error("Failed to get current CUDA context: %s",
+                         get_cuda_error_string(cu_result));
+        return NULL;
+    }
+
+    zend_bool context_changed = 0;
+    if (old_context != module->cu_context)
+    {
+        cu_result = cuCtxPushCurrent(module->cu_context);
+        if (cu_result != CUDA_SUCCESS)
+        {
+            module_log_error("Failed to set module CUDA context: %s",
+                             get_cuda_error_string(cu_result));
+            return NULL;
+        }
+        context_changed = 1;
+    }
 
     pthread_mutex_lock(&module->stream_pool->mutex);
 
@@ -643,14 +725,53 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
     {
         if (module->stream_pool->streams[i].stream != NULL)
         {
-            if (!module->stream_pool->streams[i].in_use ||
-                cuStreamQuery(module->stream_pool->streams[i].stream) == CUDA_SUCCESS)
+            if (!module->stream_pool->streams[i].in_use)
             {
                 module->stream_pool->streams[i].in_use = 1;
                 module->stream_pool->streams[i].last_used = current_time;
+                module->stream_pool->streams[i].context = module->cu_context;
                 stream = module->stream_pool->streams[i].stream;
                 break;
             }
+
+            CUresult query_result = cuStreamQuery(module->stream_pool->streams[i].stream);
+            if (query_result == CUDA_SUCCESS)
+            {
+                module->stream_pool->streams[i].in_use = 0;
+                module->stream_pool->streams[i].in_use = 1;
+                module->stream_pool->streams[i].last_used = current_time;
+                module->stream_pool->streams[i].context = module->cu_context;
+                stream = module->stream_pool->streams[i].stream;
+                break;
+            }
+            else if (query_result != CUDA_ERROR_NOT_READY)
+            {
+                module_log_error("Stream query error: %s",
+                                 get_cuda_error_string(query_result));
+                module->stream_pool->streams[i].in_use = 0;
+                module->stream_pool->streams[i].stream = NULL;
+            }
+        }
+    }
+
+    if (!stream && module->stream_pool->size < module->stream_pool->capacity)
+    {
+        int idx = module->stream_pool->size;
+        cu_result = cuStreamCreate(&module->stream_pool->streams[idx].stream,
+                                   CU_STREAM_NON_BLOCKING);
+
+        if (cu_result == CUDA_SUCCESS)
+        {
+            module->stream_pool->streams[idx].in_use = 1;
+            module->stream_pool->streams[idx].last_used = current_time;
+            module->stream_pool->streams[idx].context = module->cu_context;
+            module->stream_pool->size++;
+            stream = module->stream_pool->streams[idx].stream;
+        }
+        else
+        {
+            module_log_error("Failed to create new stream: %s",
+                             get_cuda_error_string(cu_result));
         }
     }
 
@@ -661,12 +782,26 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
 
     pthread_mutex_unlock(&module->stream_pool->mutex);
 
-    if (!stream)
+    if (!stream && module->stream_pool->size > 0)
     {
-        if (module->stream_pool->size > 0)
+        pthread_mutex_lock(&module->stream_pool->mutex);
+
+        if (!module->stream_pool->streams[0].in_use)
         {
+            module->stream_pool->streams[0].in_use = 1;
+            module->stream_pool->streams[0].last_used = current_time;
+            module->stream_pool->streams[0].context = module->cu_context;
             stream = module->stream_pool->streams[0].stream;
+            module->stream_pool->actives++;
         }
+
+        pthread_mutex_unlock(&module->stream_pool->mutex);
+    }
+
+    if (context_changed)
+    {
+        CUcontext dummy;
+        cuCtxPopCurrent(&dummy);
     }
 
     return stream;
@@ -733,6 +868,14 @@ static void module_return_stream_to_pool(cuda_module_object *module, CUstream st
             module->stream_pool->actives--;
             module->stream_pool->streams[i].in_use = 0;
             module->stream_pool->streams[i].last_used = module_get_current_time_ms();
+
+            if (module->stream_pool->streams[i].context != module->cu_context)
+            {
+                module_log_error("Stream context mismatch, destroying stream");
+                cuStreamDestroy(stream);
+                module->stream_pool->streams[i].stream = NULL;
+            }
+
             break;
         }
     }
@@ -753,17 +896,7 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module)
 
     if (module->cu_context)
     {
-        CUcontext current;
-        cu_result = cuCtxGetCurrent(&current);
-        if (cu_result != CUDA_SUCCESS || current != module->cu_context)
-        {
-            cu_result = cuCtxSetCurrent(module->cu_context);
-            if (cu_result != CUDA_SUCCESS)
-            {
-                module_check_cuda_error(module, cu_result, "setting current context");
-                return 0;
-            }
-        }
+        module_ensure_context_set(module);
         return 1;
     }
 
@@ -830,7 +963,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
     if (module->cu_stream)
     {
         cu_result = cuStreamDestroy(module->cu_stream);
-        if (cu_result != CUDA_SUCCESS)
+        if (cu_result != CUDA_SUCCESS && cu_result != CUDA_ERROR_INVALID_HANDLE)
         {
             module_log_error("Failed to destroy CUDA stream: %s",
                              get_cuda_error_string(cu_result));
@@ -847,7 +980,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
             if (g_shared_context_refcount == 0 && g_shared_context)
             {
                 cu_result = cuCtxDestroy(g_shared_context);
-                if (cu_result != CUDA_SUCCESS)
+                if (cu_result != CUDA_SUCCESS && cu_result != CUDA_ERROR_INVALID_HANDLE)
                 {
                     module_log_error("Failed to destroy shared CUDA context: %s",
                                      get_cuda_error_string(cu_result));
@@ -861,7 +994,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
         else
         {
             cu_result = cuCtxDestroy(module->cu_context);
-            if (cu_result != CUDA_SUCCESS)
+            if (cu_result != CUDA_SUCCESS && cu_result != CUDA_ERROR_INVALID_HANDLE)
             {
                 module_log_error("Failed to destroy CUDA context: %s",
                                  get_cuda_error_string(cu_result));
@@ -922,6 +1055,11 @@ static zend_bool module_validate_launch_config(cuda_module_object *module, int g
 
     if (!limits_loaded)
     {
+        if (!g_cuda_initialized)
+        {
+            return 0;
+        }
+        
         cuDeviceGetAttribute(&max_threads, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, g_primary_device);
         cuDeviceGetAttribute(&max_block[0], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, g_primary_device);
         cuDeviceGetAttribute(&max_block[1], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, g_primary_device);
@@ -977,30 +1115,49 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
     {
         if (op && op->is_active)
         {
-            CUresult result = cuStreamQuery(op->stream);
-            if (result == CUDA_SUCCESS)
+            CUcontext old_context = NULL;
+            CUresult cu_result;
+            
+            cu_result = cuCtxPushCurrent(op->context);
+            if (cu_result != CUDA_SUCCESS)
             {
-                module_cleanup_async_operation_by_id(module, op->id);
-                op->is_active = 0;
+                module_log_error("Failed to set context for timeout check: %s",
+                                 get_cuda_error_string(cu_result));
                 continue;
             }
-
+            
+            CUresult query_result = cuStreamQuery(op->stream);
+            
+            if (query_result == CUDA_SUCCESS)
+            {
+                cuCtxPopCurrent(&old_context);
+                module_cleanup_async_operation_by_id(module, op->id);
+                continue;
+            }
+            else if (query_result != CUDA_ERROR_NOT_READY)
+            {
+                module_log_error("Stream query error during timeout check: %s",
+                                 get_cuda_error_string(query_result));
+            }
+            
             double elapsed = current_time - op->start_time;
             if (elapsed > ASYNC_OP_TIMEOUT_MS)
             {
                 CUresult sync_result = cuStreamSynchronize(op->stream);
+                
                 if (sync_result != CUDA_SUCCESS)
                 {
                     module_log_error("Failed to synchronize stream after timeout: %s",
                                      get_cuda_error_string(sync_result));
                 }
-                else
-                {
-                    op->is_active = 0;
-                }
-
+                
+                cuCtxPopCurrent(&old_context);
+                
                 module_cleanup_async_operation_by_id(module, op->id);
+                continue;
             }
+            
+            cuCtxPopCurrent(&old_context);
         }
     }
     ZEND_HASH_FOREACH_END();
@@ -1015,14 +1172,22 @@ static int module_create_async_operation(cuda_module_object *module,
                                          int block[3],
                                          int argc)
 {
-    if (!module_initialize_cuda_context(module))
+    CUcontext old_context = NULL;
+    CUresult cu_result;
+
+    cu_result = cuCtxPushCurrent(module->cu_context);
+    if (cu_result != CUDA_SUCCESS)
     {
+        module_log_error("Failed to set context for async operation: %s", get_cuda_error_string(cu_result));
         return 0;
     }
 
     cuda_async_operation *op = (cuda_async_operation *)emalloc(sizeof(cuda_async_operation));
     if (!op)
+    {
+        cuCtxPopCurrent(&old_context);
         return 0;
+    }
 
     memset(op, 0, sizeof(cuda_async_operation));
 
@@ -1043,6 +1208,7 @@ static int module_create_async_operation(cuda_module_object *module,
     {
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to get CUDA stream for async operation");
+        cuCtxPopCurrent(&old_context);
         if (op->kernel_name)
             zend_string_release(op->kernel_name);
         efree(op);
@@ -1050,9 +1216,13 @@ static int module_create_async_operation(cuda_module_object *module,
     }
 
     op->last_error = CUDA_SUCCESS;
+    op->context = module->cu_context;
     memset(op->error_message, 0, sizeof(op->error_message));
 
     zend_hash_index_update_ptr(module->async_operations, op->id, op);
+
+    cuCtxPopCurrent(&old_context);
+
     return op->id;
 }
 
@@ -1247,9 +1417,20 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
 {
     CUresult cu_result;
     CUfunction cu_function;
+    CUcontext old_context = NULL;
+
+    cu_result = cuCtxPushCurrent(module->cu_context);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        zend_throw_exception_ex(NULL, 0,
+                                "Failed to set CUDA context for kernel execution: %s",
+                                get_cuda_error_string(cu_result));
+        return 0;
+    }
 
     if (!module_validate_launch_config_cached(grid, block))
     {
+        cuCtxPopCurrent(&old_context);
         zend_throw_exception_ex(NULL, 0, "Invalid grid/block configuration");
         return 0;
     }
@@ -1257,12 +1438,14 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
     CUmodule cu_module = module_get_or_load_module_cached(module, kernel->name);
     if (!cu_module)
     {
+        cuCtxPopCurrent(&old_context);
         return 0;
     }
 
     cu_result = cuModuleGetFunction(&cu_function, cu_module, ZSTR_VAL(kernel->name));
     if (cu_result != CUDA_SUCCESS)
     {
+        cuCtxPopCurrent(&old_context);
         zend_throw_exception_ex(NULL, 0,
                                 "Failed to get kernel function '%s': %s",
                                 ZSTR_VAL(kernel->name),
@@ -1277,6 +1460,8 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
                                stream,
                                cuda_args,
                                NULL);
+
+    cuCtxPopCurrent(&old_context);
 
     if (cu_result != CUDA_SUCCESS)
     {
@@ -1478,8 +1663,12 @@ ZEND_METHOD(CompiledModule, launch)
     }
 
     double start_time = module_get_current_time_ms();
+    CUcontext old_ctx;
+    cuCtxPushCurrent(module->cu_context);
     zend_bool success = module_execute_cuda_kernel(module, kernel, grid, block,
                                                    cuda_args, argc, module->cu_stream);
+
+    cuCtxPopCurrent(&old_ctx);
 
     if (success)
     {
@@ -1647,25 +1836,40 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
     if (!module_ensure_cuda_initialized(module))
     {
+        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        RETURN_FALSE;
+    }
+
+    CUcontext old_context = NULL;
+    CUresult cu_result = cuCtxPushCurrent(module->cu_context);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        zend_throw_exception_ex(NULL, 0, 
+                                "Failed to set CUDA context for batch operations: %s",
+                                get_cuda_error_string(cu_result));
         RETURN_FALSE;
     }
 
     CUstream batch_stream = module_get_stream_with_expansion(module);
     if (!batch_stream)
     {
+        cuCtxPopCurrent(&old_context);
         zend_throw_exception_ex(NULL, 0, "Failed to get stream for batch operations");
         RETURN_FALSE;
     }
 
     array_init(return_value);
-
-    zval *op_item;
+    zend_bool batch_success = 1;
     int op_index = 0;
 
+    zval *op_item;
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(operations), op_item)
     {
         if (Z_TYPE_P(op_item) != IS_ARRAY)
         {
+            add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
             continue;
         }
 
@@ -1675,9 +1879,10 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
         if (!kernel_name_zv || Z_TYPE_P(kernel_name_zv) != IS_STRING)
         {
-            zend_throw_exception_ex(NULL, 0,
-                                    "Must provide 'kernel' for launchAsyncBatch operation");
-            RETURN_FALSE;
+            add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
+            continue;
         }
 
         zend_string *kernel_name = Z_STR_P(kernel_name_zv);
@@ -1685,10 +1890,10 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
         if (!kernel)
         {
-            zend_throw_exception_ex(NULL, 0,
-                                    "Kernel '%s' not found in compiled module",
-                                    ZSTR_VAL(kernel_name));
-            RETURN_FALSE;
+            add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
+            continue;
         }
 
         int argc = 0;
@@ -1719,6 +1924,8 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
             if (args)
                 efree(args);
             add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
             continue;
         }
 
@@ -1737,6 +1944,8 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
             if (args)
                 efree(args);
             add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
             continue;
         }
 
@@ -1745,6 +1954,8 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         {
             module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
             continue;
         }
 
@@ -1753,40 +1964,50 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         {
             module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            op_index++;
             continue;
         }
 
-        CUresult result = cuLaunchKernel(cu_function,
-                                         grid[0], grid[1], grid[2],
-                                         block[0], block[1], block[2],
-                                         0,
-                                         batch_stream,
-                                         cuda_args,
-                                         NULL);
+        cu_result = cuLaunchKernel(cu_function,
+                                   grid[0], grid[1], grid[2],
+                                   block[0], block[1], block[2],
+                                   0,
+                                   batch_stream,
+                                   cuda_args,
+                                   NULL);
 
-        if (result == CUDA_SUCCESS)
+        module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+
+        if (cu_result == CUDA_SUCCESS)
         {
-            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 1);
             module->kernel_execution_count++;
         }
         else
         {
-            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
+            batch_success = 0;
+            module_log_error("Batch kernel launch failed: %s", get_cuda_error_string(cu_result));
         }
 
         op_index++;
     }
     ZEND_HASH_FOREACH_END();
 
-    CUresult sync_result = cuStreamSynchronize(batch_stream);
-    if (sync_result != CUDA_SUCCESS)
+    cu_result = cuStreamSynchronize(batch_stream);
+    
+    cuCtxPopCurrent(&old_context);
+    
+    if (cu_result != CUDA_SUCCESS)
     {
-        module_check_cuda_error(module, sync_result, "batch stream synchronization");
+        module_check_cuda_error(module, cu_result, "batch stream synchronization");
+        batch_success = 0;
     }
 
     module_return_stream_to_pool(module, batch_stream);
+
+    RETURN_BOOL(batch_success);
 }
 
 ZEND_METHOD(CompiledModule, sync)
@@ -1813,7 +2034,11 @@ ZEND_METHOD(CompiledModule, sync)
         {
             if (op && op->is_active)
             {
+                CUcontext old_context = NULL;
+                cuCtxPushCurrent(op->context);
                 cu_result = cuStreamSynchronize(op->stream);
+                cuCtxPopCurrent(&old_context);
+
                 if (cu_result != CUDA_SUCCESS)
                 {
                     module_check_cuda_error(module, cu_result, "stream synchronization");
@@ -1840,7 +2065,11 @@ ZEND_METHOD(CompiledModule, sync)
 
         if (op->is_active)
         {
+            CUcontext old_context = NULL;
+            cuCtxPushCurrent(op->context);
             cu_result = cuStreamSynchronize(op->stream);
+            cuCtxPopCurrent(&old_context);
+
             if (cu_result != CUDA_SUCCESS)
             {
                 module_check_cuda_error(module, cu_result, "stream synchronization");
@@ -1889,7 +2118,10 @@ ZEND_METHOD(CompiledModule, isFinished)
         {
             if (op && op->is_active)
             {
+                CUcontext old_context = NULL;
+                cuCtxPushCurrent(op->context);
                 CUresult cu_result = cuStreamQuery(op->stream);
+                cuCtxPopCurrent(&old_context);
 
                 if (cu_result == CUDA_SUCCESS)
                 {

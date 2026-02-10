@@ -1,74 +1,238 @@
 <?php
 
-use Cuda\Number;
+use Cuda\CudaArray;
+use Cuda\Compiler;
+use Cuda\Attr;
+use Cuda\CompiledModule;
 
-class NumberTest extends Number
+class kernels
 {
-    public function __construct(private int|float $number) {}
-
-    private function getValue(mixed $operand): int|float
-    {
-        return ($operand instanceof self) ? $operand->number : $operand;
-    }
-
-    public function __add(mixed $left, mixed $right): static
-    {
-        return new static($this->getValue($left) + $this->getValue($right));
-    }
-
-    public function __sub(mixed $left, mixed $right): static
-    {
-        return new static($this->getValue($left) - $this->getValue($right));
-    }
-
-    public function __mul(mixed $left, mixed $right): static
-    {
-        return new static($this->getValue($left) * $this->getValue($right));
-    }
-
-    public function __div(mixed $left, mixed $right): static
-    {
-        $divisor = $this->getValue($right);
-        if ($divisor == 0) {
-            throw new \DivisionByZeroError("No division by zero!");
+    #[Attr\Kernel(name: 'add')]
+    public function add(
+        #[attr\TensorType(dtype: 'int32')] $tensor,
+        #[attr\TensorType(dtype: 'int32')] $secondTensor,
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx] = $tensor[$idx] + $secondTensor[$idx];
         }
-        return new static($this->getValue($left) / $divisor);
     }
 
-    public function __mod(mixed $left, mixed $right): static
-    {
-        return new static($this->getValue($left) % $this->getValue($right));
+
+    #[Attr\Kernel(name: 'div')]
+    public function div(
+        #[attr\TensorType(dtype: 'int32')] $tensor,
+        #[attr\TensorType(dtype: 'int32')] $secondTensor,
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx] = $tensor[$idx] / $secondTensor[$idx];
+        }
     }
 
-    public function __pow(mixed $left, mixed $right): static
+    #[Attr\Kernel(name: 'sub')]
+    public function sub(
+        #[attr\TensorType(dtype: 'int32')] $tensor,
+        #[attr\TensorType(dtype: 'int32')] $secondTensor,
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx] = $tensor[$idx] - $secondTensor[$idx];
+        }
+    }
+
+    #[Attr\Kernel(name: 'mul')]
+    public function mul(
+        #[attr\TensorType(dtype: 'int32')] $tensor,
+        #[attr\TensorType(dtype: 'int32')] $secondTensor,
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx] = $tensor[$idx] * $secondTensor[$idx];
+        }
+    }
+
+
+    #[Attr\Kernel(name: 'powk')]
+    public function pow(
+        #[attr\TensorType(dtype: 'int32')] $tensor,
+        #[attr\TensorType(dtype: 'int32')] $secondTensor,
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx] = $cuda->math->pow($tensor[$idx], $secondTensor[$idx]);
+        }
+    }
+
+    #[Attr\Kernel(name: 'inc')]
+    public function inc(
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx]++;
+        }
+    }
+
+    #[Attr\Kernel(name: 'dec')]
+    public function dec(
+        #[attr\TensorType(dtype: 'int32')] &$result,
+        #[attr\IntType] $size
+    ): void {
+        /** @var Cuda\Runtime $cuda */
+        $idx = $cuda->globalIdx();
+        if ($idx < $size) {
+            $result[$idx]--;
+        }
+    }
+}
+
+class Tensor extends Cuda\Number
+{
+    private CudaArray $data;
+    private static CompiledModule $handler;
+
+    public function __construct(array|CudaArray $data, string $dtype = 'float32')
     {
-        return new static($this->getValue($left) ** $this->getValue($right));
+        $this->data = $data instanceof CudaArray ? $data : new CudaArray($data, $dtype);
+    }
+
+    public function data(): CudaArray
+    {
+        return $this->data;
+    }
+
+    public static function init(CompiledModule $handler): void
+    {
+        // $handler->initialize();
+        self::$handler = $handler;
     }
 
     public function __inc(): void
     {
-        $this->number++;
+        $this->launchUnary('inc', $this->data);
     }
 
     public function __dec(): void
     {
-        $this->number--;
+        $this->launchUnary('dec', $this->data);
     }
 
-    
-    public function __toString(): string
+    public function __add(mixed $left, mixed $right): static
     {
-        return (string)$this->number;
+        return $this->launchBinary('add', $left, $right);
+    }
+
+    public function __sub(mixed $left, mixed $right): static
+    {
+        return $this->launchBinary('asubd', $left, $right);
+    }
+
+    public function __mul(mixed $left, mixed $right): static
+    {
+        return $this->launchBinary('mul', $left, $right);
+    }
+
+    public function __div(mixed $left, mixed $right): static
+    {
+        return $this->launchBinary('div', $left, $right);
+    }
+    public function __mod(mixed $left, mixed $right): mixed
+    {
+        throw new RuntimeException("Operation not implemented");
+    }
+
+    public function __pow(mixed $left, mixed $right): mixed
+    {
+        return $this->launchBinary('powk', $left, $right);
+    }
+
+    public function getShape(): array
+    {
+        return $this->data->getShape();
+    }
+
+    public function getSize(): int
+    {
+        return $this->data->getSize();
+    }
+
+    public function dtype(): string
+    {
+        return $this->data->dtype();
+    }
+
+    private function launchUnary(string $kernel,  CudaArray $value): static
+    {
+        self::$handler->launch(
+            name: $kernel,
+            config: self::$handler->autoGrid($kernel, $value),
+            args: [$value, $value->getSize()]
+        );
+
+        return new static($value, $this->data->dtype());
+    }
+
+    private function launchBinary(string $kernel, Tensor|int|float $first, Tensor|int|float $second)
+    {
+        $first = !$first instanceof Tensor
+            ? CudaArray::full($second->getShape(), $first,  dtype: $second->dtype())
+            : $first->data();
+
+        $second = !$second instanceof Tensor
+            ? CudaArray::full($first->getShape(), $second, dtype: $first->dtype())
+            :   $second->data();
+
+        if ($second->getShape() != $first->getShape()) {
+            throw new \RuntimeException("Invalid shape.");
+        }
+
+        $result = CudaArray::zeros($this->data->getShape(), $this->data->dtype());
+
+        self::$handler->launch(
+            name: $kernel,
+            config: self::$handler->autoGrid($kernel, $first),
+            args: [$first, $second, $result, $result->getSize()],
+        );
+    
+        return new static($result);
     }
 }
 
-$a = new NumberTest(10);
-$b = new NumberTest(5);
+$compiler = new Compiler();
+$kernels = new Kernels();
 
-echo "Addition: " . ($a + $b) . "\n";       // 15
-echo "Scalar Mult: " . ($a * 2) . "\n";     // 20
-echo "Pre-Inc: " . (++$a) . "\n";           // 11
-echo "Post-Inc: " . ($a++) . "\n";          // 11 (returns old value)
-echo "After Post-Inc: " . $a . "\n";        // 12
-echo "Complex: " . (($a + $b) * 2) . "\n";  // (12 + 5) * 2 = 34
-echo "Complex 2: " . (($a**2 + $b) * 2) . "\n";  // (12**2 + 5) * 2 = 298
+$ref = new ReflectionClass($kernels);
+foreach ($ref->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+    $compiler->kernel([$kernels, $method->getName()]);
+}
+
+$module = $compiler->compile();
+
+Tensor::init($module);
+
+$a = new Tensor([1, 2, 3, 4, 5], dtype: 'int32');
+$b = new Tensor([6, 7, 8, 9, 10], dtype: 'int32');
+
+$result = ($a + $b * 2 + 3 + 4);
+
+var_dump($result->data()->toArray());
+
+var_dump($result);

@@ -50,6 +50,7 @@ typedef struct _cuda_async_operation
     double start_time;
 
     CUstream stream;
+    CUcontext context;
     CUevent start_event;
     CUevent end_event;
 
@@ -70,6 +71,7 @@ typedef struct _cuda_async_operation
 
 typedef struct {
     CUstream stream;
+    CUcontext context;
     zend_bool in_use;
     double last_used;
 } pooled_stream_t;

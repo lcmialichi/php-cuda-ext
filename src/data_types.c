@@ -256,9 +256,13 @@ dtype_t promote_types(dtype_t a, dtype_t b)
 
 scalar_value_t cast_single_value(scalar_value_t value, dtype_t target_dtype)
 {
+    if (value.dtype == target_dtype)
+    {
+        return value;
+    }
+
     scalar_value_t new_val;
     new_val.dtype = target_dtype;
-
     long double temp_val = 0;
 
     switch (value.dtype)
@@ -291,33 +295,31 @@ scalar_value_t cast_single_value(scalar_value_t value, dtype_t target_dtype)
     {
     case DTYPE_FLOAT32:
         new_val.v.f32 = (float)temp_val;
-        new_val.is_neg = new_val.v.f32 < 0;
+        new_val.is_neg = (new_val.v.f32 < 0);
         break;
     case DTYPE_FLOAT64:
         new_val.v.f64 = (double)temp_val;
-        new_val.is_neg = new_val.v.f64 < 0;
+        new_val.is_neg = (new_val.v.f64 < 0);
         break;
     case DTYPE_INT32:
         new_val.v.i32 = (int32_t)temp_val;
-        new_val.is_neg = new_val.v.i32 < 0;
+        new_val.is_neg = (new_val.v.i32 < 0);
         break;
     case DTYPE_INT64:
         new_val.v.i64 = (int64_t)temp_val;
-        new_val.is_neg = new_val.v.i64 < 0;
+        new_val.is_neg = (new_val.v.i64 < 0);
         break;
     case DTYPE_INT8:
         new_val.v.i8 = (int8_t)temp_val;
-        new_val.is_neg = new_val.v.i8 < 0;
+        new_val.is_neg = (new_val.v.i8 < 0);
         break;
     case DTYPE_BOOL:
         new_val.v.b = (temp_val != 0);
         new_val.is_neg = 0;
-
         break;
     default:
         new_val.dtype = DTYPE_UNKNOWN;
         new_val.is_neg = 0;
-        break;
     }
 
     return new_val;
@@ -327,7 +329,7 @@ dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype
 {
     if (op == OP_DIV || (op == OP_POW && is_neg == 1))
     {
-        if (tensor_dtype == DTYPE_FLOAT64 || scalar_dtype == DTYPE_FLOAT64)
+        if (tensor_dtype == DTYPE_FLOAT64 && scalar_dtype == DTYPE_FLOAT64)
         {
             return DTYPE_FLOAT64;
         }
@@ -369,7 +371,7 @@ dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype
 
 dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b, operation_type_t op)
 {
-    if (op == OP_DIV || op == OP_POW)
+    if (op == OP_DIV || op == OP_POW) /** @todo need to validate this policy for tensors */
     {
         dtype_t p = promote_types(a, b);
         if (p == DTYPE_FLOAT64)
@@ -386,7 +388,6 @@ dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b, operation_type_t op)
     }
 
     dtype_t promoted = promote_types(a, b);
-
     if (dtype_is_integer(a) && dtype_is_integer(b))
     {
         if (dtype_is_signed(a) != dtype_is_signed(b))
@@ -466,20 +467,17 @@ int can_safely_cast_to(dtype_t from, dtype_t to)
 
     if (dtype_is_integer(from) && dtype_is_floating(to))
     {
-        size_t from_bits = dtype_size(from) * 8;
-        size_t to_mantissa_bits;
+        size_t from_size = dtype_size(from);
+        if (to == DTYPE_FLOAT64) {
+            return 1; 
+        }
 
-        if (to == DTYPE_FLOAT32)
-            to_mantissa_bits = 24;
-        else if (to == DTYPE_FLOAT64)
-            to_mantissa_bits = 53;
-        else
-            return 0;
+        if (to == DTYPE_FLOAT32) {
+            if (from_size <= 2) return 1;
+            if (from_size == 4) return 1;
+        }
 
-        if (dtype_is_signed(from))
-            from_bits--;
-
-        return from_bits <= to_mantissa_bits;
+        return 0;
     }
 
     if (dtype_is_integer(from) && dtype_is_integer(to))
@@ -507,9 +505,9 @@ int can_safely_cast_to(dtype_t from, dtype_t to)
 
     if (dtype_is_floating(from) && dtype_is_floating(to))
     {
-        size_t from_mantissa = (from == DTYPE_FLOAT32) ? 24 : 53;
-        size_t to_mantissa = (to == DTYPE_FLOAT32) ? 24 : 53;
-        return to_mantissa >= from_mantissa;
+        size_t from_size = dtype_size(from);
+        size_t to_size = dtype_size(to);
+        return to_size >= from_size;
     }
 
     return 0;

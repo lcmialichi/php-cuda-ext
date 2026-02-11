@@ -29,14 +29,21 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
         return NULL;
     }
 
-    if (can_safely_cast_to(a->dtype, b->dtype) == 0)
+    dtype_t promoted_type = promote_types_for_arithmetic(a->dtype, b->dtype, operation_type);
+    if (!can_safely_cast_to(a->dtype, promoted_type))
     {
-        zend_throw_error(NULL, "Failed to promote type %s to %s",
-                         dtype_to_string(a->dtype),
-                         dtype_to_string(b->dtype));
+        zend_throw_error(NULL, "Cannot safely promote operand A (%s) to %s",
+                         dtype_to_string(a->dtype), dtype_to_string(promoted_type));
+        return NULL;
     }
 
-    dtype_t promoted_type = promote_types_for_arithmetic(a->dtype, b->dtype, operation_type);
+    if (!can_safely_cast_to(b->dtype, promoted_type))
+    {
+        zend_throw_error(NULL, "Cannot safely promote operand B (%s) to %s",
+                         dtype_to_string(b->dtype), dtype_to_string(promoted_type));
+        return NULL;
+    }
+
     tensor_t *result = cuda_tensor_create_empty_dtype(result_shape, result_dims, promoted_type);
     if (!result)
     {

@@ -41,14 +41,51 @@ struct DivOpT
 template <typename T>
 struct PowOpT
 {
+    static __device__ __forceinline__ T int_pow(T base, int exp) {
+        T res = (T)1;
+        while (exp > 0) {
+            if (exp & 1) res *= base;
+            base *= base;
+            exp >>= 1;
+        }
+        return res;
+    }
+
     static __device__ __forceinline__ T apply(T a, T b)
     {
-        if constexpr (std::is_same<T, float>::value)
+        bool is_integer_exp = false;
+        
+        if constexpr (std::is_floating_point<T>::value) {
+            if (b == floor(b)) is_integer_exp = true;
+        } else {
+            is_integer_exp = true;
+        }
+
+        if (is_integer_exp) {
+            int exp = static_cast<int>(b);
+            
+            if (exp == 0) return (T)1;
+            if (exp == 1) return a;
+            if (exp == 2) return a * a;
+            if (exp == 3) return a * a * a;
+
+            if (exp < 0) {
+                if constexpr (std::is_floating_point<T>::value) {
+                    return (T)1.0 / int_pow(a, -exp);
+                } else {
+                    return (T)0; 
+                }
+            }
+            return int_pow(a, exp);
+        }
+
+        if constexpr (std::is_same<T, float>::value) {
             return powf(a, b);
-        else if constexpr (std::is_same<T, double>::value)
+        } else if constexpr (std::is_same<T, double>::value) {
             return pow(a, b);
-        else
+        } else {
             return static_cast<T>(powf(static_cast<float>(a), static_cast<float>(b)));
+        }
     }
 };
 

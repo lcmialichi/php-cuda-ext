@@ -223,18 +223,12 @@ foreach ($ref->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
 }
 
 $module = $compiler->compile();
-
 Tensor::init($module);
 
-$a = new CudaArray([1, 2, 3, 4, 5], dtype: 'int32');
-$b = new CudaArray([6, 7, 8, 9, 10], dtype: 'int32');
+$a = new Tensor([1, 2, 3, 4, 5], dtype: 'int32');
+$b = new Tensor([6, 7, 8, 9, 10], dtype: 'int32');
 
-$result = ($a + $b * 2 + 3 + 4);
+$result = ($b + $a) ** 2;
 
-echo "pow\n";
+var_dump($result->data()->toArray());
 
-$result = $result ** -1;
-
-var_dump($result->toArray());
-
-var_dump($result);

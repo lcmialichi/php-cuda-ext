@@ -98,7 +98,7 @@ static dtype_t parse_dtype_param(zend_string *dtype_str)
     }
 
     dtype_t dtype = dtype_from_string(ZSTR_VAL(dtype_str));
-    if (dtype >= DTYPE_COUNT || dtype == DTYPE_UNKNOWN)
+    if (dtype >= DTYPE_COUNT)
     {
         return DTYPE_UNKNOWN;
     }
@@ -1602,7 +1602,7 @@ static void static_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, const char *meth
         zend_throw_error(NULL, "Invalid shape: must provide dimensions");
         RETURN_NULL();
     }
-
+    
     dtype_t dtype = parse_dtype_param(dtype_str);
     tensor_t *tensor = cuda_tensor_create_with_value(shape, ndims, scalar_value, dtype);
 

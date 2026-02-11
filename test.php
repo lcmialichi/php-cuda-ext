@@ -178,6 +178,11 @@ class Tensor extends Cuda\Number
         return $this->data->dtype();
     }
 
+    public function toArray(): array
+    {
+        return $this->data->toArray();
+    }
+
     private function launchUnary(string $kernel,  CudaArray $value): static
     {
         self::$handler->launch(
@@ -225,10 +230,9 @@ foreach ($ref->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
 $module = $compiler->compile();
 Tensor::init($module);
 
-$a = new Tensor([1, 2, 3, 4, 5], dtype: 'int32');
-$b = new Tensor([6, 7, 8, 9, 10], dtype: 'int32');
+$a = new CudaArray([1, 2, 3, 4, 5], dtype: 'int32');
+$b = new CudaArray([6, 7, 8, 9, 10], dtype: 'int32');
 
 $result = ($b + $a) ** 2;
 
-var_dump($result->data()->toArray());
-
+var_dump($result->toArray());

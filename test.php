@@ -121,7 +121,6 @@ class Tensor extends Cuda\Number
 
     public static function init(CompiledModule $handler): void
     {
-        // $handler->initialize();
         self::$handler = $handler;
     }
 
@@ -190,7 +189,7 @@ class Tensor extends Cuda\Number
         return new static($value, $this->data->dtype());
     }
 
-    private function launchBinary(string $kernel, Tensor|int|float $first, Tensor|int|float $second)
+    private function launchBinary(string $kernel, Tensor|int|float $first, Tensor|int|float $second): static
     {
         $first = !$first instanceof Tensor
             ? CudaArray::full($second->getShape(), $first,  dtype: $second->dtype())
@@ -205,13 +204,12 @@ class Tensor extends Cuda\Number
         }
 
         $result = CudaArray::zeros($this->data->getShape(), $this->data->dtype());
-
-        self::$handler->launch(
+        self::$handler->launchAsync(
             name: $kernel,
             config: self::$handler->autoGrid($kernel, $first),
             args: [$first, $second, $result, $result->getSize()],
         );
-    
+
         return new static($result);
     }
 }
@@ -228,11 +226,15 @@ $module = $compiler->compile();
 
 Tensor::init($module);
 
-$a = new Tensor([1, 2, 3, 4, 5], dtype: 'int32');
-$b = new Tensor([6, 7, 8, 9, 10], dtype: 'int32');
+$a = new CudaArray([1, 2, 3, 4, 5], dtype: 'int32');
+$b = new CudaArray([6, 7, 8, 9, 10], dtype: 'int32');
 
 $result = ($a + $b * 2 + 3 + 4);
 
-var_dump($result->data()->toArray());
+echo "pow\n";
+
+$result = $result ** -1;
+
+var_dump($result->toArray());
 
 var_dump($result);

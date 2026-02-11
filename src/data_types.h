@@ -48,6 +48,7 @@ typedef struct
         bool b;
     } v;
     dtype_t dtype;
+    int is_neg;
 } scalar_value_t;
 
 #ifndef __CUDACC__
@@ -63,18 +64,23 @@ typedef struct
         {                                                \
         case DTYPE_INT64:                                \
             (__input__).v.i64 = Z_LVAL_P((__zval__));    \
+            (__input__).is_neg = (__input__).v.i64 < 0;  \
             break;                                       \
         case DTYPE_FLOAT64:                              \
             (__input__).v.f64 = Z_DVAL_P((__zval__));    \
+            (__input__).is_neg = (__input__).v.f64 < 0;  \
             break;                                       \
         case IS_TRUE:                                    \
             (__input__).v.b = true;                      \
+            (__input__).is_neg = 0;                      \
             break;                                       \
         case IS_FALSE:                                   \
             (__input__).v.b = false;                     \
+            (__input__).is_neg = 0;                      \
             break;                                       \
         default:                                         \
-            (__input__).dtype = DTYPE_UNKNOWN;            \
+            (__input__).dtype = DTYPE_UNKNOWN;           \
+            (__input__).is_neg = 0;                      \
         }                                                \
     } while (0)
 
@@ -82,7 +88,7 @@ dtype_t dtype_from_zval(zval *val);
 dtype_t promote_types(dtype_t a, dtype_t b);
 dtype_t promote_types_for_comparison(dtype_t a, dtype_t b);
 dtype_t promote_types_for_logical(dtype_t a, dtype_t b);
-dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op);
+dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op, int is_neg);
 dtype_t promote_types_for_arithmetic(dtype_t a, dtype_t b, operation_type_t op);
 #endif
 

@@ -68,8 +68,8 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
 tensor_t *cuda_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t operation_type)
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
+    dtype_t promoted_type = promote_scalar_for_arithmetic(a->dtype, scalar.dtype, operation_type, scalar.is_neg);
 
-    dtype_t promoted_type = promote_scalar_for_arithmetic(a->dtype, scalar.dtype, operation_type);
     tensor_t *result = cuda_tensor_create_empty_dtype(a->shape, a->ndims, promoted_type);
     if (!result)
     {
@@ -106,7 +106,8 @@ tensor_t *cuda_inv_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_
 {
     CUDA_CHECK_AND_RETURN_NULL(a);
 
-    dtype_t promoted_type = promote_scalar_for_arithmetic(a->dtype, scalar.dtype, operation_type);
+    dtype_t promoted_type = promote_scalar_for_arithmetic(a->dtype, scalar.dtype, operation_type, scalar.is_neg);
+
     tensor_t *result = cuda_tensor_create_empty_dtype(a->shape, a->ndims, promoted_type);
     if (!result)
     {

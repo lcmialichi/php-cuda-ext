@@ -196,6 +196,7 @@ ZEND_METHOD(CudaArray, zeros)
 {
     scalar_value_t scalar_value;
     scalar_value.v.f32 = 0.0f;
+    scalar_value.is_neg = 0;
     scalar_value.dtype = DTYPE_FLOAT32;
 
     static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "zeros", scalar_value);
@@ -205,6 +206,7 @@ ZEND_METHOD(CudaArray, ones)
 {
     scalar_value_t scalar_value;
     scalar_value.v.f32 = 1.0f;
+    scalar_value.is_neg = 0;
     scalar_value.dtype = DTYPE_FLOAT32;
 
     static_tensor_creator(INTERNAL_FUNCTION_PARAM_PASSTHRU, "ones", scalar_value);
@@ -1245,7 +1247,6 @@ static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *o
     }
     else
     {
-
         scalar_value_t scalar_value;
         SCALAR_FROM_ZVAL(other_zv, scalar_value);
         if (scalar_value.dtype == DTYPE_UNKNOWN)
@@ -1538,8 +1539,8 @@ static void rand_tensor_creator(INTERNAL_FUNCTION_PARAMETERS, unsigned long long
         RETURN_NULL();
     }
 
-    scalar_value_t min_v = {.v.f32 = 0.00f, .dtype = DTYPE_FLOAT32};
-    scalar_value_t max_v = {.v.f32 = 100.00f, .dtype = DTYPE_FLOAT32};
+    scalar_value_t min_v = {.v.f32 = 0.00f, .dtype = DTYPE_FLOAT32, .is_neg = 0};
+    scalar_value_t max_v = {.v.f32 = 100.00f, .dtype = DTYPE_FLOAT32, .is_neg = 0};
 
     if (z_min != NULL)
     {

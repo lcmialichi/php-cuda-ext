@@ -283,6 +283,7 @@ scalar_value_t cast_single_value(scalar_value_t value, dtype_t target_dtype)
         break;
     default:
         new_val.dtype = DTYPE_UNKNOWN;
+        new_val.is_neg = 0;
         return new_val;
     }
 
@@ -290,38 +291,47 @@ scalar_value_t cast_single_value(scalar_value_t value, dtype_t target_dtype)
     {
     case DTYPE_FLOAT32:
         new_val.v.f32 = (float)temp_val;
+        new_val.is_neg = new_val.v.f32 < 0;
         break;
     case DTYPE_FLOAT64:
         new_val.v.f64 = (double)temp_val;
+        new_val.is_neg = new_val.v.f64 < 0;
         break;
     case DTYPE_INT32:
         new_val.v.i32 = (int32_t)temp_val;
+        new_val.is_neg = new_val.v.i32 < 0;
         break;
     case DTYPE_INT64:
         new_val.v.i64 = (int64_t)temp_val;
+        new_val.is_neg = new_val.v.i64 < 0;
         break;
     case DTYPE_INT8:
         new_val.v.i8 = (int8_t)temp_val;
+        new_val.is_neg = new_val.v.i8 < 0;
         break;
     case DTYPE_BOOL:
         new_val.v.b = (temp_val != 0);
+        new_val.is_neg = 0;
+
         break;
     default:
         new_val.dtype = DTYPE_UNKNOWN;
+        new_val.is_neg = 0;
         break;
     }
 
     return new_val;
 }
 
-dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op)
+dtype_t promote_scalar_for_arithmetic(dtype_t tensor_dtype, dtype_t scalar_dtype, operation_type_t op, int is_neg)
 {
-    if (op == OP_DIV || op == OP_POW)
+    if (op == OP_DIV || (op == OP_POW && is_neg == 1))
     {
         if (tensor_dtype == DTYPE_FLOAT64 || scalar_dtype == DTYPE_FLOAT64)
         {
             return DTYPE_FLOAT64;
         }
+
         return DTYPE_FLOAT32;
     }
 
@@ -407,30 +417,35 @@ int can_cast_unsafe(dtype_t from, dtype_t to)
 {
     if (from == to)
         return 1;
-    
+
     if (!dtype_is_numeric_or_bool(from) || !dtype_is_numeric_or_bool(to))
         return 0;
-    
-    if (from == DTYPE_BOOL || to == DTYPE_BOOL) {
+
+    if (from == DTYPE_BOOL || to == DTYPE_BOOL)
+    {
         return 1;
     }
-    
-    if (dtype_is_integer(from) && dtype_is_integer(to)) {
+
+    if (dtype_is_integer(from) && dtype_is_integer(to))
+    {
         return 1;
     }
-    
-    if (dtype_is_floating(from) && dtype_is_floating(to)) {
+
+    if (dtype_is_floating(from) && dtype_is_floating(to))
+    {
         return 1;
     }
-    
-    if (dtype_is_integer(from) && dtype_is_floating(to)) {
+
+    if (dtype_is_integer(from) && dtype_is_floating(to))
+    {
         return 1;
     }
-    
-    if (dtype_is_floating(from) && dtype_is_integer(to)) {
+
+    if (dtype_is_floating(from) && dtype_is_integer(to))
+    {
         return 1;
     }
-    
+
     return 0;
 }
 
@@ -438,48 +453,60 @@ int can_safely_cast_to(dtype_t from, dtype_t to)
 {
     if (from == to)
         return 1;
-    
-    if (from == DTYPE_BOOL) {
+
+    if (from == DTYPE_BOOL)
+    {
         return 1;
     }
 
-    if (dtype_is_floating(from) && dtype_is_integer(to)) {
+    if (dtype_is_floating(from) && dtype_is_integer(to))
+    {
         return 0;
     }
 
-    if (dtype_is_integer(from) && dtype_is_floating(to)) {
+    if (dtype_is_integer(from) && dtype_is_floating(to))
+    {
         size_t from_bits = dtype_size(from) * 8;
         size_t to_mantissa_bits;
-        
-        if (to == DTYPE_FLOAT32) to_mantissa_bits = 24;
-        else if (to == DTYPE_FLOAT64) to_mantissa_bits = 53;
-        else return 0;
-        
-        if (dtype_is_signed(from)) from_bits--;
-        
+
+        if (to == DTYPE_FLOAT32)
+            to_mantissa_bits = 24;
+        else if (to == DTYPE_FLOAT64)
+            to_mantissa_bits = 53;
+        else
+            return 0;
+
+        if (dtype_is_signed(from))
+            from_bits--;
+
         return from_bits <= to_mantissa_bits;
     }
 
-    if (dtype_is_integer(from) && dtype_is_integer(to)) {
+    if (dtype_is_integer(from) && dtype_is_integer(to))
+    {
         size_t from_bits = dtype_size(from) * 8;
         size_t to_bits = dtype_size(to) * 8;
-        
-        if (dtype_is_signed(from) == dtype_is_signed(to)) {
+
+        if (dtype_is_signed(from) == dtype_is_signed(to))
+        {
             return to_bits >= from_bits;
         }
-        
-        if (!dtype_is_signed(from) && dtype_is_signed(to)) {
+
+        if (!dtype_is_signed(from) && dtype_is_signed(to))
+        {
             return to_bits > from_bits;
         }
-        
-        if (dtype_is_signed(from) && !dtype_is_signed(to)) {
+
+        if (dtype_is_signed(from) && !dtype_is_signed(to))
+        {
             return 0;
         }
-        
+
         return 0;
     }
 
-    if (dtype_is_floating(from) && dtype_is_floating(to)) {
+    if (dtype_is_floating(from) && dtype_is_floating(to))
+    {
         size_t from_mantissa = (from == DTYPE_FLOAT32) ? 24 : 53;
         size_t to_mantissa = (to == DTYPE_FLOAT32) ? 24 : 53;
         return to_mantissa >= from_mantissa;

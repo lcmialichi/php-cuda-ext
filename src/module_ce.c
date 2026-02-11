@@ -574,7 +574,7 @@ static void module_ensure_context_set(cuda_module_object *module)
 {
     if (!module->cu_context)
         return;
-        
+
     CUcontext current = NULL;
     CUresult result = cuCtxGetCurrent(&current);
     if (result != CUDA_SUCCESS || current != module->cu_context)
@@ -666,7 +666,7 @@ static zend_bool module_validate_async_operation_count(cuda_module_object *modul
 {
     if (!module->stream_pool)
         return 0;
-        
+
     if (module->stream_pool->actives >= MAX_STREAM_POOL_SIZE)
     {
         return 0;
@@ -1059,7 +1059,7 @@ static zend_bool module_validate_launch_config(cuda_module_object *module, int g
         {
             return 0;
         }
-        
+
         cuDeviceGetAttribute(&max_threads, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, g_primary_device);
         cuDeviceGetAttribute(&max_block[0], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, g_primary_device);
         cuDeviceGetAttribute(&max_block[1], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, g_primary_device);
@@ -1117,7 +1117,7 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
         {
             CUcontext old_context = NULL;
             CUresult cu_result;
-            
+
             cu_result = cuCtxPushCurrent(op->context);
             if (cu_result != CUDA_SUCCESS)
             {
@@ -1125,9 +1125,9 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
                                  get_cuda_error_string(cu_result));
                 continue;
             }
-            
+
             CUresult query_result = cuStreamQuery(op->stream);
-            
+
             if (query_result == CUDA_SUCCESS)
             {
                 cuCtxPopCurrent(&old_context);
@@ -1139,24 +1139,24 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
                 module_log_error("Stream query error during timeout check: %s",
                                  get_cuda_error_string(query_result));
             }
-            
+
             double elapsed = current_time - op->start_time;
             if (elapsed > ASYNC_OP_TIMEOUT_MS)
             {
                 CUresult sync_result = cuStreamSynchronize(op->stream);
-                
+
                 if (sync_result != CUDA_SUCCESS)
                 {
                     module_log_error("Failed to synchronize stream after timeout: %s",
                                      get_cuda_error_string(sync_result));
                 }
-                
+
                 cuCtxPopCurrent(&old_context);
-                
+
                 module_cleanup_async_operation_by_id(module, op->id);
                 continue;
             }
-            
+
             cuCtxPopCurrent(&old_context);
         }
     }
@@ -1533,9 +1533,17 @@ ZEND_METHOD(CompiledModule, autoGrid)
         return;
     }
 
+    if (!module_ensure_cuda_initialized(module))
+    {
+        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        RETURN_FALSE;
+    }
+
     CUmodule cu_module = module_get_or_load_module_cached(module, kernel->name);
     if (!cu_module)
+    {
         return;
+    }
 
     CUfunction cu_func;
     CUresult res = cuModuleGetFunction(&cu_func, cu_module, kernel_name_str);
@@ -1844,7 +1852,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
     CUresult cu_result = cuCtxPushCurrent(module->cu_context);
     if (cu_result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0, 
+        zend_throw_exception_ex(NULL, 0,
                                 "Failed to set CUDA context for batch operations: %s",
                                 get_cuda_error_string(cu_result));
         RETURN_FALSE;
@@ -1996,9 +2004,9 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
     ZEND_HASH_FOREACH_END();
 
     cu_result = cuStreamSynchronize(batch_stream);
-    
+
     cuCtxPopCurrent(&old_context);
-    
+
     if (cu_result != CUDA_SUCCESS)
     {
         module_check_cuda_error(module, cu_result, "batch stream synchronization");

@@ -237,6 +237,35 @@ char *generate_cuda_headers(HashTable *cuda_headers)
     return result;
 }
 
+char *generate_device_functions() {
+    smart_string device_func = {0};
+
+    smart_string_appends(&device_func,
+        "template <typename T>\n"
+        "__device__ T* safe_ptr(size_t idx, Tensor<T> data, int* err) {\n"
+        "    if (idx >= data.size) { atomicExch(err, 1); return &data.ptr[0]; }\n"
+        "    return &data.ptr[idx];\n"
+        "}\n\n");
+
+    smart_string_appends(&device_func,
+        "template <typename T> __device__ inline T safe_sqrt(T v) {\n"
+        "    return (v < (T)0) ? (T)0 : sqrt(v);\n"
+        "}\n\n");
+
+    smart_string_appends(&device_func,
+        "template <typename T>\n"
+        "__device__ inline void atomic_add(T* addr, T val) {\n"
+        "    atomicAdd(addr, val);\n"
+        "}\n\n");
+
+    smart_string_appends(&device_func,
+        "#define MAX(a, b) ((a) > (b) ? (a) : (b))\n"
+        "#define MIN(a, b) ((a) < (b) ? (a) : (b))\n\n");
+
+    smart_string_0(&device_func);
+    return device_func.c;
+}
+
 static void destroy_local_variable(zval *zv)
 {
     if (Z_TYPE_P(zv) == IS_PTR)

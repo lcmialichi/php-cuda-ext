@@ -80,6 +80,7 @@ if test "$PHP_CUDA" != "no"; then
     PHP_SUBST(CUDA_SHARED_LIBADD)
     SRC_FILES="\
     src/cuda.c \
+    src/kernel_ce.c \
     src/number_ce.c \
     src/nvidia_types.c \
     src/cuda_wrapper.cpp \

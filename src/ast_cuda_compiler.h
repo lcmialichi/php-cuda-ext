@@ -34,9 +34,11 @@ typedef struct
     handler fn;
 } php_ast_handler;
 
+char *generate_device_functions();
+char *generate_cuda_headers(HashTable *cuda_headers);
+
 int compile_ast_as_valid_cuda(cuda_compilation_context_t *context, zend_ast *ast);
 int compile_ast_to_cuda_fn(cuda_compilation_context_t *context, zend_ast *ast);
-char *generate_cuda_headers(HashTable *cuda_headers);
 void free_cuda_context(cuda_compilation_context_t *context);
 cuda_compilation_context_t *create_cuda_context(
     func_parameter_list_t *parameters,

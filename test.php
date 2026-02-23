@@ -227,12 +227,26 @@ foreach ($ref->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
     $compiler->kernel([$kernels, $method->getName()]);
 }
 
-$module = $compiler->compile();
-Tensor::init($module);
+$kernel = new Cuda\Kernels(
+    kernels: [$kernels, 'add'],[$kernels, 'div'], [$kernels, 'mul']
+);
 
-$a = new CudaArray([1, 2, 3, 4, 5], dtype: 'int32');
-$b = new CudaArray([6, 7, 8, 9, 10], dtype: 'int32');
+$kernel = new Cuda\Kernel(function (RuntimeT $tensor, int $scalar){
+    
+})
 
-$result = ($b + $a) ** 2;
+$kernel->add(...);
+$kernel->div(...);
+$kernel->mul(...);
 
-var_dump($result->toArray());
+$compiler->compile();
+
+// $module = $compiler->compile();
+// Tensor::init($module);
+
+// $a = new CudaArray([1, 2, 3, 4, 5], dtype: 'int32');
+// $b = new CudaArray([6, 7, 8, 9, 10], dtype: 'int32');
+
+// $result = ($b + $a) ** 2;
+
+// var_dump($result->toArray());

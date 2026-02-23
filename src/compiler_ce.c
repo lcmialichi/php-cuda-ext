@@ -238,6 +238,9 @@ static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t 
     }
     ZEND_HASH_FOREACH_END();
 
+    char *device_funcs = generate_device_functions();
+    smart_string_appends(&program, device_funcs);
+
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
         if (kernel && kernel->name && kernel->cuda_code)

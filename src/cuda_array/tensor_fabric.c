@@ -7,6 +7,8 @@
 #include "factory_kernels.h"
 #include <stdbool.h>
 
+#define PINNED_TRANSFER_THRESHOLD_BYTES (1024 * 1024)
+
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
 static size_t calculate_total_size(zval *data);
@@ -413,58 +415,79 @@ tensor_t *resolve_result_tensor(tensor_t *t)
 
 static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int *index, size_t total_size, dtype_t dtype)
 {
-    void *pinned_host_data;
+    void *host_data;
     size_t el_size = dtype_size(dtype);
+    size_t total_bytes = total_size * el_size;
+    bool use_pinned_host = total_bytes >= PINNED_TRANSFER_THRESHOLD_BYTES;
 
-    cudaError_t status = cudaMallocHost(&pinned_host_data, total_size * el_size);
-    if (status != cudaSuccess)
-        return status;
+    if (el_size == 0)
+    {
+        return cudaErrorInvalidValue;
+    }
+
+    cudaError_t status = cudaSuccess;
+    if (use_pinned_host)
+    {
+        status = cudaMallocHost(&host_data, total_bytes);
+        if (status != cudaSuccess)
+            return status;
+    }
+    else
+    {
+        host_data = emalloc(total_bytes);
+    }
 
     int host_index = 0;
 
     switch (dtype)
     {
     case DTYPE_FLOAT32:
-        flatten_php_array_to_float32(data, (float *)pinned_host_data, &host_index);
+        flatten_php_array_to_float32(data, (float *)host_data, &host_index);
         break;
     case DTYPE_FLOAT64:
-        flatten_php_array_to_float64(data, (double *)pinned_host_data, &host_index);
+        flatten_php_array_to_float64(data, (double *)host_data, &host_index);
         break;
     case DTYPE_INT32:
-        flatten_php_array_to_int32(data, (int32_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int32(data, (int32_t *)host_data, &host_index);
         break;
     case DTYPE_INT8:
-        flatten_php_array_to_int8(data, (int8_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int8(data, (int8_t *)host_data, &host_index);
         break;
     case DTYPE_INT16:
-        flatten_php_array_to_int16(data, (int16_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int16(data, (int16_t *)host_data, &host_index);
         break;
     case DTYPE_INT64:
-        flatten_php_array_to_int64(data, (int64_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int64(data, (int64_t *)host_data, &host_index);
         break;
     case DTYPE_UINT8:
-        flatten_php_array_to_uint8(data, (uint8_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_uint8(data, (uint8_t *)host_data, &host_index);
         break;
     case DTYPE_UINT16:
-        flatten_php_array_to_uint16(data, (uint16_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_uint16(data, (uint16_t *)host_data, &host_index);
         break;
     case DTYPE_UINT32:
-        flatten_php_array_to_uint32(data, (uint32_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_uint32(data, (uint32_t *)host_data, &host_index);
         break;
     case DTYPE_UINT64:
-        flatten_php_array_to_uint64(data, (uint64_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_uint64(data, (uint64_t *)host_data, &host_index);
         break;
     case DTYPE_BOOL:
-        flatten_php_array_to__bool(data, (bool *)pinned_host_data, &host_index);
+        flatten_php_array_to__bool(data, (bool *)host_data, &host_index);
         break;
     default:
-        cudaFreeHost(pinned_host_data);
+        if (use_pinned_host)
+            cudaFreeHost(host_data);
+        else
+            efree(host_data);
         return cudaErrorInvalidValue;
     }
 
-    status = cudaMemcpy(gpu_data, pinned_host_data, total_size * el_size, cudaMemcpyHostToDevice);
+    status = cudaMemcpy(gpu_data, host_data, total_bytes, cudaMemcpyHostToDevice);
 
-    cudaFreeHost(pinned_host_data);
+    if (use_pinned_host)
+        cudaFreeHost(host_data);
+    else
+        efree(host_data);
     *index = host_index;
     return status;
 }

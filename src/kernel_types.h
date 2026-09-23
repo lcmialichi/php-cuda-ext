@@ -29,6 +29,8 @@ typedef struct _cached_ptx
 
 typedef struct _cuda_compiler_object
 {
+    char *global_source;
+    size_t global_source_len;
     zend_object std;
     char *target_device;
     int target_auto_detected;

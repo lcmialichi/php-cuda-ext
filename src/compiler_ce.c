@@ -27,6 +27,7 @@ static char *compute_program_hash(cuda_compiler_object *compiler);
 static func_parameter_list_t *create_parameter_list_from_array(HashTable *params_ht);
 static zend_bool add_headers_from_array(cuda_compiler_object *compiler, HashTable *headers_ht);
 static zend_bool add_header_string(cuda_compiler_object *compiler, zend_string *header);
+static zend_bool compiler_has_cuda_source(cuda_compiler_object *compiler);
 
 static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src);
 static int check_cuda_compatibility(cuda_compiler_object *compiler);
@@ -75,6 +76,11 @@ static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t 
     size_t estimated_size = 4096;
     cuda_kernel_data *kernel;
 
+    if (compiler->global_source)
+    {
+        estimated_size += compiler->global_source_len + 100;
+    }
+
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
         if (kernel->cuda_code)
@@ -105,6 +111,13 @@ static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t 
         }
     }
     ZEND_HASH_FOREACH_END();
+
+    if (compiler->global_source)
+    {
+        smart_string_appendl(&program, "\n// --- Global Source ---\n", strlen("\n// --- Global Source ---\n"));
+        smart_string_appendl(&program, compiler->global_source, compiler->global_source_len);
+        smart_string_appendl(&program, "\n// ---------------------\n\n", strlen("\n// ---------------------\n\n"));
+    }
 
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
@@ -147,6 +160,12 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
         }
     }
     ZEND_HASH_FOREACH_END();
+
+    if (compiler->global_source)
+    {
+        smart_string_appendl(&program_hash_content, compiler->global_source, compiler->global_source_len);
+        smart_string_appendc(&program_hash_content, ';');
+    }
 
     cuda_kernel_data *kernel;
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
@@ -386,7 +405,6 @@ static int check_cuda_compatibility(cuda_compiler_object *compiler)
 
     return 1;
 }
-
 static int validate_and_adjust_architecture(const char *desired_arch, int driver_version,
                                             char *compatible_arch, size_t buf_size)
 {
@@ -672,6 +690,26 @@ static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src)
     return dst;
 }
 
+static zend_bool compiler_has_cuda_source(cuda_compiler_object *compiler)
+{
+    if (compiler->global_source && compiler->global_source_len > 0)
+    {
+        return 1;
+    }
+
+    cuda_kernel_data *kernel;
+    ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
+    {
+        if (kernel && kernel->cuda_code && kernel->cuda_code[0] != '\0')
+        {
+            return 1;
+        }
+    }
+    ZEND_HASH_FOREACH_END();
+
+    return 0;
+}
+
 static zend_bool add_header_string(cuda_compiler_object *compiler, zend_string *header)
 {
     zend_ulong index = zend_hash_num_elements(compiler->headers);
@@ -900,20 +938,48 @@ ZEND_METHOD(Compiler, __construct)
     }
 }
 
+ZEND_METHOD(Compiler, addSource)
+{
+    zend_string *source;
+    cuda_compiler_object *compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STR(source)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (ZSTR_LEN(source) == 0)
+    {
+        zend_throw_exception_ex(NULL, 0, "CUDA source cannot be empty");
+        return;
+    }
+
+    if (compiler->global_source)
+    {
+        efree(compiler->global_source);
+    }
+
+    compiler->global_source = estrndup(ZSTR_VAL(source), ZSTR_LEN(source));
+    compiler->global_source_len = ZSTR_LEN(source);
+
+    zend_hash_clean(compiler->ptx_cache);
+
+    RETURN_ZVAL(getThis(), 1, 0);
+}
+
 ZEND_METHOD(Compiler, kernel)
 {
     cuda_compiler_object *compiler;
     zend_string *kernel_name;
-    zend_string *source;
+    zend_string *source = NULL;
     zval *parameters_zv = NULL;
     zval *headers_zv = NULL;
 
-    ZEND_PARSE_PARAMETERS_START(2, 4)
-    Z_PARAM_STR(kernel_name)
-    Z_PARAM_STR(source)
-    Z_PARAM_OPTIONAL
-    Z_PARAM_ARRAY(parameters_zv)
-    Z_PARAM_ARRAY(headers_zv)
+    ZEND_PARSE_PARAMETERS_START(1, 4)
+        Z_PARAM_STR(kernel_name)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_STR_OR_NULL(source)
+        Z_PARAM_ARRAY(parameters_zv)
+        Z_PARAM_ARRAY(headers_zv)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
@@ -921,12 +987,6 @@ ZEND_METHOD(Compiler, kernel)
     if (ZSTR_LEN(kernel_name) == 0)
     {
         zend_throw_exception_ex(NULL, 0, "Kernel name cannot be empty");
-        return;
-    }
-
-    if (ZSTR_LEN(source) == 0)
-    {
-        zend_throw_exception_ex(NULL, 0, "CUDA source cannot be empty");
         return;
     }
 
@@ -960,13 +1020,22 @@ ZEND_METHOD(Compiler, kernel)
     cuda_kernel_data *kernel = ecalloc(1, sizeof(cuda_kernel_data));
     kernel->name = zend_string_copy(kernel_name);
     kernel->parameters = params;
-    kernel->cuda_code = estrndup(ZSTR_VAL(source), ZSTR_LEN(source));
+    
+    if (source && ZSTR_LEN(source) > 0)
+    {
+        kernel->cuda_code = estrndup(ZSTR_VAL(source), ZSTR_LEN(source));
+    }
+    else
+    {
+        kernel->cuda_code = NULL;
+    }
 
     zend_hash_update_ptr(compiler->kernels, kernel_name, kernel);
     zend_hash_clean(compiler->ptx_cache);
 
     RETURN_ZVAL(getThis(), 1, 0);
 }
+
 
 ZEND_METHOD(Compiler, header)
 {
@@ -1014,6 +1083,12 @@ ZEND_METHOD(Compiler, compile)
     if (zend_hash_num_elements(compiler->kernels) == 0)
     {
         zend_throw_exception_ex(NULL, 0, "No CUDA kernels registered");
+        RETURN_NULL();
+    }
+
+    if (!compiler_has_cuda_source(compiler))
+    {
+        zend_throw_exception_ex(NULL, 0, "No CUDA source registered. Pass source to kernel() or call addSource() before compile().");
         RETURN_NULL();
     }
 
@@ -1235,6 +1310,13 @@ static void compiler_free_object(zend_object *object)
         efree(compiler->target_device);
         compiler->target_device = NULL;
     }
+    
+    if (compiler->global_source) 
+    {
+        efree(compiler->global_source);
+        compiler->global_source = NULL;
+    }
+
     if (compiler->kernels)
     {
 
@@ -1300,6 +1382,9 @@ static zend_object *compiler_create_object(zend_class_entry *class_type)
 
     compiler->kernels = (HashTable *)emalloc(sizeof(HashTable));
     zend_hash_init(compiler->kernels, 8, NULL, NULL, 0);
+
+    compiler->global_source = NULL;
+    compiler->global_source_len = 0;
 
     compiler->target_device = NULL;
     compiler->optimization_level = 2;

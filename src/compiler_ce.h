@@ -18,6 +18,7 @@ ZEND_METHOD(Compiler, kernel);
 ZEND_METHOD(Compiler, header);
 ZEND_METHOD(Compiler, compile);
 ZEND_METHOD(Compiler, getKernels);
+ZEND_METHOD(Compiler, addSource);
 ZEND_METHOD(Compiler, getCacheStats);
 ZEND_METHOD(Compiler, clearCache);
 

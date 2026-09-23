@@ -26,6 +26,7 @@
 #define LAUNCH_CACHE_SIZE 64
 #define BATCH_STREAM_TIMEOUT 1000
 #define ASYNC_OP_POOL_SIZE 32
+#define MODULE_CACHE_KEY "__cuda_module"
 
 extern zend_class_entry *cuda_array_ce;
 
@@ -81,7 +82,7 @@ static void module_expand_stream_pool_async(cuda_module_object *module);
 static void module_destroy_stream_pool(cuda_module_object *module);
 static zend_bool module_initialize_global_cuda(cuda_module_object *module);
 static void module_prepare_launch_config(zval *config_zv, int grid[3], int block[3]);
-static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
+static void module_cleanup_args_and_buffers(zval *args, int argc, void **cuda_args,
                                             void **temp_buffers, int temp_buffers_count);
 static zend_bool module_validate_async_operation_count(cuda_module_object *module);
 static zend_bool module_get_shared_context(cuda_module_object *module);
@@ -328,7 +329,7 @@ static void module_prepare_launch_config(zval *config_zv, int grid[3], int block
     }
 }
 
-static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
+static void module_cleanup_args_and_buffers(zval *args, int argc, void **cuda_args,
                                             void **temp_buffers, int temp_buffers_count)
 {
     if (temp_buffers)
@@ -347,7 +348,13 @@ static void module_cleanup_args_and_buffers(zval *args, void **cuda_args,
         efree(cuda_args);
 
     if (args)
+    {
+        for (int i = 0; i < argc; i++)
+        {
+            zval_ptr_dtor(&args[i]);
+        }
         efree(args);
+    }
 }
 
 static zend_bool module_initialize_global_cuda(cuda_module_object *module)
@@ -1018,7 +1025,7 @@ static void module_cleanup_cuda_resources(cuda_module_object *module)
 
 static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zend_string *kernel_name)
 {
-    CUmodule *cached_module = (CUmodule *)zend_hash_find_ptr(module->loaded_modules, kernel_name);
+    CUmodule *cached_module = (CUmodule *)zend_hash_str_find_ptr(module->loaded_modules, MODULE_CACHE_KEY, sizeof(MODULE_CACHE_KEY) - 1);
     if (cached_module)
     {
         return *cached_module;
@@ -1047,7 +1054,7 @@ static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zen
     CUmodule *module_ptr = (CUmodule *)emalloc(sizeof(CUmodule));
     *module_ptr = cu_module;
 
-    if (zend_hash_add_ptr(module->loaded_modules, kernel_name, module_ptr) == NULL)
+    if (zend_hash_str_add_ptr(module->loaded_modules, MODULE_CACHE_KEY, sizeof(MODULE_CACHE_KEY) - 1, module_ptr) == NULL)
     {
         efree(module_ptr);
         cuModuleUnload(cu_module);
@@ -1463,7 +1470,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
     }
     else
     {
-        module_cleanup_args_and_buffers(NULL, cuda_args, temp_gpu_buffers, temp_buffers_count);
+        module_cleanup_args_and_buffers(NULL, 0, cuda_args, temp_gpu_buffers, temp_buffers_count);
     }
 
     return valid;
@@ -1706,7 +1713,7 @@ ZEND_METHOD(CompiledModule, launch)
                                 ZSTR_VAL(kernel_name),
                                 expected_args, argc);
         if (args)
-            efree(args);
+            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
         RETURN_FALSE;
     }
 
@@ -1724,7 +1731,7 @@ ZEND_METHOD(CompiledModule, launch)
     {
         if (args)
         {
-            efree(args);
+            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
         }
 
         RETURN_FALSE;
@@ -1753,7 +1760,7 @@ ZEND_METHOD(CompiledModule, launch)
         }
     }
 
-    module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+    module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
     RETURN_BOOL(success);
 }
 
@@ -1832,7 +1839,7 @@ ZEND_METHOD(CompiledModule, launchAsync)
                                 expected_args, argc);
         if (args)
         {
-            efree(args);
+            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
         }
         RETURN_FALSE;
     }
@@ -1851,7 +1858,7 @@ ZEND_METHOD(CompiledModule, launchAsync)
     {
         if (args)
         {
-            efree(args);
+            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
         }
         RETURN_FALSE;
     }
@@ -1860,14 +1867,14 @@ ZEND_METHOD(CompiledModule, launchAsync)
                                               temp_buffers_count, grid, block, argc);
     if (!op_id)
     {
-        module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+        module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
         RETURN_FALSE;
     }
 
     cuda_async_operation *op = zend_hash_index_find_ptr(module->async_operations, op_id);
     if (!op)
     {
-        module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+        module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
         RETURN_FALSE;
     }
 
@@ -1876,7 +1883,7 @@ ZEND_METHOD(CompiledModule, launchAsync)
                                                    cuda_args, argc, op->stream);
 
     if (args)
-        efree(args);
+        module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
 
     if (success)
     {
@@ -1990,7 +1997,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         if (expected_args != argc)
         {
             if (args)
-                efree(args);
+                module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
             op_index++;
@@ -2010,7 +2017,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         if (!args_prepared)
         {
             if (args)
-                efree(args);
+                module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
             op_index++;
@@ -2020,7 +2027,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         CUmodule cu_module = module_get_or_load_module_cached(module, kernel_name);
         if (!cu_module)
         {
-            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+            module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
             op_index++;
@@ -2030,7 +2037,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         CUfunction cu_function;
         if (cuModuleGetFunction(&cu_function, cu_module, ZSTR_VAL(kernel_name)) != CUDA_SUCCESS)
         {
-            module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+            module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
             op_index++;
@@ -2045,7 +2052,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
                                    cuda_args,
                                    NULL);
 
-        module_cleanup_args_and_buffers(args, cuda_args, temp_gpu_buffers, temp_buffers_count);
+        module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
 
         if (cu_result == CUDA_SUCCESS)
         {

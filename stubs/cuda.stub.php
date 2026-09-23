@@ -14,7 +14,12 @@ class Compiler
         bool $fastMath = true,
     ) {}
 
-    public function kernel(string $name, string $source, array $parameters = [], array $headers = []): static
+    public function addSource(string $source): static
+    {
+        return $this;
+    }
+
+    public function kernel(string $name, ?string $source = null, array $parameters = [], array $headers = []): static
     {
         return $this;
     }
@@ -114,7 +119,6 @@ class CompiledModule
     {
         return 0;
     }
-
 
     public function hasKernel(string $kernel): bool
     {

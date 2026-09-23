@@ -72,6 +72,12 @@ static void php_cuda_build_recursive(zval *result, void *data, int dim, tensor_t
             case DTYPE_UINT16:
                 ZVAL_LONG(&val, (zend_long)((uint16_t *)data)[child_offset]);
                 break;
+            case DTYPE_UINT32:
+                ZVAL_LONG(&val, (zend_long)((uint32_t *)data)[child_offset]);
+                break;
+            case DTYPE_UINT64:
+                ZVAL_LONG(&val, (zend_long)((uint64_t *)data)[child_offset]);
+                break;
             case DTYPE_BOOL:
                 ZVAL_BOOL(&val, ((bool *)data)[child_offset]);
                 break;
@@ -133,6 +139,130 @@ ZEND_METHOD(CudaArray, __construct)
     }
 
     tensor->dtype = dtype;
+    obj->tensor_handle = tensor;
+    sync_php_object_shape(obj, tensor);
+}
+
+ZEND_METHOD(CudaArray, __serialize)
+{
+    cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
+    tensor_t *tensor = obj->tensor_handle;
+
+    if (tensor->is_view)
+    {
+        zend_throw_error(NULL, "Cannot serialize non-contiguous CudaArray views");
+        RETURN_THROWS();
+    }
+
+    size_t data_size = tensor->total_size * tensor->element_size;
+    char *host_data = emalloc(data_size);
+
+    cudaError_t status = cudaMemcpy(host_data, tensor->data, data_size, cudaMemcpyDeviceToHost);
+    if (status != cudaSuccess)
+    {
+        efree(host_data);
+        zend_throw_error(NULL, "CUDA error copying serialized data to host: %s", cudaGetErrorString(status));
+        RETURN_THROWS();
+    }
+
+    array_init(return_value);
+    add_assoc_stringl(return_value, "__cuda_array_v1", "1", 1);
+    add_assoc_long(return_value, "ndims", tensor->ndims);
+    add_assoc_string(return_value, "dtype", dtype_to_string(tensor->dtype));
+    add_assoc_long(return_value, "total_elements", tensor->total_size);
+    add_assoc_long(return_value, "element_size", tensor->element_size);
+
+    zval shape_array;
+    array_init(&shape_array);
+    for (int i = 0; i < tensor->ndims; i++)
+    {
+        add_next_index_long(&shape_array, tensor->shape[i]);
+    }
+    add_assoc_zval(return_value, "shape", &shape_array);
+
+    add_assoc_stringl(return_value, "data", host_data, data_size);
+    efree(host_data);
+}
+
+ZEND_METHOD(CudaArray, __unserialize)
+{
+    HashTable *data;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_ARRAY_HT(data)
+    ZEND_PARSE_PARAMETERS_END();
+
+    zval *version = zend_hash_str_find(data, "__cuda_array_v1", sizeof("__cuda_array_v1") - 1);
+    if (!version)
+    {
+        zend_throw_error(NULL, "Invalid serialized CudaArray payload");
+        RETURN_THROWS();
+    }
+
+    zval *ndims_zv = zend_hash_str_find(data, "ndims", sizeof("ndims") - 1);
+    zval *dtype_zv = zend_hash_str_find(data, "dtype", sizeof("dtype") - 1);
+    zval *shape_zv = zend_hash_str_find(data, "shape", sizeof("shape") - 1);
+    zval *data_zv = zend_hash_str_find(data, "data", sizeof("data") - 1);
+
+    if (!ndims_zv || Z_TYPE_P(ndims_zv) != IS_LONG ||
+        !dtype_zv || Z_TYPE_P(dtype_zv) != IS_STRING ||
+        !shape_zv || Z_TYPE_P(shape_zv) != IS_ARRAY ||
+        !data_zv || Z_TYPE_P(data_zv) != IS_STRING)
+    {
+        zend_throw_error(NULL, "Malformed serialized CudaArray payload");
+        RETURN_THROWS();
+    }
+
+    int ndims = (int)Z_LVAL_P(ndims_zv);
+    if (ndims <= 0 || ndims > MAX_DIMS || zend_hash_num_elements(Z_ARRVAL_P(shape_zv)) != (uint32_t)ndims)
+    {
+        zend_throw_error(NULL, "Invalid serialized CudaArray shape");
+        RETURN_THROWS();
+    }
+
+    dtype_t dtype = dtype_from_string(Z_STRVAL_P(dtype_zv));
+    if (dtype == DTYPE_UNKNOWN || dtype >= DTYPE_COUNT)
+    {
+        zend_throw_error(NULL, "Invalid serialized CudaArray dtype: %s", Z_STRVAL_P(dtype_zv));
+        RETURN_THROWS();
+    }
+
+    int shape[MAX_DIMS] = {0};
+    size_t total_elements = 1;
+    int i = 0;
+    zval *dim_zv;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(shape_zv), dim_zv)
+    {
+        zend_long dim = zval_get_long(dim_zv);
+        if (dim <= 0)
+        {
+            zend_throw_error(NULL, "Invalid serialized CudaArray dimension");
+            RETURN_THROWS();
+        }
+        shape[i++] = (int)dim;
+        total_elements *= (size_t)dim;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    size_t expected_size = total_elements * dtype_size(dtype);
+    if (Z_STRLEN_P(data_zv) != expected_size)
+    {
+        zend_throw_error(NULL, "Serialized CudaArray data size mismatch: expected %zu bytes, got %zu", expected_size, Z_STRLEN_P(data_zv));
+        RETURN_THROWS();
+    }
+
+    tensor_t *tensor = cuda_tensor_create_from_host_buffer(shape, ndims, dtype, Z_STRVAL_P(data_zv), Z_STRLEN_P(data_zv));
+    if (!tensor)
+    {
+        RETURN_THROWS();
+    }
+
+    cuda_array_obj *obj = php_cuda_array_fetch_object(Z_OBJ_P(ZEND_THIS));
+    if (obj->tensor_handle)
+    {
+        cuda_tensor_destroy(obj->tensor_handle);
+    }
+
     obj->tensor_handle = tensor;
     sync_php_object_shape(obj, tensor);
 }

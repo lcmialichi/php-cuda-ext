@@ -378,9 +378,6 @@ ZEND_METHOD(ContiguousArray, __unserialize)
         RETURN_NULL();
     }
 
-    void *array_data = safe_emalloc(total_elements, element_size, 0);
-    memcpy(array_data, Z_STRVAL_P(data_zv), total_elements * element_size);
-
     contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
     if (obj->tensor)
     {
@@ -388,30 +385,12 @@ ZEND_METHOD(ContiguousArray, __unserialize)
         obj->tensor = NULL;
     }
 
-    if (obj->tensor)
-    {
-        if (obj->tensor->data && obj->tensor->data != array_data)
-        {
-            efree(obj->tensor->data);
-        }
-        efree(obj->tensor);
-        obj->tensor = NULL;
-    }
+    obj->shape = NULL;
+    obj->strides = NULL;
+    obj->cached_data_ptr = NULL;
 
-    if (obj->shape && obj->shape != obj->tensor->shape)
-    {
-        efree(obj->shape);
-    }
-
-    if (obj->strides && obj->strides != obj->tensor->strides)
-    {
-        efree(obj->strides);
-    }
-
-    if (obj->cached_data_ptr && obj->cached_data_ptr != obj->tensor->data)
-    {
-        efree(obj->cached_data_ptr);
-    }
+    void *array_data = safe_emalloc(total_elements, element_size, 0);
+    memcpy(array_data, Z_STRVAL_P(data_zv), total_elements * element_size);
 
     tensor_t *tensor = cuda_tensor_create_on_host(shape, ndims, array_data, dtype);
     efree(array_data);
@@ -420,7 +399,6 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     {
         efree(shape);
         efree(strides);
-        efree(array_data);
         zend_throw_exception(NULL, "Failed to create tensor", 0);
         RETURN_NULL();
     }
@@ -450,15 +428,14 @@ ZEND_METHOD(ContiguousArray, toArray)
 ZEND_METHOD(ContiguousArray, toGpu)
 {
     contiguous_array_object *obj = contiguous_array_from_obj(Z_OBJ_P(getThis()));
-    tensor_t *host_tensor = (tensor_t *)emalloc(sizeof(tensor_t));
-    if (!host_tensor)
+    tensor_t *tensor = obj->tensor;
+    size_t data_size = tensor->total_size * tensor->element_size;
+    tensor_t *gpu_tensor = cuda_tensor_create_from_host_buffer(tensor->shape, tensor->ndims, tensor->dtype, tensor->data, data_size);
+    if (!gpu_tensor)
     {
-        zend_throw_error(NULL, "Failed to allocate tensor structure");
-        RETURN_NULL();
+        RETURN_THROWS();
     }
 
-    tensor_t *tensor = obj->tensor;
-    tensor_t *gpu_tensor = cuda_tensor_create(tensor->shape, tensor->ndims, tensor->data, tensor->dtype);
     zend_string *cuda_array_name = zend_string_init("Cuda\\CudaArray",
                                                     strlen("Cuda\\CudaArray"), 0);
 

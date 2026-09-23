@@ -4,6 +4,8 @@
 #include "php.h"
 #include "zend_compile.h"
 #include "data_types.h"
+#include <pthread.h>
+#include <time.h>
 #include <nvrtc.h>
 #include <cuda.h>
 

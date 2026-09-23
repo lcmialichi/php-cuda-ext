@@ -80,6 +80,7 @@ if test "$PHP_CUDA" != "no"; then
     PHP_SUBST(CUDA_SHARED_LIBADD)
     SRC_FILES="\
     src/cuda.c \
+    src/kernel_ce.c \
     src/number_ce.c \
     src/nvidia_types.c \
     src/cuda_wrapper.cpp \
@@ -91,13 +92,8 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda/memory_pool.c \
     src/cuda_array/tensor_fabric.c \
     src/operations.c \
-    src/cuda_attributes.c \
-    src/kernel_reflection.c \
     src/compiler_ce.c \
-    src/module_ce.c \
-    src/ast_cuda_builtins.c \
-    src/ast_cuda_compiler.c \
-    src/cuda_param.c"
+    src/module_ce.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
     PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)

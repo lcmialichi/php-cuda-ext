@@ -205,10 +205,22 @@ static const char *module_dtype_to_string(dtype_t dtype)
         return "float32";
     case DTYPE_FLOAT64:
         return "float64";
+    case DTYPE_INT8:
+        return "int8";
+    case DTYPE_INT16:
+        return "int16";
     case DTYPE_INT32:
         return "int32";
     case DTYPE_INT64:
         return "int64";
+    case DTYPE_UINT8:
+        return "uint8";
+    case DTYPE_UINT16:
+        return "uint16";
+    case DTYPE_UINT32:
+        return "uint32";
+    case DTYPE_UINT64:
+        return "uint64";
     case DTYPE_BOOL:
         return "bool";
     case DTYPE_LIST:
@@ -1345,12 +1357,52 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
         {
             switch (param->dtype)
             {
-            case DTYPE_INT32:
+            case DTYPE_INT8:
             {
-                int *int_ptr = (int *)emalloc(sizeof(int));
-                *int_ptr = (int)zval_get_long(arg);
+                int8_t *int_ptr = (int8_t *)emalloc(sizeof(int8_t));
+                *int_ptr = (int8_t)zval_get_long(arg);
                 cuda_args[i] = int_ptr;
                 temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                break;
+            }
+            case DTYPE_INT16:
+            {
+                int16_t *int_ptr = (int16_t *)emalloc(sizeof(int16_t));
+                *int_ptr = (int16_t)zval_get_long(arg);
+                cuda_args[i] = int_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                break;
+            }
+            case DTYPE_INT32:
+            {
+                int32_t *int_ptr = (int32_t *)emalloc(sizeof(int32_t));
+                *int_ptr = (int32_t)zval_get_long(arg);
+                cuda_args[i] = int_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                break;
+            }
+            case DTYPE_UINT8:
+            {
+                uint8_t *uint_ptr = (uint8_t *)emalloc(sizeof(uint8_t));
+                *uint_ptr = (uint8_t)zval_get_long(arg);
+                cuda_args[i] = uint_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = uint_ptr;
+                break;
+            }
+            case DTYPE_UINT16:
+            {
+                uint16_t *uint_ptr = (uint16_t *)emalloc(sizeof(uint16_t));
+                *uint_ptr = (uint16_t)zval_get_long(arg);
+                cuda_args[i] = uint_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = uint_ptr;
+                break;
+            }
+            case DTYPE_UINT32:
+            {
+                uint32_t *uint_ptr = (uint32_t *)emalloc(sizeof(uint32_t));
+                *uint_ptr = (uint32_t)zval_get_long(arg);
+                cuda_args[i] = uint_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = uint_ptr;
                 break;
             }
             case DTYPE_FLOAT32:
@@ -1371,10 +1423,18 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
             }
             case DTYPE_INT64:
             {
-                zend_long *long_ptr = (zend_long *)emalloc(sizeof(zend_long));
-                *long_ptr = zval_get_long(arg);
+                int64_t *long_ptr = (int64_t *)emalloc(sizeof(int64_t));
+                *long_ptr = (int64_t)zval_get_long(arg);
                 cuda_args[i] = long_ptr;
                 temp_gpu_buffers[temp_buffers_count++] = long_ptr;
+                break;
+            }
+            case DTYPE_UINT64:
+            {
+                uint64_t *ulong_ptr = (uint64_t *)emalloc(sizeof(uint64_t));
+                *ulong_ptr = (uint64_t)zval_get_long(arg);
+                cuda_args[i] = ulong_ptr;
+                temp_gpu_buffers[temp_buffers_count++] = ulong_ptr;
                 break;
             }
             case DTYPE_BOOL:
@@ -2399,6 +2459,7 @@ ZEND_METHOD(CompiledModule, __serialize)
             array_init(&kernel_data);
 
             add_assoc_str(&kernel_data, "name", zend_string_copy(kernel->name));
+            add_assoc_long(&kernel_data, "params_count", kernel->parameters ? kernel->parameters->total : 0);
 
             if (kernel->parameters && kernel->parameters->total > 0)
             {
@@ -2420,7 +2481,6 @@ ZEND_METHOD(CompiledModule, __serialize)
                 ZSTR_VAL(params_blob)
                 [total_bytes] = '\0';
                 add_assoc_str(&kernel_data, "params_blob", params_blob);
-                add_assoc_long(&kernel_data, "params_count", kernel->parameters->total);
             }
 
             zend_hash_update(Z_ARRVAL(kernels_zv), key, &kernel_data);
@@ -2464,20 +2524,34 @@ ZEND_METHOD(CompiledModule, __unserialize)
             cuda_kernel_data *k = ecalloc(1, sizeof(cuda_kernel_data));
 
             zval *name_zv = zend_hash_str_find(Z_ARRVAL_P(kernel_entry), "name", sizeof("name") - 1);
-            if (name_zv)
-                k->name = zend_string_copy(Z_STR_P(name_zv));
+            if (!name_zv || Z_TYPE_P(name_zv) != IS_STRING)
+            {
+                efree(k);
+                continue;
+            }
+
+            k->name = zend_string_copy(Z_STR_P(name_zv));
 
             zval *blob_zv = zend_hash_str_find(Z_ARRVAL_P(kernel_entry), "params_blob", sizeof("params_blob") - 1);
             zval *count_zv = zend_hash_str_find(Z_ARRVAL_P(kernel_entry), "params_count", sizeof("params_count") - 1);
 
-            if (blob_zv && count_zv && Z_TYPE_P(blob_zv) == IS_STRING)
+            uint32_t count = count_zv ? (uint32_t)zval_get_long(count_zv) : 0;
+            k->parameters = ecalloc(1, sizeof(func_parameter_list_t));
+            k->parameters->total = count;
+
+            if (count > 0)
             {
-                uint32_t count = (uint32_t)zval_get_long(count_zv);
-                k->parameters = ecalloc(1, sizeof(func_parameter_list_t));
-                k->parameters->total = count;
+                size_t p_size = sizeof(func_parameter);
+                size_t expected_size = (size_t)count * p_size;
+
+                if (!blob_zv || Z_TYPE_P(blob_zv) != IS_STRING || Z_STRLEN_P(blob_zv) != expected_size)
+                {
+                    free_kernel_data(k);
+                    continue;
+                }
+
                 k->parameters->parameters = ecalloc(count, sizeof(func_parameter *));
 
-                size_t p_size = sizeof(func_parameter);
                 char *src_ptr = Z_STRVAL_P(blob_zv);
 
                 for (uint32_t i = 0; i < count; i++)

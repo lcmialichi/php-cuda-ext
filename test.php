@@ -1,238 +1,251 @@
 <?php
 
-use Cuda\CudaArray;
 use Cuda\Compiler;
-use Cuda\Attr;
-use Cuda\CompiledModule;
+use Cuda\CudaArray;
 
-class kernels
+function fail(string $message): never
 {
-    #[Attr\Kernel(name: 'add')]
-    public function add(
-        #[attr\TensorType(dtype: 'int32')] $tensor,
-        #[attr\TensorType(dtype: 'int32')] $secondTensor,
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx] = $tensor[$idx] + $secondTensor[$idx];
-        }
-    }
+    throw new RuntimeException($message);
+}
 
-
-    #[Attr\Kernel(name: 'div')]
-    public function div(
-        #[attr\TensorType(dtype: 'int32')] $tensor,
-        #[attr\TensorType(dtype: 'int32')] $secondTensor,
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx] = $tensor[$idx] / $secondTensor[$idx];
-        }
-    }
-
-    #[Attr\Kernel(name: 'sub')]
-    public function sub(
-        #[attr\TensorType(dtype: 'int32')] $tensor,
-        #[attr\TensorType(dtype: 'int32')] $secondTensor,
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx] = $tensor[$idx] - $secondTensor[$idx];
-        }
-    }
-
-    #[Attr\Kernel(name: 'mul')]
-    public function mul(
-        #[attr\TensorType(dtype: 'int32')] $tensor,
-        #[attr\TensorType(dtype: 'int32')] $secondTensor,
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx] = $tensor[$idx] * $secondTensor[$idx];
-        }
-    }
-
-
-    #[Attr\Kernel(name: 'powk')]
-    public function pow(
-        #[attr\TensorType(dtype: 'int32')] $tensor,
-        #[attr\TensorType(dtype: 'int32')] $secondTensor,
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx] = $cuda->math->pow($tensor[$idx], $secondTensor[$idx]);
-        }
-    }
-
-    #[Attr\Kernel(name: 'inc')]
-    public function inc(
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx]++;
-        }
-    }
-
-    #[Attr\Kernel(name: 'dec')]
-    public function dec(
-        #[attr\TensorType(dtype: 'int32')] &$result,
-        #[attr\IntType] $size
-    ): void {
-        /** @var Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-        if ($idx < $size) {
-            $result[$idx]--;
-        }
+function assertTrue(bool $condition, string $message): void
+{
+    if (!$condition) {
+        fail($message);
     }
 }
 
-class Tensor extends Cuda\Number
+function assertArrayClose(array $actual, array $expected, float $epsilon, string $label): void
 {
-    private CudaArray $data;
-    private static CompiledModule $handler;
+    assertTrue(count($actual) === count($expected), "$label: array length mismatch");
 
-    public function __construct(array|CudaArray $data, string $dtype = 'float32')
-    {
-        $this->data = $data instanceof CudaArray ? $data : new CudaArray($data, $dtype);
-    }
-
-    public function data(): CudaArray
-    {
-        return $this->data;
-    }
-
-    public static function init(CompiledModule $handler): void
-    {
-        self::$handler = $handler;
-    }
-
-    public function __inc(): void
-    {
-        $this->launchUnary('inc', $this->data);
-    }
-
-    public function __dec(): void
-    {
-        $this->launchUnary('dec', $this->data);
-    }
-
-    public function __add(mixed $left, mixed $right): static
-    {
-        return $this->launchBinary('add', $left, $right);
-    }
-
-    public function __sub(mixed $left, mixed $right): static
-    {
-        return $this->launchBinary('asubd', $left, $right);
-    }
-
-    public function __mul(mixed $left, mixed $right): static
-    {
-        return $this->launchBinary('mul', $left, $right);
-    }
-
-    public function __div(mixed $left, mixed $right): static
-    {
-        return $this->launchBinary('div', $left, $right);
-    }
-    public function __mod(mixed $left, mixed $right): mixed
-    {
-        throw new RuntimeException("Operation not implemented");
-    }
-
-    public function __pow(mixed $left, mixed $right): mixed
-    {
-        return $this->launchBinary('powk', $left, $right);
-    }
-
-    public function getShape(): array
-    {
-        return $this->data->getShape();
-    }
-
-    public function getSize(): int
-    {
-        return $this->data->getSize();
-    }
-
-    public function dtype(): string
-    {
-        return $this->data->dtype();
-    }
-
-    public function toArray(): array
-    {
-        return $this->data->toArray();
-    }
-
-    private function launchUnary(string $kernel,  CudaArray $value): static
-    {
-        self::$handler->launch(
-            name: $kernel,
-            config: self::$handler->autoGrid($kernel, $value),
-            args: [$value, $value->getSize()]
-        );
-
-        return new static($value, $this->data->dtype());
-    }
-
-    private function launchBinary(string $kernel, Tensor|int|float $first, Tensor|int|float $second): static
-    {
-        $first = !$first instanceof Tensor
-            ? CudaArray::full($second->getShape(), $first,  dtype: $second->dtype())
-            : $first->data();
-
-        $second = !$second instanceof Tensor
-            ? CudaArray::full($first->getShape(), $second, dtype: $first->dtype())
-            :   $second->data();
-
-        if ($second->getShape() != $first->getShape()) {
-            throw new \RuntimeException("Invalid shape.");
+    foreach ($expected as $index => $expectedValue) {
+        $actualValue = $actual[$index];
+        if (is_bool($expectedValue)) {
+            assertTrue($actualValue === $expectedValue, "{$label}[$index]: expected bool value");
+            continue;
         }
 
-        $result = CudaArray::zeros($this->data->getShape(), $this->data->dtype());
-        self::$handler->launchAsync(
-            name: $kernel,
-            config: self::$handler->autoGrid($kernel, $first),
-            args: [$first, $second, $result, $result->getSize()],
-        );
-
-        return new static($result);
+        assertTrue(abs((float) $actualValue - (float) $expectedValue) <= $epsilon, "{$label}[$index]: expected $expectedValue, got $actualValue");
     }
 }
+
+function millis(float $start): float
+{
+    return (microtime(true) - $start) * 1000.0;
+}
+
+$dtypeCases = [
+    'float32' => [[1.25, -2.5, 3.75], 1e-5],
+    'float64' => [[1.25, -2.5, 3.75], 1e-9],
+    'int8' => [[-8, 0, 7], 0.0],
+    'int16' => [[-1024, 0, 2048], 0.0],
+    'int32' => [[-100000, 0, 100000], 0.0],
+    'int64' => [[-10000000000, 0, 10000000000], 0.0],
+    'uint8' => [[0, 8, 255], 0.0],
+    'uint16' => [[0, 1024, 65535], 0.0],
+    'uint32' => [[0, 65536, 2147483647], 0.0],
+    'uint64' => [[0, 65536, 2147483647], 0.0],
+    'bool' => [[false, true, true], 0.0],
+];
+
+foreach ($dtypeCases as $dtype => [$values, $epsilon]) {
+    $array = new CudaArray($values, $dtype);
+    assertTrue($array->dtype() === $dtype, "dtype() mismatch for $dtype");
+    assertArrayClose($array->toArray(), $values, $epsilon, "toArray($dtype)");
+}
+
+echo "CudaArray dtype round-trip OK\n";
 
 $compiler = new Compiler();
-$kernels = new Kernels();
 
-$ref = new ReflectionClass($kernels);
-foreach ($ref->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
-    $compiler->kernel([$kernels, $method->getName()]);
+$kernelSource = <<<'CUDA'
+extern "C" __global__ void logistic_regression_step(
+    const float *x,
+    const float *y,
+    float *w,
+    float *pred,
+    float *loss,
+    int n,
+    int d,
+    float lr)
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= n) {
+        return;
+    }
+
+    float z = w[d];
+    for (int col = 0; col < d; col++) {
+        z += x[row * d + col] * w[col];
+    }
+
+    float p = 1.0f / (1.0f + expf(-z));
+    pred[row] = p;
+
+    float target = y[row];
+    float clipped = fminf(fmaxf(p, 1.0e-6f), 1.0f - 1.0e-6f);
+    loss[row] = -(target * logf(clipped) + (1.0f - target) * logf(1.0f - clipped));
+
+    float scale = lr * (p - target) / (float)n;
+    for (int col = 0; col < d; col++) {
+        atomicAdd(&w[col], -scale * x[row * d + col]);
+    }
+    atomicAdd(&w[d], -scale);
+}
+CUDA;
+
+$compiler->kernel(
+    'logistic_regression_step',
+    $kernelSource,
+    [
+        ['name' => 'x', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'y', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'w', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'pred', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'loss', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'n', 'dtype' => 'int32'],
+        ['name' => 'd', 'dtype' => 'int32'],
+        ['name' => 'lr', 'dtype' => 'float32'],
+    ]
+);
+
+$compileStart = microtime(true);
+$module = $compiler->compile();
+$compileMs = millis($compileStart);
+
+$serialized = serialize($module);
+$unserializeStart = microtime(true);
+$module = unserialize($serialized);
+$unserializeMs = millis($unserializeStart);
+
+assertTrue($module->hasKernel('logistic_regression_step'), 'unserialized module lost kernel metadata');
+assertTrue(is_string($module->getPtx()) && str_contains($module->getPtx(), '.version'), 'unserialized module lost PTX');
+
+echo sprintf(
+    "Compiled module in %.2f ms; unserialized cached PTX in %.2f ms; serialized size=%d bytes\n",
+    $compileMs,
+    $unserializeMs,
+    strlen($serialized)
+);
+
+// Define a test runner to verify module functionality
+function runLogisticRegressionTest($module, string $testLabel) {
+    $n = 4;
+    $d = 2;
+    $x = new CudaArray([
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
+    ], 'float32');
+
+    $y = new CudaArray([0.0, 1.0, 1.0, 1.0], 'float32');
+    $weights = CudaArray::zeros([$d + 1], 'float32');
+    $pred = CudaArray::zeros([$n], 'float32');
+    $loss = CudaArray::zeros([$n], 'float32');
+    $config = $module->autoGrid('logistic_regression_step', $n);
+
+    for ($epoch = 0; $epoch < 250; $epoch++) {
+        $module->launch('logistic_regression_step', $config, [$x, $y, $weights, $pred, $loss, $n, $d, 0.8]);
+    }
+
+    $predictions = $pred->toArray();
+    $trainedWeights = $weights->toArray();
+    $lossValues = $loss->toArray();
+    $meanLoss = array_sum($lossValues) / count($lossValues);
+
+    assertTrue($predictions[0] < 0.55, "[$testLabel] logistic regression should keep [0,0] near the negative class");
+    assertTrue($predictions[1] > 0.70, "[$testLabel] logistic regression should classify [0,1] as positive");
+    assertTrue($predictions[2] > 0.70, "[$testLabel] logistic regression should classify [1,0] as positive");
+    assertTrue($predictions[3] > 0.90, "[$testLabel] logistic regression should classify [1,1] as strongly positive");
+    assertTrue($meanLoss < 0.35, "[$testLabel] expected trained mean loss below 0.35, got $meanLoss");
+
+    echo "[$testLabel] Logistic regression predictions: " . json_encode($predictions) . "\n";
+    echo "[$testLabel] Trained weights: " . json_encode($trainedWeights) . "\n";
+    echo sprintf("[%s] Mean loss: %.6f\n", $testLabel, $meanLoss);
+    echo "[$testLabel] Sanity check passed.\n\n";
 }
 
-$module = $compiler->compile();
-Tensor::init($module);
+// Run initial sanity check
+runLogisticRegressionTest($module, 'Initial Load');
 
-$a = new CudaArray([1, 2, 3, 4, 5], dtype: 'int32');
-$b = new CudaArray([6, 7, 8, 9, 10], dtype: 'int32');
 
-$result = ($b + $a) ** 2;
+echo "--- Starting JIT Compilation vs Deserialization Benchmark ---\n";
 
-var_dump($result->toArray());
+$benchmarkIterations = 50;
+$compileTimes = [];
+$deserializeTimes = [];
+$testModuleCompile = null;
+
+// 1. Pure Compilation Benchmark (NVRTC + Module Load)
+for ($i = 0; $i < $benchmarkIterations; $i++) {
+    $benchCompiler = new Compiler();
+    $benchCompiler->kernel(
+        'logistic_regression_step',
+        $kernelSource,
+        [
+            ['name' => 'x', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'y', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'w', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'pred', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'loss', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'n', 'dtype' => 'int32'],
+            ['name' => 'd', 'dtype' => 'int32'],
+            ['name' => 'lr', 'dtype' => 'float32'],
+        ]
+    );
+
+    $start = microtime(true);
+    $testModuleCompile = $benchCompiler->compile();
+    $compileTimes[] = millis($start);
+}
+
+// Ensure the compiled module actually works
+runLogisticRegressionTest($testModuleCompile, 'Benchmark Compiled Module');
+
+// 2. Prepare serialized payload (PTX cache)
+$serializedPayload = serialize($testModuleCompile);
+$payloadSizeBytes = strlen($serializedPayload);
+$testModuleDeserialize = null;
+
+// 3. Deserialization Benchmark (cuModuleLoadData / Cache)
+for ($i = 0; $i < $benchmarkIterations; $i++) {
+    $start = microtime(true);
+    $testModuleDeserialize = unserialize($serializedPayload);
+    // Initialize if required by your extension's lifecycle
+    if (method_exists($testModuleDeserialize, 'initialize')) {
+        $testModuleDeserialize->initialize();
+    }
+    $deserializeTimes[] = millis($start);
+}
+
+// Ensure the deserialized module actually works
+runLogisticRegressionTest($testModuleDeserialize, 'Benchmark Deserialized Module');
+
+
+$calcStats = function (array $times) {
+    return [
+        'min' => min($times),
+        'max' => max($times),
+        'avg' => array_sum($times) / count($times)
+    ];
+};
+
+$compileStats = $calcStats($compileTimes);
+$deserializeStats = $calcStats($deserializeTimes);
+
+echo sprintf("Serialized Payload: %d bytes (%.2f KB)\n\n", $payloadSizeBytes, $payloadSizeBytes / 1024);
+
+echo "[1] JIT Compilation (Compiler::compile) - $benchmarkIterations iterations:\n";
+echo sprintf("    Min: %.3f ms\n", $compileStats['min']);
+echo sprintf("    Max: %.3f ms\n", $compileStats['max']);
+echo sprintf("    Avg: %.3f ms\n", $compileStats['avg']);
+
+echo "\n[2] Deserialization (unserialize PTX Cache) - $benchmarkIterations iterations:\n";
+echo sprintf("    Min: %.3f ms\n", $deserializeStats['min']);
+echo sprintf("    Max: %.3f ms\n", $deserializeStats['max']);
+echo sprintf("    Avg: %.3f ms\n", $deserializeStats['avg']);
+
+$speedup = $compileStats['avg'] / $deserializeStats['avg'];
+echo sprintf("\n[!] Deserialization is %.2fx faster than compiling from scratch.\n", $speedup);

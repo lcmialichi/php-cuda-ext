@@ -6,7 +6,6 @@ namespace App\Cuda;
 
 use Cuda\Compiler;
 use Cuda\CudaArray;
-use Cuda\Attr as K;
 use Cuda\CompiledModule;
 
 /**
@@ -26,19 +25,23 @@ if (file_exists($cachePath)) {
 
     $compiler = new Compiler();
 
-    // Define the kernel logic using PHP Attributes for Type Marshalling
-    $compiler->kernel(#[K\Kernel(name: 'v_scale')] function (
-        #[K\TensorType] &$data,
-        #[K\IntType] $factor,
-        #[K\IntType] $n
-    ): void {
-        /** @var \Cuda\Runtime $cuda */
-        $idx = $cuda->globalIdx();
-
-        if ($idx < $n) {
-            $data[$idx] *= $factor;
-        }
-    });
+    $compiler->kernel(
+        'v_scale',
+        <<<'CUDA'
+extern "C" __global__ void v_scale(float *data, int factor, int n)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) {
+        data[idx] *= factor;
+    }
+}
+CUDA,
+        [
+            ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'factor', 'dtype' => 'int32'],
+            ['name' => 'n', 'dtype' => 'int32'],
+        ]
+    );
 
     // Generate the GPU Module
     $module = $compiler->compile();
@@ -59,7 +62,7 @@ if (file_exists($cachePath)) {
  * "Lazy Initialization" during the first kernel launch.
  * * Explicit calls are recommended for catching CUDA context errors early.
  * 
- *  @var CompiledModule $module 
+ *  @var CompiledModule $module
  */
 $module->initialize();
 

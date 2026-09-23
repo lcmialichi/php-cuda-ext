@@ -13,6 +13,13 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_Tensor___debugInfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_serialize, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_cuda_array_unserialize, 0, 0, 1)
+ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_multiply, 0, 1, CudaArray, 0)
 ZEND_ARG_OBJ_INFO(0, other, CudaArray, 0)
 ZEND_END_ARG_INFO()
@@ -114,6 +121,8 @@ ZEND_END_ARG_INFO()
 
 static zend_function_entry cuda_array_methods[] = {
     ZEND_ME(CudaArray, __construct, arginfo_cuda_array_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+        ZEND_ME(CudaArray, __serialize, arginfo_cuda_array_serialize, ZEND_ACC_PUBLIC)
+            ZEND_ME(CudaArray, __unserialize, arginfo_cuda_array_unserialize, ZEND_ACC_PUBLIC)
         ZEND_ME(CudaArray, __invoke, arginfo_cuda_array_invoke, ZEND_ACC_PUBLIC)
             ZEND_ME(CudaArray, __debugInfo, arginfo_Tensor___debugInfo, ZEND_ACC_PUBLIC)
 

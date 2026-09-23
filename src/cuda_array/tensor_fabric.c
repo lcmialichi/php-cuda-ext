@@ -7,10 +7,13 @@
 #include "factory_kernels.h"
 #include <stdbool.h>
 
+#define PINNED_TRANSFER_THRESHOLD_BYTES (1024 * 1024)
+
 static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
 static size_t calculate_total_size(zval *data);
 static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int *index, size_t total_size, dtype_t dtype);
+static cudaError_t cuda_copy_host_buffer_to_gpu(void *gpu_data, const void *host_data, size_t byte_count);
 
 tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str)
 {
@@ -63,6 +66,33 @@ tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype)
     {
         cuda_tensor_destroy(tensor);
         zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(cuda_status));
+        return NULL;
+    }
+
+    return tensor;
+}
+
+tensor_t *cuda_tensor_create_from_host_buffer(int *shape, int ndims, dtype_t dtype, const void *host_data, size_t byte_count)
+{
+    tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
+    if (!tensor)
+    {
+        return NULL;
+    }
+
+    size_t expected_bytes = tensor->total_size * tensor->element_size;
+    if (byte_count != expected_bytes)
+    {
+        cuda_tensor_destroy(tensor);
+        zend_throw_error(NULL, "Host buffer size mismatch: expected %zu bytes, got %zu", expected_bytes, byte_count);
+        return NULL;
+    }
+
+    cudaError_t status = cuda_copy_host_buffer_to_gpu(tensor->data, host_data, byte_count);
+    if (status != cudaSuccess)
+    {
+        cuda_tensor_destroy(tensor);
+        zend_throw_error(NULL, "Failed to copy host buffer to GPU: %s", cudaGetErrorString(status));
         return NULL;
     }
 
@@ -413,44 +443,106 @@ tensor_t *resolve_result_tensor(tensor_t *t)
 
 static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int *index, size_t total_size, dtype_t dtype)
 {
-    void *pinned_host_data;
+    void *host_data;
     size_t el_size = dtype_size(dtype);
+    size_t total_bytes = total_size * el_size;
+    bool use_pinned_host = total_bytes >= PINNED_TRANSFER_THRESHOLD_BYTES;
 
-    cudaError_t status = cudaMallocHost(&pinned_host_data, total_size * el_size);
-    if (status != cudaSuccess)
-        return status;
+    if (el_size == 0)
+    {
+        return cudaErrorInvalidValue;
+    }
+
+    cudaError_t status = cudaSuccess;
+    if (use_pinned_host)
+    {
+        status = cudaMallocHost(&host_data, total_bytes);
+        if (status != cudaSuccess)
+            return status;
+    }
+    else
+    {
+        host_data = emalloc(total_bytes);
+    }
 
     int host_index = 0;
 
     switch (dtype)
     {
     case DTYPE_FLOAT32:
-        flatten_php_array_to_float32(data, (float *)pinned_host_data, &host_index);
+        flatten_php_array_to_float32(data, (float *)host_data, &host_index);
         break;
     case DTYPE_FLOAT64:
-        flatten_php_array_to_float64(data, (double *)pinned_host_data, &host_index);
+        flatten_php_array_to_float64(data, (double *)host_data, &host_index);
         break;
     case DTYPE_INT32:
-        flatten_php_array_to_int32(data, (int32_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int32(data, (int32_t *)host_data, &host_index);
         break;
     case DTYPE_INT8:
-        flatten_php_array_to_int8(data, (int8_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int8(data, (int8_t *)host_data, &host_index);
+        break;
+    case DTYPE_INT16:
+        flatten_php_array_to_int16(data, (int16_t *)host_data, &host_index);
         break;
     case DTYPE_INT64:
-        flatten_php_array_to_int64(data, (int64_t *)pinned_host_data, &host_index);
+        flatten_php_array_to_int64(data, (int64_t *)host_data, &host_index);
+        break;
+    case DTYPE_UINT8:
+        flatten_php_array_to_uint8(data, (uint8_t *)host_data, &host_index);
+        break;
+    case DTYPE_UINT16:
+        flatten_php_array_to_uint16(data, (uint16_t *)host_data, &host_index);
+        break;
+    case DTYPE_UINT32:
+        flatten_php_array_to_uint32(data, (uint32_t *)host_data, &host_index);
+        break;
+    case DTYPE_UINT64:
+        flatten_php_array_to_uint64(data, (uint64_t *)host_data, &host_index);
         break;
     case DTYPE_BOOL:
-        flatten_php_array_to__bool(data, (bool *)pinned_host_data, &host_index);
+        flatten_php_array_to__bool(data, (bool *)host_data, &host_index);
         break;
     default:
-        cudaFreeHost(pinned_host_data);
+        if (use_pinned_host)
+            cudaFreeHost(host_data);
+        else
+            efree(host_data);
         return cudaErrorInvalidValue;
     }
 
-    status = cudaMemcpy(gpu_data, pinned_host_data, total_size * el_size, cudaMemcpyHostToDevice);
+    status = cudaMemcpy(gpu_data, host_data, total_bytes, cudaMemcpyHostToDevice);
 
-    cudaFreeHost(pinned_host_data);
+    if (use_pinned_host)
+        cudaFreeHost(host_data);
+    else
+        efree(host_data);
     *index = host_index;
+    return status;
+}
+
+static cudaError_t cuda_copy_host_buffer_to_gpu(void *gpu_data, const void *host_data, size_t byte_count)
+{
+    if (byte_count == 0)
+    {
+        return cudaSuccess;
+    }
+
+    if (byte_count < PINNED_TRANSFER_THRESHOLD_BYTES)
+    {
+        return cudaMemcpy(gpu_data, host_data, byte_count, cudaMemcpyHostToDevice);
+    }
+
+    void *pinned_host_data = NULL;
+    cudaError_t status = cudaMallocHost(&pinned_host_data, byte_count);
+    if (status != cudaSuccess)
+    {
+        return status;
+    }
+
+    memcpy(pinned_host_data, host_data, byte_count);
+    status = cudaMemcpy(gpu_data, pinned_host_data, byte_count, cudaMemcpyHostToDevice);
+    cudaFreeHost(pinned_host_data);
+
     return status;
 }
 

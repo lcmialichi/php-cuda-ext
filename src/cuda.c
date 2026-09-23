@@ -11,8 +11,6 @@
 #include "cuda_arginfo.h"
 #include "cuda_array_ce.h"
 #include "cuda.h"
-#include "cuda_attributes.h"
-#include "cuda_param.h"
 #include "compiler_ce.h"
 #include "module_ce.h"
 #include "contiguous_array_ce.h"
@@ -64,11 +62,8 @@ PHP_MINIT_FUNCTION(cuda)
     }
 
     register_number_class();
-    cuda_attr_init();
     compiler_init();
     module_init();
-    cuda_param_attribute_init();
-    cuda_register_attributes();
     contiguous_array_init();
 
     if (!cuda_array_init(pool_size))

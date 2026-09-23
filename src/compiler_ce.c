@@ -3,11 +3,6 @@
 #include "php.h"
 #include "zend_interfaces.h"
 #include "zend_exceptions.h"
-#include "zend_closures.h"
-#include "kernel_reflection.h"
-#include "ast_cuda_compiler.h"
-#include "zend_ast.h"
-#include "zend_compile.h"
 #include "ext/standard/php_smart_string.h"
 #include "cuda_globals.h"
 #include "ext/hash/php_hash.h"
@@ -25,14 +20,13 @@ static zend_object_handlers compiler_handlers;
 
 static void compiler_free_object(zend_object *object);
 static zend_object *compiler_create_object(zend_class_entry *class_type);
-static char *read_entire_file(const char *filename, size_t *out_len);
-static char *extract_function_body_for_ast(const char *source, size_t source_len,
-                                           uint32_t start_line, uint32_t end_line,
-                                           size_t *out_len);
 
 static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t *out_len);
 static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src);
 static char *compute_program_hash(cuda_compiler_object *compiler);
+static func_parameter_list_t *create_parameter_list_from_array(HashTable *params_ht);
+static zend_bool add_headers_from_array(cuda_compiler_object *compiler, HashTable *headers_ht);
+static zend_bool add_header_string(cuda_compiler_object *compiler, zend_string *header);
 
 static cuda_kernel_data *copy_kernel_data(cuda_kernel_data *src);
 static int check_cuda_compatibility(cuda_compiler_object *compiler);
@@ -49,29 +43,6 @@ static char g_cached_target[16] = "";
 static int g_cached_opt_level = 0;
 static zend_bool g_cached_debug = 0;
 static zend_bool g_cached_fast_math = 0;
-
-static void ensure_common_headers(cuda_compiler_object *compiler)
-{
-    static const char *common_headers[] = {
-        "#include <cuda_runtime.h>",
-        "#include <device_launch_parameters.h>",
-        "#include <cuda_fp16.h>",
-        NULL};
-
-    for (int i = 0; common_headers[i]; i++)
-    {
-        zend_string *header = zend_string_init(common_headers[i], strlen(common_headers[i]), 1);
-
-        if (!zend_hash_exists(compiler->headers, header))
-        {
-            zend_hash_add_ptr(compiler->headers, header, header);
-        }
-        else
-        {
-            zend_string_release(header);
-        }
-    }
-}
 
 static void append_math_constants(smart_string *program)
 {
@@ -97,109 +68,6 @@ static void append_math_constants(smart_string *program)
         "#endif\n\n";
 
     smart_string_appendl(program, math_constants, strlen(math_constants));
-}
-
-static char *read_entire_file(const char *filename, size_t *out_len)
-{
-    FILE *file = fopen(filename, "r");
-    if (!file)
-        return NULL;
-
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *buffer = (char *)emalloc(file_size + 1);
-    size_t read_size = fread(buffer, 1, file_size, file);
-    buffer[read_size] = '\0';
-
-    fclose(file);
-
-    if (out_len)
-        *out_len = read_size;
-    return buffer;
-}
-
-static char *extract_function_body_for_ast(const char *source, size_t source_len,
-                                           uint32_t start_line, uint32_t end_line,
-                                           size_t *out_len)
-{
-    if (start_line == 0 || end_line == 0 || start_line > end_line)
-    {
-        return NULL;
-    }
-
-    const char **line_offsets = (const char **)emalloc(sizeof(char *) * (end_line + 3));
-    uint32_t current_line = 1;
-    line_offsets[1] = source;
-
-    for (size_t i = 0; i < source_len; i++)
-    {
-        if (source[i] == '\n')
-        {
-            current_line++;
-            if (current_line > end_line + 1)
-                break;
-            line_offsets[current_line] = &source[i + 1];
-        }
-    }
-
-    if (end_line > current_line)
-    {
-        efree(line_offsets);
-        return NULL;
-    }
-
-    const char *func_start = line_offsets[start_line];
-    const char *func_end = (end_line < current_line) ? line_offsets[end_line + 1] : source + source_len;
-
-    const char *body_start = NULL;
-    const char *body_end = NULL;
-    int brace_level = 0;
-    int found_open = 0;
-
-    for (const char *p = func_start; p < func_end; p++)
-    {
-        if (*p == '{')
-        {
-            if (!found_open)
-            {
-                body_start = p + 1;
-                found_open = 1;
-            }
-            brace_level++;
-        }
-        else if (*p == '}')
-        {
-            brace_level--;
-            if (brace_level == 0 && found_open)
-            {
-                body_end = p;
-                break;
-            }
-        }
-    }
-
-    if (!body_start || !body_end || body_end <= body_start)
-    {
-        efree(line_offsets);
-        return NULL;
-    }
-
-    size_t body_len = body_end - body_start;
-    const char *prefix = "<?php\n";
-    size_t prefix_len = strlen(prefix);
-
-    char *output = (char *)emalloc(prefix_len + body_len + 1);
-    memcpy(output, prefix, prefix_len);
-    memcpy(output + prefix_len, body_start, body_len);
-    output[prefix_len + body_len] = '\0';
-
-    if (out_len)
-        *out_len = prefix_len + body_len;
-
-    efree(line_offsets);
-    return output;
 }
 
 static char *build_complete_cuda_program(cuda_compiler_object *compiler, size_t *out_len)
@@ -269,9 +137,17 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
         arch_num = compiler->target_device + 3;
     }
 
-    char ptx_header[128];
+    zval *header_zv;
+    ZEND_HASH_FOREACH_VAL(compiler->headers, header_zv)
+    {
+        if (Z_TYPE_P(header_zv) == IS_STRING)
+        {
+            smart_string_appendl(&program_hash_content, Z_STRVAL_P(header_zv), Z_STRLEN_P(header_zv));
+            smart_string_appendc(&program_hash_content, ';');
+        }
+    }
+    ZEND_HASH_FOREACH_END();
 
-    smart_string_appendl(&program_hash_content, ptx_header, strlen(ptx_header));
     cuda_kernel_data *kernel;
     ZEND_HASH_FOREACH_PTR(compiler->kernels, kernel)
     {
@@ -420,8 +296,8 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
     g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--restrict");
 
     char include_cuda[256], include_crt[256];
-    snprintf(include_cuda, sizeof(include_cuda), "-I%s", CUDA_INCLUDE_PATH_STR);
-    snprintf(include_crt, sizeof(include_crt), "-I%s", CUDA_CRT_INCLUDE_STR);
+    snprintf(include_cuda, sizeof(include_cuda), "%s", CUDA_INCLUDE_PATH_STR);
+    snprintf(include_crt, sizeof(include_crt), "%s", CUDA_CRT_INCLUDE_STR);
 
     g_cached_nvrtc_options[g_cached_option_count++] = estrdup(include_cuda);
     g_cached_nvrtc_options[g_cached_option_count++] = estrdup(include_crt);
@@ -796,6 +672,116 @@ static func_parameter_list_t *copy_parameter_list(func_parameter_list_t *src)
     return dst;
 }
 
+static zend_bool add_header_string(cuda_compiler_object *compiler, zend_string *header)
+{
+    zend_ulong index = zend_hash_num_elements(compiler->headers);
+    zval header_zv;
+
+    ZVAL_STR_COPY(&header_zv, header);
+    return zend_hash_index_add(compiler->headers, index, &header_zv) != NULL;
+}
+
+static zend_bool add_headers_from_array(cuda_compiler_object *compiler, HashTable *headers_ht)
+{
+    zval *header_zv;
+
+    ZEND_HASH_FOREACH_VAL(headers_ht, header_zv)
+    {
+        if (Z_TYPE_P(header_zv) != IS_STRING)
+        {
+            zend_throw_exception_ex(NULL, 0, "CUDA headers must be strings");
+            return 0;
+        }
+
+        if (!add_header_string(compiler, Z_STR_P(header_zv)))
+        {
+            zend_throw_exception_ex(NULL, 0, "Failed to add CUDA header");
+            return 0;
+        }
+    }
+    ZEND_HASH_FOREACH_END();
+
+    return 1;
+}
+
+static func_parameter_list_t *create_parameter_list_from_array(HashTable *params_ht)
+{
+    uint32_t count = zend_hash_num_elements(params_ht);
+    func_parameter_list_t *params = ecalloc(1, sizeof(func_parameter_list_t));
+    params->total = count;
+
+    if (count == 0)
+    {
+        return params;
+    }
+
+    params->parameters = ecalloc(count, sizeof(func_parameter *));
+
+    uint32_t index = 0;
+    zval *param_zv;
+    ZEND_HASH_FOREACH_VAL(params_ht, param_zv)
+    {
+        if (Z_TYPE_P(param_zv) != IS_ARRAY)
+        {
+            zend_throw_exception_ex(NULL, 0, "Kernel parameter %u must be an array", index);
+            free_parameter_list(params);
+            return NULL;
+        }
+
+        HashTable *param_ht = Z_ARRVAL_P(param_zv);
+        zval *name_zv = zend_hash_str_find(param_ht, "name", sizeof("name") - 1);
+        zval *dtype_zv = zend_hash_str_find(param_ht, "dtype", sizeof("dtype") - 1);
+        zval *type_zv = zend_hash_str_find(param_ht, "type", sizeof("type") - 1);
+
+        if (!name_zv || Z_TYPE_P(name_zv) != IS_STRING || Z_STRLEN_P(name_zv) == 0)
+        {
+            zend_throw_exception_ex(NULL, 0, "Kernel parameter %u requires a non-empty string name", index);
+            free_parameter_list(params);
+            return NULL;
+        }
+
+        if (!dtype_zv || Z_TYPE_P(dtype_zv) != IS_STRING)
+        {
+            zend_throw_exception_ex(NULL, 0, "Kernel parameter '%s' requires a string dtype", Z_STRVAL_P(name_zv));
+            free_parameter_list(params);
+            return NULL;
+        }
+
+        dtype_t dtype = dtype_from_string(Z_STRVAL_P(dtype_zv));
+        if (dtype == DTYPE_UNKNOWN || dtype == DTYPE_VOID || dtype == DTYPE_LIST)
+        {
+            zend_throw_exception_ex(NULL, 0, "Kernel parameter '%s' has unsupported dtype '%s'", Z_STRVAL_P(name_zv), Z_STRVAL_P(dtype_zv));
+            free_parameter_list(params);
+            return NULL;
+        }
+
+        zend_bool is_array = 0;
+        if (type_zv && Z_TYPE_P(type_zv) == IS_STRING)
+        {
+            const char *type = Z_STRVAL_P(type_zv);
+            is_array = strcasecmp(type, "array") == 0 || strcasecmp(type, "cudaarray") == 0 || strcasecmp(type, "CudaArray") == 0;
+        }
+
+        func_parameter *param = ecalloc(1, sizeof(func_parameter));
+        size_t name_len = Z_STRLEN_P(name_zv);
+        if (name_len >= sizeof(param->name))
+        {
+            name_len = sizeof(param->name) - 1;
+        }
+
+        memcpy(param->name, Z_STRVAL_P(name_zv), name_len);
+        param->name[name_len] = '\0';
+        param->dtype = is_array ? DTYPE_LIST : dtype;
+        param->second_dtype = is_array ? dtype : DTYPE_UNKNOWN;
+        param->type = PARAMETER;
+
+        params->parameters[index++] = param;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    return params;
+}
+
 ZEND_METHOD(Compiler, __construct)
 {
     cuda_compiler_object *compiler;
@@ -816,9 +802,6 @@ ZEND_METHOD(Compiler, __construct)
 
     compiler->devices = (HashTable *)emalloc(sizeof(HashTable));
     zend_hash_init(compiler->devices, 8, NULL, NULL, 0);
-
-    compiler->ptx_cache = (HashTable *)emalloc(sizeof(HashTable));
-    zend_hash_init(compiler->ptx_cache, 8, NULL, NULL, 0);
 
     if (target_str)
     {
@@ -903,131 +886,110 @@ ZEND_METHOD(Compiler, __construct)
     compiler->debug_mode = debug;
     compiler->fast_math = (debug) ? 0 : fast_math;
 
-    ensure_common_headers(compiler);
+    static const char *common_headers[] = {
+        "#include <cuda_runtime.h>",
+        "#include <device_launch_parameters.h>",
+        "#include <cuda_fp16.h>",
+        NULL};
+
+    for (int i = 0; common_headers[i]; i++)
+    {
+        zend_string *header = zend_string_init(common_headers[i], strlen(common_headers[i]), 0);
+        add_header_string(compiler, header);
+        zend_string_release(header);
+    }
 }
 
 ZEND_METHOD(Compiler, kernel)
 {
     cuda_compiler_object *compiler;
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
+    zend_string *kernel_name;
+    zend_string *source;
+    zval *parameters_zv = NULL;
+    zval *headers_zv = NULL;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-    Z_PARAM_FUNC(fci, fcc)
+    ZEND_PARSE_PARAMETERS_START(2, 4)
+    Z_PARAM_STR(kernel_name)
+    Z_PARAM_STR(source)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_ARRAY(parameters_zv)
+    Z_PARAM_ARRAY(headers_zv)
     ZEND_PARSE_PARAMETERS_END();
 
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
-    zend_function *fptr = fcc.function_handler;
 
-    if (!fptr || fptr->type != ZEND_USER_FUNCTION)
+    if (ZSTR_LEN(kernel_name) == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "Invalid kernel function");
+        zend_throw_exception_ex(NULL, 0, "Kernel name cannot be empty");
         return;
     }
 
-    if (fptr->op_array.fn_flags & ZEND_ACC_USES_THIS)
+    if (ZSTR_LEN(source) == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "Kernel functions cannot use object context");
+        zend_throw_exception_ex(NULL, 0, "CUDA source cannot be empty");
         return;
     }
 
-    if (fptr->op_array.static_variables != NULL)
+    func_parameter_list_t *params = NULL;
+    if (parameters_zv)
     {
-        zend_throw_exception_ex(NULL, 0, "CUDA Runtime cannot access outer context variables");
-        return;
-    }
-
-    cuda_method_attribute_args *fargs = cuda_extract_method_attribute(fptr, cuda_attr_kernel_ce);
-    if (!fargs)
-    {
-        zend_throw_exception_ex(NULL, 0, "Failed to extract kernel attributes");
-        return;
-    }
-
-    zend_op_array *op_array = &fptr->op_array;
-    if (!op_array->filename || op_array->line_start == 0 || op_array->line_end == 0)
-    {
-        efree(fargs);
-        zend_throw_exception_ex(NULL, 0, "Cannot locate kernel source");
-        return;
-    }
-
-    size_t file_len = 0;
-    char *file_content = read_entire_file(ZSTR_VAL(op_array->filename), &file_len);
-    if (!file_content)
-    {
-        efree(fargs);
-        zend_throw_exception_ex(NULL, 0, "Cannot read kernel source file");
-        return;
-    }
-
-    size_t src_len = 0;
-    char *src = extract_function_body_for_ast(
-        file_content, file_len,
-        op_array->line_start, op_array->line_end,
-        &src_len);
-
-    efree(file_content);
-    zend_string *source_code = NULL;
-    if (src)
-    {
-        source_code = zend_string_init(src, src_len, 0);
-        efree(src);
+        params = create_parameter_list_from_array(Z_ARRVAL_P(parameters_zv));
+        if (!params)
+        {
+            return;
+        }
     }
     else
     {
-        zend_throw_exception_ex(NULL, 0, "Cannot parse function body");
-        efree(fargs);
-        return;
+        params = ecalloc(1, sizeof(func_parameter_list_t));
     }
 
-    zend_arena *ast_arena = NULL;
-    zend_ast *ast = zend_compile_string_to_ast(source_code, &ast_arena, fargs->name);
-
-    func_parameter_list_t *params = cuda_extract_parameters(fptr);
-    cuda_compilation_context_t *ctx = create_cuda_context(params, FN_KERNEL, fargs->name, compiler->headers);
-
-    if (compile_ast_to_cuda_fn(ctx, ast) != 1)
+    if (headers_zv && !add_headers_from_array(compiler, Z_ARRVAL_P(headers_zv)))
     {
-        free_cuda_context(ctx);
-        zend_string_release(source_code);
         free_parameter_list(params);
-        efree(fargs);
         return;
     }
 
-    zend_ast_destroy(ast);
-    zend_arena_destroy(ast_arena);
-    zend_string_release(source_code);
-
-    smart_string_0(ctx->cuda_code_buffer);
-
-    cuda_kernel_data *kernel = (cuda_kernel_data *)ecalloc(1, sizeof(cuda_kernel_data));
-    if (!fargs->name)
+    cuda_kernel_data *old_kernel = zend_hash_find_ptr(compiler->kernels, kernel_name);
+    if (old_kernel)
     {
-        zend_throw_exception_ex(NULL, 0, "Kernel name is NULL");
-        efree(fargs);
-        efree(kernel);
-        return;
+        zend_hash_del(compiler->kernels, kernel_name);
+        free_kernel_data(old_kernel);
     }
 
-    kernel->name = zend_string_dup(fargs->name, 0);
+    cuda_kernel_data *kernel = ecalloc(1, sizeof(cuda_kernel_data));
+    kernel->name = zend_string_copy(kernel_name);
     kernel->parameters = params;
-    if (ctx->cuda_code_buffer && ctx->cuda_code_buffer->c)
-    {
-        kernel->cuda_code = estrdup(ctx->cuda_code_buffer->c);
-    }
-    else
-    {
-        kernel->cuda_code = estrdup("");
-    }
+    kernel->cuda_code = estrndup(ZSTR_VAL(source), ZSTR_LEN(source));
 
-    zend_hash_update_ptr(compiler->kernels, kernel->name, kernel);
+    zend_hash_update_ptr(compiler->kernels, kernel_name, kernel);
     zend_hash_clean(compiler->ptx_cache);
-    free_cuda_context(ctx);
 
-    efree(fargs);
+    RETURN_ZVAL(getThis(), 1, 0);
+}
 
+ZEND_METHOD(Compiler, header)
+{
+    zend_string *header;
+    cuda_compiler_object *compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_STR(header)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (ZSTR_LEN(header) == 0)
+    {
+        zend_throw_exception_ex(NULL, 0, "CUDA header cannot be empty");
+        return;
+    }
+
+    if (!add_header_string(compiler, header))
+    {
+        zend_throw_exception_ex(NULL, 0, "Failed to add CUDA header");
+        return;
+    }
+
+    zend_hash_clean(compiler->ptx_cache);
     RETURN_ZVAL(getThis(), 1, 0);
 }
 
@@ -1046,6 +1008,12 @@ ZEND_METHOD(Compiler, compile)
     compiler = Z_CUDA_COMPILER_P(ZEND_THIS);
     if (!check_cuda_compatibility(compiler))
     {
+        RETURN_NULL();
+    }
+
+    if (zend_hash_num_elements(compiler->kernels) == 0)
+    {
+        zend_throw_exception_ex(NULL, 0, "No CUDA kernels registered");
         RETURN_NULL();
     }
 
@@ -1134,7 +1102,7 @@ ZEND_METHOD(Compiler, compile)
     {
         if (ptx_code)
         {
-            free(ptx_code);
+            efree(ptx_code);
         }
 
         zend_string_release(hash_zstr);
@@ -1151,7 +1119,7 @@ ZEND_METHOD(Compiler, compile)
 
     if (!module_ce)
     {
-        free(ptx_code);
+        efree(ptx_code);
         zend_string_release(hash_zstr);
         zend_throw_exception_ex(NULL, 0, "CompiledModule class not found");
         RETURN_NULL();
@@ -1325,7 +1293,7 @@ static zend_object *compiler_create_object(zend_class_entry *class_type)
     compiler->std.handlers = &compiler_handlers;
 
     compiler->headers = (HashTable *)emalloc(sizeof(HashTable));
-    zend_hash_init(compiler->headers, 8, NULL, NULL, 0);
+    zend_hash_init(compiler->headers, 8, NULL, ZVAL_PTR_DTOR, 0);
 
     compiler->ptx_cache = (HashTable *)emalloc(sizeof(HashTable));
     zend_hash_init(compiler->ptx_cache, 8, NULL, NULL, 0);

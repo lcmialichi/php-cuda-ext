@@ -42,7 +42,7 @@ class CLI
 }
 
 echo CLI::bold(CLI::cyan("\n======================================================\n"));
-echo CLI::bold(CLI::cyan("🚀 CUDA PHP Neural Network: 0-9 Digit Recognizer 🚀\n"));
+echo CLI::bold(CLI::cyan("  CUDA PHP Neural Network: 0-9 Digit Recognizer \n"));
 echo CLI::bold(CLI::cyan("======================================================\n\n"));
 
 $modelPath = __DIR__ . '/trained_model_stable.dat';
@@ -52,7 +52,6 @@ $inputFeatures = 64;
 $numClasses = 10;
 $hiddenNodes = 64;
 
-// DEFININDO O TAMANHO DO LOTE PARA POUPAR VRAM NA MTX 570
 $batchSize = 256;
 
 // ============================================================================
@@ -68,7 +67,7 @@ if (!file_exists($datasetPath)) {
     echo CLI::green("✅ Download complete.\n\n");
 }
 
-echo CLI::blue("📊 Parsing CSV dataset...\n");
+echo CLI::blue("Parsing CSV dataset...\n");
 $lines = file($datasetPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 $xHost = [];
 $yHost = [];
@@ -101,7 +100,7 @@ foreach ($samples as $index => [$normalizedPixels, $oneHot, $target]) {
         $yTestTargets[] = $target;
     }
 }
-echo CLI::green("✅ Loaded $trainSamples training samples and $testSamples testing samples.\n\n");
+echo CLI::green("Loaded $trainSamples training samples and $testSamples testing samples.\n\n");
 
 // ============================================================================
 // 2. KERNEL COMPILATION
@@ -182,13 +181,13 @@ function applyRelu($module, CudaArray $input)
 // ============================================================================
 $modelData = null;
 if (file_exists($modelPath)) {
-    echo CLI::magenta("💾 Found serialized model on disk. Loading weights...\n");
+    echo CLI::magenta("Found serialized model on disk. Loading weights...\n");
     $startLoad = microtime(true);
     $candidateModel = unserialize(file_get_contents($modelPath));
     if (($candidateModel['version'] ?? null) === $modelVersion) {
         $modelData = $candidateModel;
     } else {
-        echo CLI::yellow("⚠️ Saved model is from an older training configuration. Re-training...\n");
+        echo CLI::yellow("Saved model is from an older training configuration. Re-training...\n");
     }
 }
 
@@ -197,9 +196,9 @@ if ($modelData) {
     $b1 = unserialize($modelData['b1']);
     $W2 = unserialize($modelData['W2']);
     $b2 = unserialize($modelData['b2']);
-    echo CLI::green("✅ Model restored to GPU in " . sprintf("%.2f ms", millis($startLoad)) . "!\n\n");
+    echo CLI::green("Model restored to GPU in " . sprintf("%.2f ms", millis($startLoad)) . "!\n\n");
 } else {
-    echo CLI::yellow("⚠️ No saved model found. Initializing training from scratch...\n");
+    echo CLI::yellow("No saved model found. Initializing training from scratch...\n");
 
     $W1 = CudaArray::rand([$inputFeatures, $hiddenNodes], -0.1, 0.1, 'float32');
     $b1 = CudaArray::zeros([1, $hiddenNodes], 'float32');
@@ -209,7 +208,7 @@ if ($modelData) {
     $learningRate = 0.05;
     $epochs = 350;
 
-    echo CLI::bold(CLI::blue("\n🔥 Starting GPU Training (MTX 570) with Mini-Batches ($batchSize) for $epochs epochs...\n"));
+    echo CLI::bold(CLI::blue("\nStarting GPU Training with Mini-Batches ($batchSize) for $epochs epochs...\n"));
     $trainStart = microtime(true);
 
     $numBatches = (int) ceil($trainSamples / $batchSize);
@@ -243,7 +242,6 @@ if ($modelData) {
                 unset($sum);
             }
 
-            // BACKWARD PASS
             $A1_T = $A1->transpose([1, 0]);
             $dW2 = $A1_T->matmul($dZ2);
 
@@ -253,7 +251,6 @@ if ($modelData) {
             $W2_T = $W2->transpose([1, 0]);
             $dA1 = $dZ2->matmul($W2_T);
 
-            // Inline Relu Backward
             $dZ1 = CudaArray::zeros($Z1->getShape(), 'float32');
             $size = $Z1->getSize();
             $module->launch('relu_backward', config: $module->autoGrid('relu_backward', $size), args: [$Z1, $dA1, $dZ1, $size]);
@@ -264,7 +261,6 @@ if ($modelData) {
             $tmpDb1 = $dZ1->sum(0);
             $db1 = $tmpDb1->reshape([1, $hiddenNodes]);
 
-            // Inline Weight Update
             foreach ([
                 [$W1, $dW1],
                 [$b1, $db1],
@@ -275,31 +271,7 @@ if ($modelData) {
                 $module->launch('update_weights', config: $module->autoGrid('update_weights', $sz), args: [$w, $g, $learningRate, $sz]);
             }
 
-            cuda_synchronize();
-
-            unset(
-                $X,
-                $Y,
-                $tmpZ1,
-                $Z1,
-                $A1,
-                $tmpZ2,
-                $Z2,
-                $probs,
-                $batchLoss,
-                $dZ2,
-                $A1_T,
-                $dW2,
-                $tmpDb2,
-                $db2,
-                $W2_T,
-                $dA1,
-                $dZ1,
-                $X_T,
-                $dW1,
-                $tmpDb1,
-                $db1
-            );
+        
         }
 
         if ($epoch % 50 === 0 || $epoch === $epochs - 1) {
@@ -312,9 +284,9 @@ if ($modelData) {
         }
     }
 
-    echo CLI::green("\n✅ Training completed in " . sprintf("%.2f ms", millis($trainStart)) . ".\n");
+    echo CLI::green("\nTraining completed in " . sprintf("%.2f ms", millis($trainStart)) . ".\n");
 
-    echo CLI::magenta("💾 Saving (Serializing) trained CudaArrays to disk...\n");
+    echo CLI::magenta("Saving (Serializing) trained CudaArrays to disk...\n");
     $serializedModel = serialize([
         'version' => $modelVersion,
         'W1' => serialize($W1),
@@ -323,7 +295,7 @@ if ($modelData) {
         'b2' => serialize($b2),
     ]);
     file_put_contents($modelPath, $serializedModel);
-    echo CLI::green("✅ Model saved to: $modelPath\n\n");
+    echo CLI::green("Model saved to: $modelPath\n\n");
 }
 
 // ============================================================================
@@ -353,4 +325,4 @@ if ($accuracy < 80.0) {
     throw new RuntimeException(sprintf('Accuracy too low after stable training: %.2f%%', $accuracy));
 }
 
-echo CLI::green("✅ Stable training check passed.\n");
+echo CLI::green("Stable training check passed.\n");

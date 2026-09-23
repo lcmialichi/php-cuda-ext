@@ -6,3 +6,5 @@ examples/cache/**
 serialized_module.cudas
 /vendor/
 /benchmarks/reports/
+optdigits.csv
+trained_model_stable.dat

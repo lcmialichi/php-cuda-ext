@@ -436,8 +436,23 @@ static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int
     case DTYPE_INT8:
         flatten_php_array_to_int8(data, (int8_t *)pinned_host_data, &host_index);
         break;
+    case DTYPE_INT16:
+        flatten_php_array_to_int16(data, (int16_t *)pinned_host_data, &host_index);
+        break;
     case DTYPE_INT64:
         flatten_php_array_to_int64(data, (int64_t *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_UINT8:
+        flatten_php_array_to_uint8(data, (uint8_t *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_UINT16:
+        flatten_php_array_to_uint16(data, (uint16_t *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_UINT32:
+        flatten_php_array_to_uint32(data, (uint32_t *)pinned_host_data, &host_index);
+        break;
+    case DTYPE_UINT64:
+        flatten_php_array_to_uint64(data, (uint64_t *)pinned_host_data, &host_index);
         break;
     case DTYPE_BOOL:
         flatten_php_array_to__bool(data, (bool *)pinned_host_data, &host_index);

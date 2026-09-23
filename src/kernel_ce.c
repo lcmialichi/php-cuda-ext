@@ -1,6 +1,8 @@
 #include "kernel_ce.h"
+#include "kernel_arginfo.h"
 #include "php.h"
 
+zend_class_entry *kernel_ce;
 static zend_object_handlers kernel_handlers;
 
 static zend_object *kernel_create_object(zend_class_entry *ce)

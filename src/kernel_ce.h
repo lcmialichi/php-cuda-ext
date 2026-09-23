@@ -2,6 +2,7 @@
 #define KERNEL_CE_H
 
 #include "php.h"
+#include "kernel_types.h"
 
 #define KERNEL_CLASS_NAME "Cuda\\Kernel"
 

@@ -5,19 +5,21 @@ namespace Cuda;
 use Countable;
 use IteratorAggregate;
 
-#[\Attribute(\Attribute::TARGET_PARAMETER)]
-abstract class ParamAttribute
-{
-    abstract public function getDtype(): string;
-    abstract public function isList(): bool;
-    abstract public function isNullable(): bool;
-}
-
 class Compiler
 {
-    public function __construct(private ?string $target = null) {}
+    public function __construct(
+        ?string $target = null,
+        int $optimization = 2,
+        bool $debug = false,
+        bool $fastMath = true,
+    ) {}
 
-    public function kernel(callable $fn): static
+    public function kernel(string $name, string $source, array $parameters = [], array $headers = []): static
+    {
+        return $this;
+    }
+
+    public function header(string $code): static
     {
         return $this;
     }
@@ -30,6 +32,11 @@ class Compiler
     public function getCacheStats(): array
     {
         return [];
+    }
+
+    public function clearCache(): bool
+    {
+        return true;
     }
 }
 
@@ -55,12 +62,12 @@ class CompiledModule
         return [];
     }
 
-    public function launch(string $name, array $config = [], array $args): bool
+    public function launch(string $name, array $config = [], array $args = []): bool
     {
         return false;
     }
 
-    public function launchAsync(string $name, array $config = [], array $args): int
+    public function launchAsync(string $name, array $config = [], array $args = []): int
     {
         return false;
     }
@@ -163,8 +170,6 @@ class ContiguousArray implements \ArrayAccess, Countable
 
     public function getDtype(): string {}
 
-    public function count(): int {}
-
     public function __serialize(): array {}
     public function __unserialize(array $data): void {}
 }
@@ -190,6 +195,8 @@ class CudaArray implements \ArrayAccess
 
     public function getShape(): array {}
 
+    public function getStrides(): array {}
+
     public function getNdims(): int {}
 
     public function getSize(): int {}
@@ -200,25 +207,25 @@ class CudaArray implements \ArrayAccess
      * @param CudaArray|float|int $other
      * @return CudaArray
      */
-    public function multiply(CudaArray|float $other): CudaArray {}
+    public function multiply(CudaArray|float|int $other): CudaArray {}
 
     /**
      * @param CudaArray|float|int $other
      * @return CudaArray
      */
-    public function add(CudaArray|float $other): CudaArray {}
+    public function add(CudaArray|float|int $other): CudaArray {}
 
     /**
      * @param CudaArray|float|int $other
      * @return CudaArray
      */
-    public function subtract(CudaArray|float $other): CudaArray {}
+    public function subtract(CudaArray|float|int $other): CudaArray {}
 
     /**
      * @param CudaArray|float|int $other
      * @return CudaArray
      */
-    public function divide(CudaArray|float $other): CudaArray {}
+    public function divide(CudaArray|float|int $other): CudaArray {}
 
     /**
      * @param CudaArray|float|int $other
@@ -231,6 +238,8 @@ class CudaArray implements \ArrayAccess
     public function exp(): CudaArray {}
     public function log(): CudaArray {}
     public function sqrt(): CudaArray {}
+    public function tan(): CudaArray {}
+    public function abs(): CudaArray {}
 
     public static function ones(array $shape, ?string $dtype = 'float32'): CudaArray {}
     public static function zeros(array $shape, ?string $dtype = 'float32'): CudaArray {}
@@ -278,13 +287,13 @@ class CudaArray implements \ArrayAccess
      */
     public function concat(array $tensors, ?int $axis = null): CudaArray {}
 
-    function offsetExists(mixed $offset): bool {}
+    public function offsetExists(mixed $offset): bool {}
 
-    function offsetGet(mixed $offset): mixed {}
+    public function offsetGet(mixed $offset): mixed {}
 
-    function offsetSet(mixed $offset, mixed $value): void {}
+    public function offsetSet(mixed $offset, mixed $value): void {}
 
-    function offsetUnset(mixed $offset): void {}
+    public function offsetUnset(mixed $offset): void {}
 }
 
 /**

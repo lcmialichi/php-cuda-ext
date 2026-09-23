@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Cuda\Compiler;
 use Cuda\CudaArray;
-use Cuda\Attr as K;
 
 /**
  * Asynchronous Kernel Execution
@@ -12,36 +11,37 @@ use Cuda\Attr as K;
  * This allows for massive parallelism between the CPU and GPU.
  */
 
-class HeavyWorkload
-{
-    /**
-     * A computationally expensive kernel simulation
-     */
-    #[K\Kernel(name: 'heavy_math')]
-    public function compute(#[K\TensorType] &$data, #[K\IntType] $rows, #[K\IntType] $cols): void
-    {
-        /** @var \Cuda\Runtime $cuda */
-        $col = $cuda->blockIdx()->x * $cuda->blockDim()->x + $cuda->threadIdx()->x;
-        $row = $cuda->blockIdx()->y * $cuda->blockDim()->y + $cuda->threadIdx()->y;
-
-        if ($row >= $rows || $col >= $cols) {
-            return;
-        }
-
-        $idx = $row * $cols + $col;
-        $val = $data[$idx];
-        for ($i = 0; $i < 100; $i++) {
-            $val = $cuda->math->sin($val) * $cuda->math->cos($val);
-        }
-
-        $data[$idx] = $val;
-    }
-}
-
 // --- 1. JIT Compilation ---
 
 $compiler = new Compiler();
-$compiler->kernel([new HeavyWorkload(), 'compute']);
+$compiler->kernel(
+    'heavy_math',
+    <<<'CUDA'
+extern "C" __global__ void heavy_math(float *data, int rows, int cols)
+{
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (row >= rows || col >= cols) {
+        return;
+    }
+
+    int idx = row * cols + col;
+    float val = data[idx];
+    for (int i = 0; i < 100; i++) {
+        val = sinf(val) * cosf(val);
+    }
+
+    data[idx] = val;
+}
+CUDA,
+    [
+        ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'rows', 'dtype' => 'int32'],
+        ['name' => 'cols', 'dtype' => 'int32'],
+    ],
+    ['#include <math.h>']
+);
 $module = $compiler->compile();
 
 // --- 2. Data & Configuration ---

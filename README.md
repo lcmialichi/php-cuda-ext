@@ -181,35 +181,37 @@ $gpu_restored = $restored->toGpu(); // Cuda\CudaArray
 - bool
 
 ## Custom CUDA Kernels (JIT)
-Custom kernels are defined using PHP 8 Attributes and compiled to PTX at runtime.
+Custom kernels are written as CUDA C/C++ source strings and compiled to PTX at runtime with NVRTC. Parameter metadata tells the extension how to marshal PHP values and `CudaArray` buffers when launching the kernel.
 
 ### Kernel Definition
 ```php
-use Cuda\Attr as Attr;
-
-class Kernels
+$compiler = new Cuda\Compiler();
+$compiler->kernel(
+  'v_add',
+  <<<'CUDA'
+extern "C" __global__ void v_add(float *a, float *b, float *c, int n)
 {
-    #[Attr\Kernel(name: 'v_add')]
-    public function vectorAdd(
-        #[Attr\TensorType] array $a,
-        #[Attr\TensorType] array $b,
-        #[Attr\TensorType] array &$c,
-        #[Attr\IntType] int $n
-    ): void {
-        $idx = $cuda->globalIdx();
-        if ($idx < $n) {
-            $c[$idx] = $a[$idx] + $b[$idx];
-        }
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < n) {
+    c[idx] = a[idx] + b[idx];
     }
 }
+CUDA,
+  [
+    ['name' => 'a', 'type' => 'array', 'dtype' => 'float32'],
+    ['name' => 'b', 'type' => 'array', 'dtype' => 'float32'],
+    ['name' => 'c', 'type' => 'array', 'dtype' => 'float32'],
+    ['name' => 'n', 'dtype' => 'int32'],
+  ],
+  ['#include <math.h>']
+);
 ```
+
+Supported parameter dtypes include `float32`, `float64`, signed and unsigned integer widths, and `bool`. Use `type => 'array'` for `CudaArray` parameters; omit `type` for scalar values.
 
 ### Compilation & Execution
 
 ```php
-$compiler = new Cuda\Compiler();
-$compiler->kernel([new Kernels(), 'vectorAdd']);
-
 $module = $compiler->compile();
 $module->initialize();
 
@@ -231,7 +233,7 @@ $module->launch(
 
 ### Asynchronous Execution
 ```php
-$id = $module->launchAsync('v_add', args: [...]);
+$id = $module->launchAsync('v_add', args: [$a, $b, $c, $n]);
 $module->sync();
 ```
 Multiple kernels can be queued and synchronized explicitly.

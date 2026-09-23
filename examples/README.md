@@ -9,7 +9,7 @@ This directory contains functional implementations of the extension's API. The e
 | `01_basics_cuda_array.php` | Memory Management | VRAM allocation, Operator overloading. |
 | `02_math_and_reductions.php` | Data Aggregation | Parallel math functions, Reductions (sum/max). |
 | `03_advanced_manipulation.php` | Tensor Geometry | Reshaping, Transposition, Broadcasting. |
-| `04_custom_jit_kernels.php` | JIT Compilation | PHP 8 Attributes, Kernel definitions, Grid/Block config. |
+| `04_custom_jit_kernels.php` | JIT Compilation | CUDA source strings, typed parameters, Grid/Block config. |
 | `05_jit_async_execution.php` | Concurrency | Non-blocking execution, Op polling, Stream sync. |
 | `06_serialize_compiled_module.php` | JIT Serialization | PHP Serialize CompiledModule object example |
 
@@ -30,8 +30,7 @@ Data in a ``CudaArray`` stays in GPU VRAM. The ``toArray()`` method is the expli
 
 ## JIT Process
 Custom kernels defined in PHP classes undergo the following pipeline:
-- Reflection: Parsing PHP attributes and types.
-- Translation: Conversion of PHP logic to an intermediate representation.
+- Source registration: Passing CUDA C/C++ source strings and typed parameter metadata.
 - Compilation: Generation of PTX (Parallel Thread Execution) code.
 - Loading: Injection of the binary module into the current CUDA context
 

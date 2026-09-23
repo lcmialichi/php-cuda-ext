@@ -37,10 +37,14 @@
 
 DEFINE_FLATTENER(float32, float)
 DEFINE_FLATTENER(float64, double)
-DEFINE_FLATTENER(int32, int32_t)
 DEFINE_FLATTENER(int8, int8_t)
+DEFINE_FLATTENER(int16, int16_t)
+DEFINE_FLATTENER(int32, int32_t)
 DEFINE_FLATTENER(int64, int64_t)
-DEFINE_FLATTENER(uint64, uint8_t)
+DEFINE_FLATTENER(uint8, uint8_t)
+DEFINE_FLATTENER(uint16, uint16_t)
+DEFINE_FLATTENER(uint32, uint32_t)
+DEFINE_FLATTENER(uint64, uint64_t)
 DEFINE_FLATTENER(_bool, bool)
 
 tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str);

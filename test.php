@@ -26,7 +26,7 @@ function assertArrayClose(array $actual, array $expected, float $epsilon, string
             continue;
         }
 
-        assertTrue(abs((float)$actualValue - (float)$expectedValue) <= $epsilon, "{$label}[$index]: expected $expectedValue, got $actualValue");
+        assertTrue(abs((float) $actualValue - (float) $expectedValue) <= $epsilon, "{$label}[$index]: expected $expectedValue, got $actualValue");
     }
 }
 
@@ -58,9 +58,8 @@ foreach ($dtypeCases as $dtype => [$values, $epsilon]) {
 echo "CudaArray dtype round-trip OK\n";
 
 $compiler = new Compiler();
-$compiler->kernel(
-    'logistic_regression_step',
-    <<<'CUDA'
+
+$kernelSource = <<<'CUDA'
 extern "C" __global__ void logistic_regression_step(
     const float *x,
     const float *y,
@@ -94,7 +93,11 @@ extern "C" __global__ void logistic_regression_step(
     }
     atomicAdd(&w[d], -scale);
 }
-CUDA,
+CUDA;
+
+$compiler->kernel(
+    'logistic_regression_step',
+    $kernelSource,
     [
         ['name' => 'x', 'type' => 'array', 'dtype' => 'float32'],
         ['name' => 'y', 'type' => 'array', 'dtype' => 'float32'],
@@ -126,36 +129,123 @@ echo sprintf(
     strlen($serialized)
 );
 
-$n = 4;
-$d = 2;
-$x = new CudaArray([
-    0.0, 0.0,
-    0.0, 1.0,
-    1.0, 0.0,
-    1.0, 1.0,
-], 'float32');
-$y = new CudaArray([0.0, 1.0, 1.0, 1.0], 'float32');
-$weights = CudaArray::zeros([$d + 1], 'float32');
-$pred = CudaArray::zeros([$n], 'float32');
-$loss = CudaArray::zeros([$n], 'float32');
-$config = $module->autoGrid('logistic_regression_step', $n);
+// Define a test runner to verify module functionality
+function runLogisticRegressionTest($module, string $testLabel) {
+    $n = 4;
+    $d = 2;
+    $x = new CudaArray([
+        0.0, 0.0,
+        0.0, 1.0,
+        1.0, 0.0,
+        1.0, 1.0,
+    ], 'float32');
 
-for ($epoch = 0; $epoch < 250; $epoch++) {
-    $module->launch('logistic_regression_step', $config, [$x, $y, $weights, $pred, $loss, $n, $d, 0.8]);
+    $y = new CudaArray([0.0, 1.0, 1.0, 1.0], 'float32');
+    $weights = CudaArray::zeros([$d + 1], 'float32');
+    $pred = CudaArray::zeros([$n], 'float32');
+    $loss = CudaArray::zeros([$n], 'float32');
+    $config = $module->autoGrid('logistic_regression_step', $n);
+
+    for ($epoch = 0; $epoch < 250; $epoch++) {
+        $module->launch('logistic_regression_step', $config, [$x, $y, $weights, $pred, $loss, $n, $d, 0.8]);
+    }
+
+    $predictions = $pred->toArray();
+    $trainedWeights = $weights->toArray();
+    $lossValues = $loss->toArray();
+    $meanLoss = array_sum($lossValues) / count($lossValues);
+
+    assertTrue($predictions[0] < 0.55, "[$testLabel] logistic regression should keep [0,0] near the negative class");
+    assertTrue($predictions[1] > 0.70, "[$testLabel] logistic regression should classify [0,1] as positive");
+    assertTrue($predictions[2] > 0.70, "[$testLabel] logistic regression should classify [1,0] as positive");
+    assertTrue($predictions[3] > 0.90, "[$testLabel] logistic regression should classify [1,1] as strongly positive");
+    assertTrue($meanLoss < 0.35, "[$testLabel] expected trained mean loss below 0.35, got $meanLoss");
+
+    echo "[$testLabel] Logistic regression predictions: " . json_encode($predictions) . "\n";
+    echo "[$testLabel] Trained weights: " . json_encode($trainedWeights) . "\n";
+    echo sprintf("[%s] Mean loss: %.6f\n", $testLabel, $meanLoss);
+    echo "[$testLabel] Sanity check passed.\n\n";
 }
 
-$predictions = $pred->toArray();
-$trainedWeights = $weights->toArray();
-$lossValues = $loss->toArray();
-$meanLoss = array_sum($lossValues) / count($lossValues);
+// Run initial sanity check
+runLogisticRegressionTest($module, 'Initial Load');
 
-assertTrue($predictions[0] < 0.55, 'logistic regression should keep [0,0] near the negative class');
-assertTrue($predictions[1] > 0.70, 'logistic regression should classify [0,1] as positive');
-assertTrue($predictions[2] > 0.70, 'logistic regression should classify [1,0] as positive');
-assertTrue($predictions[3] > 0.90, 'logistic regression should classify [1,1] as strongly positive');
-assertTrue($meanLoss < 0.35, "expected trained mean loss below 0.35, got $meanLoss");
 
-echo "Logistic regression predictions: " . json_encode($predictions) . "\n";
-echo "Trained weights: " . json_encode($trainedWeights) . "\n";
-echo sprintf("Mean loss: %.6f\n", $meanLoss);
-echo "All checks passed\n";
+echo "--- Starting JIT Compilation vs Deserialization Benchmark ---\n";
+
+$benchmarkIterations = 50;
+$compileTimes = [];
+$deserializeTimes = [];
+$testModuleCompile = null;
+
+// 1. Pure Compilation Benchmark (NVRTC + Module Load)
+for ($i = 0; $i < $benchmarkIterations; $i++) {
+    $benchCompiler = new Compiler();
+    $benchCompiler->kernel(
+        'logistic_regression_step',
+        $kernelSource,
+        [
+            ['name' => 'x', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'y', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'w', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'pred', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'loss', 'type' => 'array', 'dtype' => 'float32'],
+            ['name' => 'n', 'dtype' => 'int32'],
+            ['name' => 'd', 'dtype' => 'int32'],
+            ['name' => 'lr', 'dtype' => 'float32'],
+        ]
+    );
+
+    $start = microtime(true);
+    $testModuleCompile = $benchCompiler->compile();
+    $compileTimes[] = millis($start);
+}
+
+// Ensure the compiled module actually works
+runLogisticRegressionTest($testModuleCompile, 'Benchmark Compiled Module');
+
+// 2. Prepare serialized payload (PTX cache)
+$serializedPayload = serialize($testModuleCompile);
+$payloadSizeBytes = strlen($serializedPayload);
+$testModuleDeserialize = null;
+
+// 3. Deserialization Benchmark (cuModuleLoadData / Cache)
+for ($i = 0; $i < $benchmarkIterations; $i++) {
+    $start = microtime(true);
+    $testModuleDeserialize = unserialize($serializedPayload);
+    // Initialize if required by your extension's lifecycle
+    if (method_exists($testModuleDeserialize, 'initialize')) {
+        $testModuleDeserialize->initialize();
+    }
+    $deserializeTimes[] = millis($start);
+}
+
+// Ensure the deserialized module actually works
+runLogisticRegressionTest($testModuleDeserialize, 'Benchmark Deserialized Module');
+
+
+$calcStats = function (array $times) {
+    return [
+        'min' => min($times),
+        'max' => max($times),
+        'avg' => array_sum($times) / count($times)
+    ];
+};
+
+$compileStats = $calcStats($compileTimes);
+$deserializeStats = $calcStats($deserializeTimes);
+
+echo sprintf("Serialized Payload: %d bytes (%.2f KB)\n\n", $payloadSizeBytes, $payloadSizeBytes / 1024);
+
+echo "[1] JIT Compilation (Compiler::compile) - $benchmarkIterations iterations:\n";
+echo sprintf("    Min: %.3f ms\n", $compileStats['min']);
+echo sprintf("    Max: %.3f ms\n", $compileStats['max']);
+echo sprintf("    Avg: %.3f ms\n", $compileStats['avg']);
+
+echo "\n[2] Deserialization (unserialize PTX Cache) - $benchmarkIterations iterations:\n";
+echo sprintf("    Min: %.3f ms\n", $deserializeStats['min']);
+echo sprintf("    Max: %.3f ms\n", $deserializeStats['max']);
+echo sprintf("    Avg: %.3f ms\n", $deserializeStats['avg']);
+
+$speedup = $compileStats['avg'] / $deserializeStats['avg'];
+echo sprintf("\n[!] Deserialization is %.2fx faster than compiling from scratch.\n", $speedup);

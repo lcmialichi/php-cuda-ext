@@ -14,6 +14,8 @@ int cuda_array_init(size_t size);
 void cuda_array_shutdown();
 
 ZEND_METHOD(CudaArray, __construct);
+ZEND_METHOD(CudaArray, __serialize);
+ZEND_METHOD(CudaArray, __unserialize);
 ZEND_METHOD(CudaArray, __invoke);
 ZEND_METHOD(CudaArray, __debugInfo);
 

@@ -13,6 +13,7 @@ static void flatten_php_array(zval *data, float *flat_array, int *index);
 static void extract_shape_from_array(zval *data, int *shape, int *ndims);
 static size_t calculate_total_size(zval *data);
 static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int *index, size_t total_size, dtype_t dtype);
+static cudaError_t cuda_copy_host_buffer_to_gpu(void *gpu_data, const void *host_data, size_t byte_count);
 
 tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str)
 {
@@ -65,6 +66,33 @@ tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype)
     {
         cuda_tensor_destroy(tensor);
         zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(cuda_status));
+        return NULL;
+    }
+
+    return tensor;
+}
+
+tensor_t *cuda_tensor_create_from_host_buffer(int *shape, int ndims, dtype_t dtype, const void *host_data, size_t byte_count)
+{
+    tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
+    if (!tensor)
+    {
+        return NULL;
+    }
+
+    size_t expected_bytes = tensor->total_size * tensor->element_size;
+    if (byte_count != expected_bytes)
+    {
+        cuda_tensor_destroy(tensor);
+        zend_throw_error(NULL, "Host buffer size mismatch: expected %zu bytes, got %zu", expected_bytes, byte_count);
+        return NULL;
+    }
+
+    cudaError_t status = cuda_copy_host_buffer_to_gpu(tensor->data, host_data, byte_count);
+    if (status != cudaSuccess)
+    {
+        cuda_tensor_destroy(tensor);
+        zend_throw_error(NULL, "Failed to copy host buffer to GPU: %s", cudaGetErrorString(status));
         return NULL;
     }
 
@@ -489,6 +517,32 @@ static cudaError_t cuda_flatten_php_array_to_gpu(zval *data, void *gpu_data, int
     else
         efree(host_data);
     *index = host_index;
+    return status;
+}
+
+static cudaError_t cuda_copy_host_buffer_to_gpu(void *gpu_data, const void *host_data, size_t byte_count)
+{
+    if (byte_count == 0)
+    {
+        return cudaSuccess;
+    }
+
+    if (byte_count < PINNED_TRANSFER_THRESHOLD_BYTES)
+    {
+        return cudaMemcpy(gpu_data, host_data, byte_count, cudaMemcpyHostToDevice);
+    }
+
+    void *pinned_host_data = NULL;
+    cudaError_t status = cudaMallocHost(&pinned_host_data, byte_count);
+    if (status != cudaSuccess)
+    {
+        return status;
+    }
+
+    memcpy(pinned_host_data, host_data, byte_count);
+    status = cudaMemcpy(gpu_data, pinned_host_data, byte_count, cudaMemcpyHostToDevice);
+    cudaFreeHost(pinned_host_data);
+
     return status;
 }
 

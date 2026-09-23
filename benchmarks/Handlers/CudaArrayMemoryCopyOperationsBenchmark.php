@@ -111,7 +111,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::toHost() [GPU -> ContiguousArray]",
-                "iterations" => 50,
+                "iterations" => 20,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoHost",
                 "metadata" => $this->transferMetadata()
@@ -120,7 +120,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::toArray() [GPU -> PHP Array]",
-                "iterations" => 50,
+                "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArraytoArray",
                 "metadata" => $this->transferMetadata()
@@ -129,7 +129,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "run" => 7,
                 "warmup" => true,
                 "name" => "CudaArray::__construct() [PHP Array -> GPU]",
-                "iterations" => 50,
+                "iterations" => 10,
                 "type" => "CUDA",
                 "handler" => "cudaArrayConstructor",
                 "metadata" => $this->unaryMetadata()
@@ -150,12 +150,12 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
         ];
     }
 
-     private function transferMetadata(): array
+    private function transferMetadata(): array
     {
         return [
             ["shape" => "16x16x16", "type" => "3D"],
             ["shape" => "64x64x64", "type" => "3D"],
-            ["shape" => "1024x512x64", "type" => "3D"],
+            ["shape" => "255x255x64", "type" => "3D"],
             ["shape" => "512x512", "type" => "3D"],
             ["shape" => "1024x512", "type" => "2D"],
             ["shape" => "1x180000", "type" => "2D"],
@@ -170,7 +170,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
 
     public function args3DShape(int $count): array
     {
-        return  match ($count) {
+        return match ($count) {
             1 => [[16, 16, 16]],
             2 => [[64, 64, 64]],
             3 => [[128, 128, 128]],
@@ -182,7 +182,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
 
     public function args3DAndValue(int $count): array
     {
-        return  match ($count) {
+        return match ($count) {
             1 => [[16, 16, 16], 10],
             2 => [[64, 64, 64], 10],
             3 => [[128, 128, 128], 10],
@@ -194,13 +194,13 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
 
     public function args3DAndRange(int $count): array
     {
-        return  match ($count) {
+        return match ($count) {
             1 => [[16, 16, 16], -1, 1],
-            2 => [[64, 64, 64],  -1, 1],
-            3 => [[128, 128, 128],  -1, 1],
-            4 => [[256, 256, 256],  -1, 1],
-            5 => [[1024, 128, 64],  -1, 1],
-            6 => [[512, 256, 128],  -1, 1],
+            2 => [[64, 64, 64], -1, 1],
+            3 => [[128, 128, 128], -1, 1],
+            4 => [[256, 256, 256], -1, 1],
+            5 => [[1024, 128, 64], -1, 1],
+            6 => [[512, 256, 128], -1, 1],
         };
     }
 
@@ -323,7 +323,7 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
         return match ($count) {
             1 => [array_fill(0, 15, array_fill(0, 15, array_fill(0, 15, $count)))],
             2 => [array_fill(0, 63, array_fill(0, 63, array_fill(0, 63, $count)))],
-            3 => [array_fill(0, 1023, array_fill(0, 511, array_fill(0, 63, $count)))],
+            3 => [array_fill(0, 255, array_fill(0, 255, array_fill(0, 63, $count)))],
             4 => [array_fill(0, 511, array_fill(0, 511, $count))],
             5 => [array_fill(0, 1023, array_fill(0, 511, $count))],
             6 => [array_fill(0, 1, array_fill(0, 180000, $count))],

@@ -8,10 +8,8 @@ use Cuda\CudaArray;
 /**
  * Custom CUDA Kernels (JIT)
  */
-$compiler = new Compiler();
-$compiler->kernel(
-    'v_scale',
-    <<<'CUDA'
+
+$source = <<<'CUDA'
 extern "C" __global__ void v_scale(float *data, int factor, int n)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -19,13 +17,15 @@ extern "C" __global__ void v_scale(float *data, int factor, int n)
         data[idx] *= factor;
     }
 }
-CUDA,
-    [
-        ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
-        ['name' => 'factor', 'dtype' => 'int32'],
-        ['name' => 'n', 'dtype' => 'int32'],
-    ]
-);
+CUDA;
+
+$compiler = new Compiler(source: $source);
+$compiler->kernel('v_scale', [
+    ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
+    ['name' => 'factor', 'dtype' => 'int32'],
+    ['name' => 'n', 'dtype' => 'int32'],
+]);
+
 
 // JIT: NVRTC compiles CUDA source -> PTX -> GPU Module
 $module = $compiler->compile();

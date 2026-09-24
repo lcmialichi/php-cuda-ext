@@ -8,18 +8,14 @@ use IteratorAggregate;
 class Compiler
 {
     public function __construct(
+        string $source,
         ?string $target = null,
         int $optimization = 2,
         bool $debug = false,
         bool $fastMath = true,
     ) {}
 
-    public function addSource(string $source): static
-    {
-        return $this;
-    }
-
-    public function kernel(string $name, ?string $source = null, array $parameters = [], array $headers = []): static
+    public function kernel(string $name, array $parameters = [], array $headers = []): static
     {
         return $this;
     }

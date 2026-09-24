@@ -13,10 +13,7 @@ use Cuda\CudaArray;
 
 // --- 1. JIT Compilation ---
 
-$compiler = new Compiler();
-$compiler->kernel(
-    'heavy_math',
-    <<<'CUDA'
+$src =  <<<'CUDA'
 extern "C" __global__ void heavy_math(float *data, int rows, int cols)
 {
     int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -34,14 +31,17 @@ extern "C" __global__ void heavy_math(float *data, int rows, int cols)
 
     data[idx] = val;
 }
-CUDA,
-    [
-        ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
-        ['name' => 'rows', 'dtype' => 'int32'],
-        ['name' => 'cols', 'dtype' => 'int32'],
-    ],
-    ['#include <math.h>']
-);
+CUDA;
+
+$compiler = new Compiler(source: $src);
+$headers = ['#include <math.h>'];
+$parameters = [
+    ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
+    ['name' => 'rows', 'dtype' => 'int32'],
+    ['name' => 'cols', 'dtype' => 'int32'],
+];
+
+$compiler->kernel('heavy_math', $parameters, $headers);
 $module = $compiler->compile();
 
 // --- 2. Data & Configuration ---

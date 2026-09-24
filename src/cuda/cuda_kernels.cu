@@ -12,8 +12,8 @@
 typedef struct
 {
     float *A, *B, *C;
-    int *shapeA, *shapeB, *shapeC;
-    size_t *strideA, *strideB, *strideC;
+    int shapeA[MAX_DIMS], shapeB[MAX_DIMS], shapeC[MAX_DIMS];
+    size_t strideA[MAX_DIMS], strideB[MAX_DIMS], strideC[MAX_DIMS];
     int ndA, ndB, ndC;
     int M, N, K;
     int total_batches;
@@ -349,8 +349,8 @@ extern "C"
 
     __global__ void matmul_nd_tiled_kernel(MatMulParamsND p)
     {
-        __shared__ float As[TILE_SIZE][TILE_SIZE];
-        __shared__ float Bs[TILE_SIZE][TILE_SIZE];
+        __shared__ float As[TILE_SIZE][TILE_SIZE + 1];
+        __shared__ float Bs[TILE_SIZE][TILE_SIZE + 1];
 
         int tx = threadIdx.x;
         int ty = threadIdx.y;
@@ -359,78 +359,54 @@ extern "C"
         int global_row = blockIdx.y * TILE_SIZE + ty;
         int global_col = blockIdx.x * TILE_SIZE + tx;
 
-        if (global_row >= p.M || global_col >= p.N || batch_id >= p.total_batches)
-        {
+        if (batch_id >= p.total_batches)
             return;
-        }
 
-        int coordsC[MAX_DIMS] = {0};
+        size_t batch_offset_A = 0;
+        size_t batch_offset_B = 0;
+        size_t batch_offset_C = 0;
+
         int batch_dims = p.ndC - 2;
         int tmp = batch_id;
 
         for (int i = batch_dims - 1; i >= 0; i--)
         {
-            coordsC[i] = tmp % p.shapeC[i];
+            int coord = tmp % p.shapeC[i];
             tmp /= p.shapeC[i];
-        }
 
-        coordsC[p.ndC - 2] = global_row;
-        coordsC[p.ndC - 1] = global_col;
-        size_t idxC = 0;
-        for (int i = 0; i < p.ndC; i++)
-            idxC += (size_t)coordsC[i] * p.strideC[i];
+            batch_offset_C += (size_t)coord * p.strideC[i];
+            if (p.ndA > i + 2 && p.shapeA[i] > 1)
+                batch_offset_A += (size_t)coord * p.strideA[i];
+
+            if (p.ndB > i + 2 && p.shapeB[i] > 1)
+                batch_offset_B += (size_t)coord * p.strideB[i];
+        }
+        // ---------------------------------------------------------
 
         float sum = 0.0f;
+        int strideA_row = p.strideA[p.ndA - 2];
+        int strideA_col = p.strideA[p.ndA - 1];
+        int strideB_row = p.strideB[p.ndB - 2];
+        int strideB_col = p.strideB[p.ndB - 1];
 
         for (int k_offset = 0; k_offset < p.K; k_offset += TILE_SIZE)
         {
+            int a_col = k_offset + tx;
+            int b_row = k_offset + ty;
 
-            int global_idx_A_load_row = global_row;
-            int global_idx_A_load_col = k_offset + tx;
-
-            int global_idx_B_load_row = k_offset + ty;
-            int global_idx_B_load_col = global_col;
-
-            size_t idxA_load = 0;
-            for (int i = 0; i < batch_dims; i++)
-            {
-                int current_batch_coord = coordsC[i];
-                if (p.ndA > i + 2 && p.shapeA[i] > 1)
-                {
-                    idxA_load += (size_t)current_batch_coord * p.strideA[i];
-                }
-            }
-            if (p.ndA >= 2)
-                idxA_load += (size_t)global_idx_A_load_row * p.strideA[p.ndA - 2];
-            if (p.ndA >= 2)
-                idxA_load += (size_t)global_idx_A_load_col * p.strideA[p.ndA - 1];
-
-            size_t idxB_load = 0;
-            for (int i = 0; i < batch_dims; i++)
-            {
-                int current_batch_coord = coordsC[i];
-                if (p.ndB > i + 2 && p.shapeB[i] > 1)
-                {
-                    idxB_load += (size_t)current_batch_coord * p.strideB[i];
-                }
-            }
-            if (p.ndB >= 2)
-                idxB_load += (size_t)global_idx_B_load_row * p.strideB[p.ndB - 2];
-            if (p.ndB >= 2)
-                idxB_load += (size_t)global_idx_B_load_col * p.strideB[p.ndB - 1];
-
-            if (global_idx_A_load_row < p.M && global_idx_A_load_col < p.K)
-                As[ty][tx] = p.A[idxA_load];
+            if (global_row < p.M && a_col < p.K)
+                As[ty][tx] = p.A[batch_offset_A + (global_row * strideA_row) + (a_col * strideA_col)];
             else
                 As[ty][tx] = 0.0f;
 
-            if (global_idx_B_load_row < p.K && global_idx_B_load_col < p.N)
-                Bs[ty][tx] = p.B[idxB_load];
+            if (b_row < p.K && global_col < p.N)
+                Bs[ty][tx] = p.B[batch_offset_B + (b_row * strideB_row) + (global_col * strideB_col)];
             else
                 Bs[ty][tx] = 0.0f;
 
-            __syncthreads(); 
+            __syncthreads();
 
+#pragma unroll
             for (int k = 0; k < TILE_SIZE; ++k)
             {
                 sum += As[ty][k] * Bs[k][tx];
@@ -439,7 +415,11 @@ extern "C"
             __syncthreads();
         }
 
-        p.C[idxC] = sum;
+        if (global_row < p.M && global_col < p.N)
+        {
+            size_t final_idxC = batch_offset_C + (global_row * p.strideC[p.ndC - 2]) + (global_col * p.strideC[p.ndC - 1]);
+            p.C[final_idxC] = sum;
+        }
     }
 
     int cuda_batched_matmul_nd_launcher(
@@ -453,22 +433,28 @@ extern "C"
             return 0;
         }
 
-        int h_shapeA[MAX_DIMS], h_shapeB[MAX_DIMS], h_shapeC[MAX_DIMS];
+        MatMulParamsND p_host;
+        memset(&p_host, 0, sizeof(MatMulParamsND));
 
-        cudaMemcpy(h_shapeA, d_shapeA, ndA * sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(h_shapeB, d_shapeB, ndB * sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(h_shapeC, d_shapeC, ndC * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(p_host.shapeA, d_shapeA, ndA * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(p_host.strideA, d_strideA, ndA * sizeof(size_t), cudaMemcpyDeviceToHost);
 
-        if (h_shapeA[ndA - 1] != h_shapeB[ndB - 2])
+        cudaMemcpy(p_host.shapeB, d_shapeB, ndB * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(p_host.strideB, d_strideB, ndB * sizeof(size_t), cudaMemcpyDeviceToHost);
+
+        cudaMemcpy(p_host.shapeC, d_shapeC, ndC * sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(p_host.strideC, d_strideC, ndC * sizeof(size_t), cudaMemcpyDeviceToHost);
+
+        if (p_host.shapeA[ndA - 1] != p_host.shapeB[ndB - 2])
         {
             return 0;
         }
 
-        int M = h_shapeA[ndA - 2];
-        int N = h_shapeB[ndB - 1];
-        int K = h_shapeA[ndA - 1];
+        int M = p_host.shapeA[ndA - 2];
+        int N = p_host.shapeB[ndB - 1];
+        int K = p_host.shapeA[ndA - 1];
 
-        if (h_shapeC[ndC - 2] != M || h_shapeC[ndC - 1] != N)
+        if (p_host.shapeC[ndC - 2] != M || p_host.shapeC[ndC - 1] != N)
         {
             return 0;
         }
@@ -476,10 +462,9 @@ extern "C"
         int total_batches = 1;
         for (int i = 0; i < ndC - 2; i++)
         {
-            total_batches *= h_shapeC[i];
+            total_batches *= p_host.shapeC[i];
         }
 
-        MatMulParamsND p_host;
         p_host.A = A;
         p_host.B = B;
         p_host.C = C;
@@ -490,12 +475,6 @@ extern "C"
         p_host.N = N;
         p_host.K = K;
         p_host.total_batches = total_batches;
-        p_host.shapeA = d_shapeA;
-        p_host.strideA = d_strideA;
-        p_host.shapeB = d_shapeB;
-        p_host.strideB = d_strideB;
-        p_host.shapeC = d_shapeC;
-        p_host.strideC = d_strideC;
 
         dim3 block(TILE_SIZE, TILE_SIZE);
         dim3 grid((N + TILE_SIZE - 1) / TILE_SIZE, (M + TILE_SIZE - 1) / TILE_SIZE, total_batches);

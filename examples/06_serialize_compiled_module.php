@@ -23,11 +23,7 @@ if (file_exists($cachePath)) {
 } else {
     echo "LOG: Cache miss. Initiating NVRTC compilation...\n";
 
-    $compiler = new Compiler();
-
-    $compiler->kernel(
-        'v_scale',
-        <<<'CUDA'
+    $src = <<<'CUDA'
 extern "C" __global__ void v_scale(float *data, int factor, int n)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -35,13 +31,16 @@ extern "C" __global__ void v_scale(float *data, int factor, int n)
         data[idx] *= factor;
     }
 }
-CUDA,
-        [
-            ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
-            ['name' => 'factor', 'dtype' => 'int32'],
-            ['name' => 'n', 'dtype' => 'int32'],
-        ]
-    );
+CUDA;
+
+    $compiler = new Compiler(source: $src);
+    $parameters = [
+        ['name' => 'data', 'type' => 'array', 'dtype' => 'float32'],
+        ['name' => 'factor', 'dtype' => 'int32'],
+        ['name' => 'n', 'dtype' => 'int32'],
+    ];
+
+    $compiler->kernel('v_scale', $parameters);
 
     // Generate the GPU Module
     $module = $compiler->compile();
@@ -50,7 +49,7 @@ CUDA,
     if (!is_dir(dirname($cachePath))) {
         mkdir(dirname($cachePath), 0755, true);
     }
-    
+
     file_put_contents($cachePath, serialize($module));
     echo "LOG: Module successfully compiled and cached.\n";
 }

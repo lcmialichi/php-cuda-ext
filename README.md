@@ -185,9 +185,7 @@ Custom kernels are written as CUDA C/C++ source strings and compiled to PTX at r
 
 ### Kernel Definition
 ```php
-$compiler = new Cuda\Compiler();
-$compiler->kernel(
-  'v_add',
+$src =  'v_add',
   <<<'CUDA'
 extern "C" __global__ void v_add(float *a, float *b, float *c, int n)
 {
@@ -196,7 +194,10 @@ extern "C" __global__ void v_add(float *a, float *b, float *c, int n)
     c[idx] = a[idx] + b[idx];
     }
 }
-CUDA,
+CUDA;
+
+$compiler = new Cuda\Compiler(source: $src);
+$compiler->kernel('v_add',
   [
     ['name' => 'a', 'type' => 'array', 'dtype' => 'float32'],
     ['name' => 'b', 'type' => 'array', 'dtype' => 'float32'],

@@ -28,6 +28,8 @@
 #define ASYNC_OP_POOL_SIZE 32
 #define MODULE_CACHE_KEY "__cuda_module"
 
+#define MAX_KERNEL_ARGS 128
+
 extern zend_class_entry *cuda_array_ce;
 
 zend_class_entry *cuda_module_ce;
@@ -52,23 +54,24 @@ static const char *module_dtype_to_string(dtype_t dtype);
 static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zend_string *kernel_name);
 static zend_bool module_validate_launch_config(cuda_module_object *module, int grid[3], int block[3]);
 static zend_bool module_validate_launch_config_cached(int grid[3], int block[3]);
-static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *args, int argc,
-                                               void ***cuda_args_ptr, void ***temp_buffers_ptr,
-                                               int *temp_buffers_count_ptr);
+
+// Nova assinatura: Buffer na stack
+static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTable *args_ht,
+                                               void **cuda_args, uint64_t *scalar_args);
+
 static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
                                             cuda_kernel_data *kernel,
                                             int grid[3], int block[3],
-                                            void **cuda_args, int argc,
+                                            void **cuda_args,
                                             CUstream stream);
 static void module_check_cuda_error(cuda_module_object *module, CUresult result, const char *context);
+
+// Nova assinatura: Sem alocação dinâmica de args
 static int module_create_async_operation(cuda_module_object *module,
                                          zend_string *kernel_name,
-                                         void **cuda_args,
-                                         void **temp_buffers,
-                                         int temp_buffers_count,
                                          int grid[3],
-                                         int block[3],
-                                         int argc);
+                                         int block[3]);
+
 static void module_cleanup_async_operation_by_id(cuda_module_object *module, int op_id);
 static void module_cleanup_all_async_operations(cuda_module_object *module);
 static void module_cleanup_timeout_operations(cuda_module_object *module);
@@ -82,8 +85,6 @@ static void module_expand_stream_pool_async(cuda_module_object *module);
 static void module_destroy_stream_pool(cuda_module_object *module);
 static zend_bool module_initialize_global_cuda(cuda_module_object *module);
 static void module_prepare_launch_config(zval *config_zv, int grid[3], int block[3]);
-static void module_cleanup_args_and_buffers(zval *args, int argc, void **cuda_args,
-                                            void **temp_buffers, int temp_buffers_count);
 static zend_bool module_validate_async_operation_count(cuda_module_object *module);
 static zend_bool module_get_shared_context(cuda_module_object *module);
 static void module_hash_launch_config(int grid[3], int block[3], size_t *hash);
@@ -202,32 +203,19 @@ static const char *module_dtype_to_string(dtype_t dtype)
 {
     switch (dtype)
     {
-    case DTYPE_FLOAT32:
-        return "float32";
-    case DTYPE_FLOAT64:
-        return "float64";
-    case DTYPE_INT8:
-        return "int8";
-    case DTYPE_INT16:
-        return "int16";
-    case DTYPE_INT32:
-        return "int32";
-    case DTYPE_INT64:
-        return "int64";
-    case DTYPE_UINT8:
-        return "uint8";
-    case DTYPE_UINT16:
-        return "uint16";
-    case DTYPE_UINT32:
-        return "uint32";
-    case DTYPE_UINT64:
-        return "uint64";
-    case DTYPE_BOOL:
-        return "bool";
-    case DTYPE_LIST:
-        return "array";
-    default:
-        return "unknown";
+    case DTYPE_FLOAT32: return "float32";
+    case DTYPE_FLOAT64: return "float64";
+    case DTYPE_INT8: return "int8";
+    case DTYPE_INT16: return "int16";
+    case DTYPE_INT32: return "int32";
+    case DTYPE_INT64: return "int64";
+    case DTYPE_UINT8: return "uint8";
+    case DTYPE_UINT16: return "uint16";
+    case DTYPE_UINT32: return "uint32";
+    case DTYPE_UINT64: return "uint64";
+    case DTYPE_BOOL: return "bool";
+    case DTYPE_LIST: return "array";
+    default: return "unknown";
     }
 }
 
@@ -306,12 +294,9 @@ static void module_prepare_launch_config(zval *config_zv, int grid[3], int block
             zval *x = zend_hash_index_find(Z_ARR_P(grid_zv), 0);
             zval *y = zend_hash_index_find(Z_ARR_P(grid_zv), 1);
             zval *z = zend_hash_index_find(Z_ARR_P(grid_zv), 2);
-            if (x)
-                grid[0] = zval_get_long(x);
-            if (y)
-                grid[1] = zval_get_long(y);
-            if (z)
-                grid[2] = zval_get_long(z);
+            if (x) grid[0] = zval_get_long(x);
+            if (y) grid[1] = zval_get_long(y);
+            if (z) grid[2] = zval_get_long(z);
         }
 
         if (block_zv && Z_TYPE_P(block_zv) == IS_ARRAY)
@@ -319,41 +304,10 @@ static void module_prepare_launch_config(zval *config_zv, int grid[3], int block
             zval *x = zend_hash_index_find(Z_ARR_P(block_zv), 0);
             zval *y = zend_hash_index_find(Z_ARR_P(block_zv), 1);
             zval *z = zend_hash_index_find(Z_ARR_P(block_zv), 2);
-            if (x)
-                block[0] = zval_get_long(x);
-            if (y)
-                block[1] = zval_get_long(y);
-            if (z)
-                block[2] = zval_get_long(z);
+            if (x) block[0] = zval_get_long(x);
+            if (y) block[1] = zval_get_long(y);
+            if (z) block[2] = zval_get_long(z);
         }
-    }
-}
-
-static void module_cleanup_args_and_buffers(zval *args, int argc, void **cuda_args,
-                                            void **temp_buffers, int temp_buffers_count)
-{
-    if (temp_buffers)
-    {
-        for (int i = 0; i < temp_buffers_count; i++)
-        {
-            if (temp_buffers[i])
-            {
-                efree(temp_buffers[i]);
-            }
-        }
-        efree(temp_buffers);
-    }
-
-    if (cuda_args)
-        efree(cuda_args);
-
-    if (args)
-    {
-        for (int i = 0; i < argc; i++)
-        {
-            zval_ptr_dtor(&args[i]);
-        }
-        efree(args);
     }
 }
 
@@ -754,13 +708,14 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
             }
 
             CUresult query_result = cuStreamQuery(module->stream_pool->streams[i].stream);
+            
             if (query_result == CUDA_SUCCESS)
             {
-                module->stream_pool->streams[i].in_use = 0;
                 module->stream_pool->streams[i].in_use = 1;
                 module->stream_pool->streams[i].last_used = current_time;
                 module->stream_pool->streams[i].context = module->cu_context;
                 stream = module->stream_pool->streams[i].stream;
+                module->stream_pool->actives--; 
                 break;
             }
             else if (query_result != CUDA_ERROR_NOT_READY)
@@ -769,6 +724,7 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
                                  get_cuda_error_string(query_result));
                 module->stream_pool->streams[i].in_use = 0;
                 module->stream_pool->streams[i].stream = NULL;
+                module->stream_pool->actives--;
             }
         }
     }
@@ -1090,29 +1046,19 @@ static zend_bool module_validate_launch_config(cuda_module_object *module, int g
     }
 
     if (block[0] <= 0 || block[1] <= 0 || block[2] <= 0)
-    {
         return 0;
-    }
 
     if (grid[0] <= 0 || grid[1] <= 0 || grid[2] <= 0)
-    {
         return 0;
-    }
 
     if (block[0] > max_block[0] || block[1] > max_block[1] || block[2] > max_block[2])
-    {
         return 0;
-    }
 
     if (grid[0] > max_grid[0] || grid[1] > max_grid[1] || grid[2] > max_grid[2])
-    {
         return 0;
-    }
 
     if ((block[0] * block[1] * block[2]) > max_threads)
-    {
         return 0;
-    }
 
     return 1;
 }
@@ -1184,12 +1130,8 @@ static void module_cleanup_timeout_operations(cuda_module_object *module)
 
 static int module_create_async_operation(cuda_module_object *module,
                                          zend_string *kernel_name,
-                                         void **cuda_args,
-                                         void **temp_buffers,
-                                         int temp_buffers_count,
                                          int grid[3],
-                                         int block[3],
-                                         int argc)
+                                         int block[3])
 {
     CUcontext old_context = NULL;
     CUresult cu_result;
@@ -1212,12 +1154,14 @@ static int module_create_async_operation(cuda_module_object *module,
 
     op->id = module->next_async_op_id++;
     op->kernel_name = kernel_name ? zend_string_copy(kernel_name) : NULL;
-    op->cuda_args = cuda_args;
-    op->temp_buffers = temp_buffers;
-    op->temp_buffers_count = temp_buffers_count;
+    
+    op->cuda_args = NULL;
+    op->temp_buffers = NULL;
+    op->temp_buffers_count = 0;
+    op->argc = 0;
+    
     op->is_active = 1;
     op->start_time = module_get_current_time_ms();
-    op->argc = argc;
 
     memcpy(op->grid, grid, sizeof(int) * 3);
     memcpy(op->block, block, sizeof(int) * 3);
@@ -1258,23 +1202,6 @@ static void module_cleanup_async_operation_by_id(cuda_module_object *module, int
         module_return_stream_to_pool(module, op->stream);
     }
 
-    if (op->temp_buffers)
-    {
-        for (int i = 0; i < op->temp_buffers_count; i++)
-        {
-            if (op->temp_buffers[i])
-            {
-                efree(op->temp_buffers[i]);
-            }
-        }
-        efree(op->temp_buffers);
-    }
-
-    if (op->cuda_args)
-    {
-        efree(op->cuda_args);
-    }
-
     if (op->kernel_name)
     {
         zend_string_release(op->kernel_name);
@@ -1302,28 +1229,36 @@ static void module_cleanup_all_async_operations(cuda_module_object *module)
     ZEND_HASH_FOREACH_END();
 }
 
-static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *args, int argc,
-                                               void ***cuda_args_ptr, void ***temp_buffers_ptr,
-                                               int *temp_buffers_count_ptr)
+static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTable *args_ht,
+                                               void **cuda_args, uint64_t *scalar_args)
 {
-    if (!kernel || !kernel->parameters || argc != kernel->parameters->total)
+    int argc = args_ht ? zend_hash_num_elements(args_ht) : 0;
+    int expected_args = kernel->parameters ? kernel->parameters->total : 0;
+
+    if (expected_args != argc)
     {
         zend_throw_exception_ex(NULL, 0,
-                                "Argument count mismatch: expected %d, got %d",
-                                kernel->parameters ? kernel->parameters->total : 0,
-                                argc);
+                                "Kernel '%s' expects %d arguments, %d given",
+                                kernel->name ? ZSTR_VAL(kernel->name) : "unknown",
+                                expected_args, argc);
         return 0;
     }
 
-    void **cuda_args = (void **)emalloc(sizeof(void *) * argc);
-    void **temp_gpu_buffers = (void **)emalloc(sizeof(void *) * argc);
-    int temp_buffers_count = 0;
-    zend_bool valid = 1;
+    if (argc == 0) return 1;
 
-    for (int i = 0; i < argc && valid; i++)
+    if (argc > MAX_KERNEL_ARGS)
+    {
+        zend_throw_exception_ex(NULL, 0, "Too many arguments for kernel (maximum %d)", MAX_KERNEL_ARGS);
+        return 0;
+    }
+
+    int i = 0;
+    zval *arg;
+    
+    ZEND_HASH_FOREACH_VAL(args_ht, arg)
     {
         func_parameter *param = kernel->parameters->parameters[i];
-        zval *arg = &args[i];
+        
         if (param->dtype == DTYPE_LIST)
         {
             if (Z_TYPE_P(arg) != IS_OBJECT ||
@@ -1332,8 +1267,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                 zend_throw_exception_ex(NULL, 0,
                                         "Argument %d '%s' must be a CudaArray",
                                         i + 1, param->name);
-                valid = 0;
-                break;
+                return 0;
             }
 
             cuda_array_obj *array_obj = Z_CUDA_ARRAY_P(arg);
@@ -1342,8 +1276,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                 zend_throw_exception_ex(NULL, 0,
                                         "Argument %d '%s': CudaArray has no tensor data",
                                         i + 1, param->name);
-                valid = 0;
-                break;
+                return 0;
             }
 
             tensor_t *tensor = array_obj->tensor_handle;
@@ -1354,8 +1287,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
                 zend_throw_exception_ex(NULL, 0,
                                         "Argument %d '%s': expected dtype %s, got %s",
                                         i + 1, param->name, expected, actual);
-                valid = 0;
-                break;
+                return 0;
             }
 
             cuda_args[i] = &tensor->data;
@@ -1366,120 +1298,97 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, zval *a
             {
             case DTYPE_INT8:
             {
-                int8_t *int_ptr = (int8_t *)emalloc(sizeof(int8_t));
-                *int_ptr = (int8_t)zval_get_long(arg);
-                cuda_args[i] = int_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                int8_t val = (int8_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(int8_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_INT16:
             {
-                int16_t *int_ptr = (int16_t *)emalloc(sizeof(int16_t));
-                *int_ptr = (int16_t)zval_get_long(arg);
-                cuda_args[i] = int_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                int16_t val = (int16_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(int16_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_INT32:
             {
-                int32_t *int_ptr = (int32_t *)emalloc(sizeof(int32_t));
-                *int_ptr = (int32_t)zval_get_long(arg);
-                cuda_args[i] = int_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = int_ptr;
+                int32_t val = (int32_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(int32_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_UINT8:
             {
-                uint8_t *uint_ptr = (uint8_t *)emalloc(sizeof(uint8_t));
-                *uint_ptr = (uint8_t)zval_get_long(arg);
-                cuda_args[i] = uint_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = uint_ptr;
+                uint8_t val = (uint8_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(uint8_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_UINT16:
             {
-                uint16_t *uint_ptr = (uint16_t *)emalloc(sizeof(uint16_t));
-                *uint_ptr = (uint16_t)zval_get_long(arg);
-                cuda_args[i] = uint_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = uint_ptr;
+                uint16_t val = (uint16_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(uint16_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_UINT32:
             {
-                uint32_t *uint_ptr = (uint32_t *)emalloc(sizeof(uint32_t));
-                *uint_ptr = (uint32_t)zval_get_long(arg);
-                cuda_args[i] = uint_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = uint_ptr;
+                uint32_t val = (uint32_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(uint32_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_FLOAT32:
             {
-                float *float_ptr = (float *)emalloc(sizeof(float));
-                *float_ptr = (float)zval_get_double(arg);
-                cuda_args[i] = float_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = float_ptr;
+                float val = (float)zval_get_double(arg);
+                memcpy(&scalar_args[i], &val, sizeof(float));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_FLOAT64:
             {
-                double *double_ptr = (double *)emalloc(sizeof(double));
-                *double_ptr = zval_get_double(arg);
-                cuda_args[i] = double_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = double_ptr;
+                double val = zval_get_double(arg);
+                memcpy(&scalar_args[i], &val, sizeof(double));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_INT64:
             {
-                int64_t *long_ptr = (int64_t *)emalloc(sizeof(int64_t));
-                *long_ptr = (int64_t)zval_get_long(arg);
-                cuda_args[i] = long_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = long_ptr;
+                int64_t val = (int64_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(int64_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_UINT64:
             {
-                uint64_t *ulong_ptr = (uint64_t *)emalloc(sizeof(uint64_t));
-                *ulong_ptr = (uint64_t)zval_get_long(arg);
-                cuda_args[i] = ulong_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = ulong_ptr;
+                uint64_t val = (uint64_t)zval_get_long(arg);
+                memcpy(&scalar_args[i], &val, sizeof(uint64_t));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             case DTYPE_BOOL:
             {
-                bool *bool_ptr = (bool *)emalloc(sizeof(bool));
-                *bool_ptr = zval_is_true(arg) ? true : false;
-                cuda_args[i] = bool_ptr;
-                temp_gpu_buffers[temp_buffers_count++] = bool_ptr;
+                bool val = zval_is_true(arg) ? true : false;
+                memcpy(&scalar_args[i], &val, sizeof(bool));
+                cuda_args[i] = &scalar_args[i];
                 break;
             }
             default:
-                zend_throw_exception_ex(NULL, 0,
-                                        "Unsupported scalar dtype for argument %d",
-                                        i + 1);
-                valid = 0;
-                break;
+                zend_throw_exception_ex(NULL, 0, "Unsupported scalar dtype for argument %d", i + 1);
+                return 0;
             }
         }
+        i++;
     }
+    ZEND_HASH_FOREACH_END();
 
-    if (valid)
-    {
-        *cuda_args_ptr = cuda_args;
-        *temp_buffers_ptr = temp_gpu_buffers;
-        *temp_buffers_count_ptr = temp_buffers_count;
-    }
-    else
-    {
-        module_cleanup_args_and_buffers(NULL, 0, cuda_args, temp_gpu_buffers, temp_buffers_count);
-    }
-
-    return valid;
+    return 1;
 }
 
 static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
                                             cuda_kernel_data *kernel,
                                             int grid[3], int block[3],
-                                            void **cuda_args, int argc,
+                                            void **cuda_args,
                                             CUstream stream)
 {
     CUresult cu_result;
@@ -1683,70 +1592,28 @@ ZEND_METHOD(CompiledModule, launch)
         RETURN_FALSE;
     }
 
-    int argc = 0;
-    zval *args = NULL;
-
-    if (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY)
-    {
-        HashTable *ht = Z_ARRVAL_P(args_zv);
-        argc = zend_hash_num_elements(ht);
-
-        if (argc > 0)
-        {
-            args = (zval *)emalloc(sizeof(zval) * argc);
-            int i = 0;
-            zval *val;
-
-            ZEND_HASH_FOREACH_VAL(ht, val)
-            {
-                ZVAL_COPY(&args[i++], val);
-            }
-            ZEND_HASH_FOREACH_END();
-        }
-    }
-
-    int expected_args = kernel->parameters ? kernel->parameters->total : 0;
-    if (expected_args != argc)
-    {
-        zend_throw_exception_ex(NULL, 0,
-                                "Kernel '%s' expects %d arguments, %d given",
-                                ZSTR_VAL(kernel_name),
-                                expected_args, argc);
-        if (args)
-            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
-        RETURN_FALSE;
-    }
+    HashTable *args_ht = (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY) ? Z_ARRVAL_P(args_zv) : NULL;
 
     int grid[3], block[3];
     module_prepare_launch_config(config_zv, grid, block);
 
-    void **cuda_args = NULL;
-    void **temp_gpu_buffers = NULL;
-    int temp_buffers_count = 0;
+    // 🔥 PRE-ALLOCATION NA STACK (Super rápido, não vai para a HEAP do PHP)
+    void *cuda_args[MAX_KERNEL_ARGS];
+    uint64_t scalar_args[MAX_KERNEL_ARGS];
 
-    zend_bool args_prepared = module_prepare_cuda_arguments(kernel, args, argc,
-                                                            &cuda_args, &temp_gpu_buffers,
-                                                            &temp_buffers_count);
-    if (!args_prepared)
+    if (!module_prepare_cuda_arguments(kernel, args_ht, cuda_args, scalar_args))
     {
-        if (args)
-        {
-            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
-        }
-
         RETURN_FALSE;
     }
 
     double start_time = module_get_current_time_ms();
-    CUcontext old_ctx;
-    cuCtxPushCurrent(module->cu_context);
+    
     zend_bool success = module_execute_cuda_kernel(module, kernel, grid, block,
-                                                   cuda_args, argc, module->cu_stream);
-
-    cuCtxPopCurrent(&old_ctx);
+                                                   cuda_args, module->cu_stream);
 
     if (success)
     {
+        // Nota: Um launch síncrono requer a sincronização aqui no final.
         CUresult cu_result = cuStreamSynchronize(module->cu_stream);
         if (cu_result != CUDA_SUCCESS)
         {
@@ -1760,7 +1627,6 @@ ZEND_METHOD(CompiledModule, launch)
         }
     }
 
-    module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
     RETURN_BOOL(success);
 }
 
@@ -1793,10 +1659,38 @@ ZEND_METHOD(CompiledModule, launchAsync)
 
     if (!module_validate_async_operation_count(module))
     {
-        zend_throw_exception_ex(NULL, 0,
-                                "Too many active async operations (%d maximum)",
-                                MAX_STREAM_POOL_SIZE);
-        RETURN_FALSE;
+        module_cleanup_timeout_operations(module);
+        
+        if (!module_validate_async_operation_count(module))
+        {
+            pthread_mutex_lock(&module->stream_pool->mutex);
+            CUstream oldest_stream = NULL;
+            double oldest_time = module_get_current_time_ms();
+            int oldest_idx = -1;
+
+            for (int i = 0; i < module->stream_pool->size; i++) {
+                if (module->stream_pool->streams[i].in_use && 
+                    module->stream_pool->streams[i].last_used < oldest_time) {
+                    oldest_time = module->stream_pool->streams[i].last_used;
+                    oldest_stream = module->stream_pool->streams[i].stream;
+                    oldest_idx = i;
+                }
+            }
+            pthread_mutex_unlock(&module->stream_pool->mutex);
+
+            if (oldest_stream) {
+                cuStreamSynchronize(oldest_stream);
+                
+                zend_ulong num_idx;
+                cuda_async_operation *op;
+                ZEND_HASH_FOREACH_NUM_KEY_PTR(module->async_operations, num_idx, op) {
+                    if (op && op->stream == oldest_stream) {
+                        module_cleanup_async_operation_by_id(module, op->id);
+                        break;
+                    }
+                } ZEND_HASH_FOREACH_END();
+            }
+        }
     }
 
     cuda_kernel_data *kernel = zend_hash_find_ptr(module->kernel_functions, kernel_name);
@@ -1808,82 +1702,38 @@ ZEND_METHOD(CompiledModule, launchAsync)
         RETURN_FALSE;
     }
 
-    int argc = 0;
-    zval *args = NULL;
-
-    if (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY)
-    {
-        HashTable *ht = Z_ARRVAL_P(args_zv);
-        argc = zend_hash_num_elements(ht);
-
-        if (argc > 0)
-        {
-            args = (zval *)emalloc(sizeof(zval) * argc);
-            int i = 0;
-            zval *val;
-
-            ZEND_HASH_FOREACH_VAL(ht, val)
-            {
-                ZVAL_COPY(&args[i++], val);
-            }
-            ZEND_HASH_FOREACH_END();
-        }
-    }
-
-    int expected_args = kernel->parameters ? kernel->parameters->total : 0;
-    if (expected_args != argc)
-    {
-        zend_throw_exception_ex(NULL, 0,
-                                "Kernel '%s' expects %d arguments, %d given",
-                                ZSTR_VAL(kernel_name),
-                                expected_args, argc);
-        if (args)
-        {
-            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
-        }
-        RETURN_FALSE;
-    }
+    HashTable *args_ht = (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY) ? Z_ARRVAL_P(args_zv) : NULL;
 
     int grid[3], block[3];
     module_prepare_launch_config(config_zv, grid, block);
 
-    void **cuda_args = NULL;
-    void **temp_gpu_buffers = NULL;
-    int temp_buffers_count = 0;
+    // 🔥 PRE-ALLOCATION NA STACK
+    void *cuda_args[MAX_KERNEL_ARGS];
+    uint64_t scalar_args[MAX_KERNEL_ARGS];
 
-    zend_bool args_prepared = module_prepare_cuda_arguments(kernel, args, argc,
-                                                            &cuda_args, &temp_gpu_buffers,
-                                                            &temp_buffers_count);
-    if (!args_prepared)
+    if (!module_prepare_cuda_arguments(kernel, args_ht, cuda_args, scalar_args))
     {
-        if (args)
-        {
-            module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
-        }
         RETURN_FALSE;
     }
-    int op_id = module_create_async_operation(module, kernel_name,
-                                              cuda_args, temp_gpu_buffers,
-                                              temp_buffers_count, grid, block, argc);
+
+    int op_id = module_create_async_operation(module, kernel_name, grid, block);
+    
     if (!op_id)
     {
-        module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
         RETURN_FALSE;
     }
 
     cuda_async_operation *op = zend_hash_index_find_ptr(module->async_operations, op_id);
     if (!op)
     {
-        module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
         RETURN_FALSE;
     }
 
     double start_time = module_get_current_time_ms();
+    
+    // O cuLaunchKernel faz a cópia do `cuda_args` para a VRAM/Command Buffer *AGORA* antes de retornar
     zend_bool success = module_execute_cuda_kernel(module, kernel, grid, block,
-                                                   cuda_args, argc, op->stream);
-
-    if (args)
-        module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
+                                                   cuda_args, op->stream);
 
     if (success)
     {
@@ -1935,7 +1785,6 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
     array_init(return_value);
     zend_bool batch_success = 1;
-    int op_index = 0;
 
     zval *op_item;
     ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(operations), op_item)
@@ -1944,7 +1793,6 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         {
             add_next_index_bool(return_value, 0);
             batch_success = 0;
-            op_index++;
             continue;
         }
 
@@ -1956,7 +1804,6 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         {
             add_next_index_bool(return_value, 0);
             batch_success = 0;
-            op_index++;
             continue;
         }
 
@@ -1967,80 +1814,38 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
         {
             add_next_index_bool(return_value, 0);
             batch_success = 0;
-            op_index++;
-            continue;
-        }
-
-        int argc = 0;
-        zval *args = NULL;
-
-        if (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY)
-        {
-            HashTable *ht = Z_ARRVAL_P(args_zv);
-            argc = zend_hash_num_elements(ht);
-
-            if (argc > 0)
-            {
-                args = (zval *)emalloc(sizeof(zval) * argc);
-                int i = 0;
-                zval *val;
-
-                ZEND_HASH_FOREACH_VAL(ht, val)
-                {
-                    ZVAL_COPY(&args[i++], val);
-                }
-                ZEND_HASH_FOREACH_END();
-            }
-        }
-
-        int expected_args = kernel->parameters ? kernel->parameters->total : 0;
-        if (expected_args != argc)
-        {
-            if (args)
-                module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
-            add_next_index_bool(return_value, 0);
-            batch_success = 0;
-            op_index++;
             continue;
         }
 
         int grid[3], block[3];
         module_prepare_launch_config(config_zv, grid, block);
 
-        void **cuda_args = NULL;
-        void **temp_gpu_buffers = NULL;
-        int temp_buffers_count = 0;
+        HashTable *args_ht = (args_zv && Z_TYPE_P(args_zv) == IS_ARRAY) ? Z_ARRVAL_P(args_zv) : NULL;
 
-        zend_bool args_prepared = module_prepare_cuda_arguments(kernel, args, argc,
-                                                                &cuda_args, &temp_gpu_buffers,
-                                                                &temp_buffers_count);
-        if (!args_prepared)
+        // 🔥 PRE-ALLOCATION NA STACK DENTRO DO LOOP 
+        void *cuda_args[MAX_KERNEL_ARGS];
+        uint64_t scalar_args[MAX_KERNEL_ARGS];
+
+        if (!module_prepare_cuda_arguments(kernel, args_ht, cuda_args, scalar_args))
         {
-            if (args)
-                module_cleanup_args_and_buffers(args, argc, NULL, NULL, 0);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
-            op_index++;
             continue;
         }
 
         CUmodule cu_module = module_get_or_load_module_cached(module, kernel_name);
         if (!cu_module)
         {
-            module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
-            op_index++;
             continue;
         }
 
         CUfunction cu_function;
         if (cuModuleGetFunction(&cu_function, cu_module, ZSTR_VAL(kernel_name)) != CUDA_SUCCESS)
         {
-            module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
             add_next_index_bool(return_value, 0);
             batch_success = 0;
-            op_index++;
             continue;
         }
 
@@ -2051,8 +1856,6 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
                                    batch_stream,
                                    cuda_args,
                                    NULL);
-
-        module_cleanup_args_and_buffers(args, argc, cuda_args, temp_gpu_buffers, temp_buffers_count);
 
         if (cu_result == CUDA_SUCCESS)
         {
@@ -2066,7 +1869,6 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
             module_log_error("Batch kernel launch failed: %s", get_cuda_error_string(cu_result));
         }
 
-        op_index++;
     }
     ZEND_HASH_FOREACH_END();
 
@@ -2485,8 +2287,7 @@ ZEND_METHOD(CompiledModule, __serialize)
                     }
                 }
 
-                ZSTR_VAL(params_blob)
-                [total_bytes] = '\0';
+                ZSTR_VAL(params_blob)[total_bytes] = '\0';
                 add_assoc_str(&kernel_data, "params_blob", params_blob);
             }
 
@@ -2614,7 +2415,8 @@ ZEND_METHOD(CompiledModule, getAsyncStatus)
                 }
                 add_assoc_double(&op_info, "elapsed_ms",
                                  module_get_current_time_ms() - op->start_time);
-                add_assoc_long(&op_info, "temp_buffers_count", op->temp_buffers_count);
+                
+                add_assoc_long(&op_info, "temp_buffers_count", 0); 
 
                 add_index_zval(return_value, num_idx, &op_info);
             }
@@ -2639,7 +2441,7 @@ ZEND_METHOD(CompiledModule, getAsyncStatus)
         }
         add_assoc_double(return_value, "elapsed_ms",
                          module_get_current_time_ms() - op->start_time);
-        add_assoc_long(return_value, "temp_buffers_count", op->temp_buffers_count);
+        add_assoc_long(return_value, "temp_buffers_count", 0);
     }
 }
 

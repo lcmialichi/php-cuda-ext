@@ -1,3 +1,4 @@
+#include "cuda_exceptions.h"
 #include "module_ce.h"
 #include "php.h"
 #include "ca_struct.h"
@@ -184,7 +185,7 @@ static void module_check_cuda_error(cuda_module_object *module, CUresult result,
     if (result != CUDA_SUCCESS)
     {
         const char *error_str = get_cuda_error_string(result);
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "CUDA error in %s: %s (code: %d)",
                                 context,
                                 error_str ? error_str : "Unknown error",
@@ -530,13 +531,13 @@ static zend_bool module_ensure_ptx_loaded(cuda_module_object *module)
 {
     if (!module->ptx_code || module->ptx_size == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "No PTX code available");
+        CUDA_THROW_RUNTIME("No PTX code available");
         return 0;
     }
 
     if (module->ptx_size < 10 || strstr(module->ptx_code, ".version") == NULL)
     {
-        zend_throw_exception_ex(NULL, 0, "Invalid PTX code format");
+        CUDA_THROW_INVALID("Invalid PTX code format");
         return 0;
     }
 
@@ -565,7 +566,7 @@ static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
     if (module->cu_context)
     {
         module_ensure_context_set(module);
-        return 1;
+        return EG(exception) == NULL;
     }
 
     if (module_get_shared_context(module))
@@ -576,13 +577,14 @@ static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
 
     if (!module_initialize_global_cuda(module))
     {
+        CUDA_THROW_RUNTIME("Failed to initialize CUDA driver");
         return 0;
     }
 
     CUresult cu_result = cuDevicePrimaryCtxRetain(&module->cu_context, g_primary_device);
     if (cu_result != CUDA_SUCCESS)
     {
-        module_log_error("Failed to retain primary context: %s", get_cuda_error_string(cu_result));
+        CUDA_THROW_RUNTIME("Failed to retain primary context: %s", get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -591,7 +593,7 @@ static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
     {
         cuDevicePrimaryCtxRelease(g_primary_device);
         module->cu_context = NULL;
-        module_log_error("Failed to create stream: %s", get_cuda_error_string(cu_result));
+        CUDA_THROW_RUNTIME("Failed to create stream: %s", get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -864,7 +866,7 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module)
 
     if (!module_initialize_global_cuda(module))
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to initialize CUDA driver");
         return 0;
     }
@@ -886,7 +888,7 @@ static zend_bool module_initialize_cuda_context(cuda_module_object *module)
     cu_result = cuCtxCreate(&module->cu_context, ctx_flags, g_primary_device);
     if (cu_result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to create CUDA context: %s",
                                 get_cuda_error_string(cu_result));
         return 0;
@@ -989,7 +991,7 @@ static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zen
 
     if (!module->ptx_code || module->ptx_size == 0)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "No PTX code available for kernel '%s'",
                                 ZSTR_VAL(kernel_name));
         return NULL;
@@ -1000,7 +1002,7 @@ static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zen
 
     if (result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to load PTX module for kernel '%s': %s",
                                 ZSTR_VAL(kernel_name),
                                 get_cuda_error_string(result));
@@ -1014,7 +1016,7 @@ static CUmodule module_get_or_load_module_cached(cuda_module_object *module, zen
     {
         efree(module_ptr);
         cuModuleUnload(cu_module);
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to cache module for kernel '%s'",
                                 ZSTR_VAL(kernel_name));
         return NULL;
@@ -1170,7 +1172,7 @@ static int module_create_async_operation(cuda_module_object *module,
     op->stream = module_get_stream_with_expansion(module);
     if (!op->stream)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to get CUDA stream for async operation");
         cuCtxPopCurrent(&old_context);
         if (op->kernel_name)
@@ -1252,7 +1254,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTab
 
     if (expected_args != argc)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_INVALID(
                                 "Kernel '%s' expects %d arguments, %d given",
                                 kernel->name ? ZSTR_VAL(kernel->name) : "unknown",
                                 expected_args, argc);
@@ -1263,7 +1265,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTab
 
     if (argc > MAX_KERNEL_ARGS)
     {
-        zend_throw_exception_ex(NULL, 0, "Too many arguments for kernel (maximum %d)", MAX_KERNEL_ARGS);
+        CUDA_THROW_INVALID("Too many arguments for kernel (maximum %d)", MAX_KERNEL_ARGS);
         return 0;
     }
 
@@ -1279,7 +1281,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTab
             if (Z_TYPE_P(arg) != IS_OBJECT ||
                 !instanceof_function(Z_OBJCE_P(arg), cuda_array_ce))
             {
-                zend_throw_exception_ex(NULL, 0,
+                CUDA_THROW_INVALID(
                                         "Argument %d '%s' must be a CudaArray",
                                         i + 1, param->name);
                 return 0;
@@ -1288,7 +1290,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTab
             cuda_array_obj *array_obj = Z_CUDA_ARRAY_P(arg);
             if (!array_obj->tensor_handle)
             {
-                zend_throw_exception_ex(NULL, 0,
+                CUDA_THROW_INVALID(
                                         "Argument %d '%s': CudaArray has no tensor data",
                                         i + 1, param->name);
                 return 0;
@@ -1299,7 +1301,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTab
             {
                 const char *expected = module_dtype_to_string(param->second_dtype);
                 const char *actual = module_dtype_to_string(tensor->dtype);
-                zend_throw_exception_ex(NULL, 0,
+                CUDA_THROW_INVALID(
                                         "Argument %d '%s': expected dtype %s, got %s",
                                         i + 1, param->name, expected, actual);
                 return 0;
@@ -1389,7 +1391,7 @@ static zend_bool module_prepare_cuda_arguments(cuda_kernel_data *kernel, HashTab
                 break;
             }
             default:
-                zend_throw_exception_ex(NULL, 0, "Unsupported scalar dtype for argument %d", i + 1);
+                CUDA_THROW_INVALID("Unsupported scalar dtype for argument %d", i + 1);
                 return 0;
             }
         }
@@ -1413,7 +1415,7 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
     cu_result = cuCtxPushCurrent(module->cu_context);
     if (cu_result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to set CUDA context for kernel execution: %s",
                                 get_cuda_error_string(cu_result));
         return 0;
@@ -1422,7 +1424,7 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
     if (!module_validate_launch_config_cached(grid, block))
     {
         cuCtxPopCurrent(&old_context);
-        zend_throw_exception_ex(NULL, 0, "Invalid grid/block configuration");
+        CUDA_THROW_INVALID("Invalid grid/block configuration");
         return 0;
     }
 
@@ -1437,7 +1439,7 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
     if (cu_result != CUDA_SUCCESS)
     {
         cuCtxPopCurrent(&old_context);
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to get kernel function '%s': %s",
                                 ZSTR_VAL(kernel->name),
                                 get_cuda_error_string(cu_result));
@@ -1456,7 +1458,7 @@ static zend_bool module_execute_cuda_kernel(cuda_module_object *module,
 
     if (cu_result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to launch kernel '%s': %s",
                                 ZSTR_VAL(kernel->name),
                                 get_cuda_error_string(cu_result));
@@ -1504,14 +1506,14 @@ ZEND_METHOD(CompiledModule, autoGrid)
         cuda_array_obj *ca_obj = Z_CUDA_ARRAY_P(z_input);
         if (!ca_obj->tensor_handle)
         {
-            zend_throw_exception_ex(NULL, 0, "CudaArray has no tensor data");
+            CUDA_THROW_INVALID("CudaArray has no tensor data");
             return;
         }
         total_elements = ca_obj->tensor_handle->total_size;
     }
     else
     {
-        zend_throw_exception_ex(NULL, 0, "invalid parameter type: 'elements'");
+        CUDA_THROW_INVALID("invalid parameter type: 'elements'");
         return;
     }
 
@@ -1520,13 +1522,13 @@ ZEND_METHOD(CompiledModule, autoGrid)
 
     if (!kernel)
     {
-        zend_throw_exception_ex(NULL, 0, "Kernel '%s' not found", kernel_name_str);
+        CUDA_THROW_INVALID("Kernel '%s' not found", kernel_name_str);
         return;
     }
 
     if (!module_ensure_cuda_initialized(module))
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        CUDA_THROW_RUNTIME("Failed to initialize CUDA context");
         RETURN_FALSE;
     }
 
@@ -1540,7 +1542,7 @@ ZEND_METHOD(CompiledModule, autoGrid)
     CUresult res = cuModuleGetFunction(&cu_func, cu_module, kernel_name_str);
     if (res != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to get function: %s", get_cuda_error_string(res));
+        CUDA_THROW_RUNTIME("Failed to get function: %s", get_cuda_error_string(res));
         return;
     }
 
@@ -1549,7 +1551,7 @@ ZEND_METHOD(CompiledModule, autoGrid)
 
     if (res != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0, "Occupancy failed: %s", get_cuda_error_string(res));
+        CUDA_THROW_RUNTIME("Occupancy failed: %s", get_cuda_error_string(res));
         return;
     }
 
@@ -1588,20 +1590,20 @@ ZEND_METHOD(CompiledModule, launch)
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
     if (!module_ensure_cuda_initialized(module))
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        CUDA_THROW_RUNTIME("Failed to initialize CUDA context");
         RETURN_FALSE;
     }
 
     if (!module->ptx_code || module->ptx_size == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "No PTX code available");
+        CUDA_THROW_RUNTIME("No PTX code available");
         RETURN_FALSE;
     }
 
     cuda_kernel_data *kernel = zend_hash_find_ptr(module->kernel_functions, kernel_name);
     if (!kernel)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_INVALID(
                                 "Kernel '%s' not found in compiled module",
                                 ZSTR_VAL(kernel_name));
         RETURN_FALSE;
@@ -1662,13 +1664,13 @@ ZEND_METHOD(CompiledModule, launchAsync)
 
     if (!module_ensure_cuda_initialized(module))
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        CUDA_THROW_RUNTIME("Failed to initialize CUDA context");
         RETURN_FALSE;
     }
 
     if (!module->ptx_code || module->ptx_size == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "No PTX code available");
+        CUDA_THROW_RUNTIME("No PTX code available");
         RETURN_FALSE;
     }
 
@@ -1711,7 +1713,7 @@ ZEND_METHOD(CompiledModule, launchAsync)
     cuda_kernel_data *kernel = zend_hash_find_ptr(module->kernel_functions, kernel_name);
     if (!kernel)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_INVALID(
                                 "Kernel '%s' not found in compiled module",
                                 ZSTR_VAL(kernel_name));
         RETURN_FALSE;
@@ -1781,7 +1783,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
 
     if (!module_ensure_cuda_initialized(module))
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to initialize CUDA context");
+        CUDA_THROW_RUNTIME("Failed to initialize CUDA context");
         RETURN_FALSE;
     }
 
@@ -1789,7 +1791,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
     CUresult cu_result = cuCtxPushCurrent(module->cu_context);
     if (cu_result != CUDA_SUCCESS)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Failed to set CUDA context for batch operations: %s",
                                 get_cuda_error_string(cu_result));
         RETURN_FALSE;
@@ -1799,7 +1801,7 @@ ZEND_METHOD(CompiledModule, launchAsyncBatch)
     if (!batch_stream)
     {
         cuCtxPopCurrent(&old_context);
-        zend_throw_exception_ex(NULL, 0, "Failed to get stream for batch operations");
+        CUDA_THROW_RUNTIME("Failed to get stream for batch operations");
         RETURN_FALSE;
     }
 
@@ -1955,7 +1957,7 @@ ZEND_METHOD(CompiledModule, sync)
         cuda_async_operation *op = zend_hash_index_find_ptr(module->async_operations, op_id);
         if (!op)
         {
-            zend_throw_exception_ex(NULL, 0, "Async operation %ld not found", op_id);
+            CUDA_THROW_INVALID("Async operation %ld not found", op_id);
             RETURN_FALSE;
         }
 
@@ -2066,7 +2068,6 @@ ZEND_METHOD(CompiledModule, isFinished)
         else
         {
             module_check_cuda_error(module, cu_result, "stream query");
-            op->is_active = 0;
             RETURN_FALSE;
         }
     }
@@ -2133,7 +2134,7 @@ ZEND_METHOD(CompiledModule, wait)
                 double elapsed = module_get_current_time_ms() - start_time;
                 if (elapsed > timeout_ms)
                 {
-                    zend_throw_exception_ex(NULL, 0,
+                    CUDA_THROW_RUNTIME(
                                             "Timeout waiting for all async operations after %.2f ms",
                                             elapsed);
                     RETURN_FALSE;
@@ -2168,7 +2169,6 @@ ZEND_METHOD(CompiledModule, wait)
             else if (cu_result != CUDA_ERROR_NOT_READY)
             {
                 module_check_cuda_error(module, cu_result, "stream query");
-                op->is_active = 0;
                 RETURN_FALSE;
             }
 
@@ -2177,8 +2177,7 @@ ZEND_METHOD(CompiledModule, wait)
                 double elapsed = module_get_current_time_ms() - start_time;
                 if (elapsed > timeout_ms)
                 {
-                    op->is_active = 0;
-                    zend_throw_exception_ex(NULL, 0,
+                    CUDA_THROW_RUNTIME(
                                             "Timeout waiting for async operation %ld after %.2f ms",
                                             op_id, elapsed);
                     RETURN_FALSE;
@@ -2243,21 +2242,26 @@ ZEND_METHOD(CompiledModule, save)
 
     if (!module->ptx_code)
     {
-        RETURN_FALSE;
+        CUDA_THROW_RUNTIME("No PTX code available to save");
+        RETURN_THROWS();
     }
 
     FILE *file = fopen(ZSTR_VAL(filename), "w");
     if (!file)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to open file for writing: %s",
-                         ZSTR_VAL(filename));
-        RETURN_FALSE;
+        CUDA_THROW_RUNTIME("Failed to open file for writing: %s", ZSTR_VAL(filename));
+        RETURN_THROWS();
     }
 
     size_t written = fwrite(module->ptx_code, 1, module->ptx_size, file);
     fclose(file);
 
-    RETURN_BOOL(written == module->ptx_size);
+    if (written != module->ptx_size)
+    {
+        CUDA_THROW_RUNTIME("Failed to write complete PTX file: %s", ZSTR_VAL(filename));
+        RETURN_THROWS();
+    }
+    RETURN_TRUE;
 }
 
 ZEND_METHOD(CompiledModule, __serialize)
@@ -2572,7 +2576,7 @@ ZEND_METHOD(CompiledModule, cancelOperation)
     cuda_async_operation *op = zend_hash_index_find_ptr(module->async_operations, op_id);
     if (!op)
     {
-        zend_throw_exception_ex(NULL, 0, "Async operation %ld not found", op_id);
+        CUDA_THROW_INVALID("Async operation %ld not found", op_id);
         RETURN_FALSE;
     }
 

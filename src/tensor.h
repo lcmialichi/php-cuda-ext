@@ -3,6 +3,9 @@
 
 #include <cuda_runtime.h>
 #include "data_types.h"
+#ifndef __CUDACC__
+#include "cuda_exceptions.h"
+#endif
 
 #define MAX_DIMS 10
 #define MAX_CONCAT_TENSORS 10
@@ -63,7 +66,7 @@ extern "C"
     {                                                                                    \
         if (UNEXPECTED((__tensor__) == NULL))                     \
         {                                                                                \
-            php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL"); \
+            CUDA_THROW_RUNTIME("CUDA not initialized or tensor is NULL"); \
             return NULL;                                                                 \
         }                                                                                \
     } while (0)
@@ -73,7 +76,7 @@ extern "C"
     {                                                                                    \
         if (UNEXPECTED((__tensor__) == NULL))                     \
         {                                                                                \
-            php_error_docref(NULL, E_WARNING, "CUDA not initialized or tensor is NULL"); \
+            CUDA_THROW_RUNTIME("CUDA not initialized or tensor is NULL"); \
             return 0;                                                                    \
         }                                                                                \
     } while (0)

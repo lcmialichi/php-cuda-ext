@@ -5,6 +5,7 @@
 #include <string.h>
 #include "memory_pool.h"
 #include "operations.h"
+#include "cuda_exceptions.h"
 
 static int cuda_is_initialized = 0;
 static tensor_t *handle_allocation_failure(tensor_t *tensor, const char *message, cudaError_t err_code);
@@ -91,40 +92,13 @@ tensor_t *tensor_cast(tensor_t *tensor, dtype_t new_dtype)
 
     if (!tensor_can_cast_to(tensor, new_dtype))
     {
-        php_error_docref(NULL, E_WARNING,
-                         "Cannot safely cast from %s to %s",
-                         dtype_to_string(tensor->dtype),
-                         dtype_to_string(new_dtype));
+        CUDA_THROW_INVALID("Cannot safely cast from %s to %s",
+                           dtype_to_string(tensor->dtype), dtype_to_string(new_dtype));
         return NULL;
     }
 
-    tensor_t *result = cuda_tensor_create_with_dtype(
-        tensor->shape, tensor->ndims, new_dtype);
-
-    if (!result)
-    {
-        php_error_docref(NULL, E_WARNING, "Failed to create tensor for casting");
-        return NULL;
-    }
-
-    php_error_docref(NULL, E_NOTICE, "Tensor casting not fully implemented yet");
-
-    if (tensor->data && result->data)
-    {
-        size_t bytes_to_copy = tensor->total_size * tensor->element_size;
-        if (bytes_to_copy > 0)
-        {
-            cudaError_t err = cudaMemcpy(result->data, tensor->data,
-                                         bytes_to_copy, cudaMemcpyDeviceToDevice);
-            if (err != cudaSuccess)
-            {
-                cuda_tensor_destroy(result);
-                return NULL;
-            }
-        }
-    }
-
-    return result;
+    CUDA_THROW_RUNTIME("Casting between tensor dtypes is not implemented");
+    return NULL;
 }
 
 tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
@@ -147,7 +121,7 @@ tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
     if (tensor->element_size == 0)
     {
         efree(tensor);
-        php_error_docref(NULL, E_WARNING, "Invalid dtype: %d", dtype);
+        CUDA_THROW_INVALID("Invalid dtype: %d", dtype);
         return NULL;
     }
 
@@ -170,7 +144,10 @@ tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
             return handle_allocation_failure(tensor, "Failed to allocate strides array", cudaSuccess);
         }
         if (!compute_total_size(shape, ndims, &tensor->total_size))
+        {
+            CUDA_THROW_INVALID("Invalid tensor shape");
             return handle_allocation_failure(tensor, "Invalid tensor shape", cudaSuccess);
+        }
         compute_strides_from_shape(shape, tensor->strides, ndims);
     }
     else
@@ -229,7 +206,7 @@ int tensor_validate_dtype(tensor_t *tensor)
 
     if (tensor->dtype >= DTYPE_COUNT)
     {
-        php_error_docref(NULL, E_WARNING, "Invalid dtype: %d", tensor->dtype);
+        CUDA_THROW_INVALID("Invalid dtype: %d", tensor->dtype);
         return 0;
     }
 
@@ -329,11 +306,14 @@ static tensor_t *handle_allocation_failure(tensor_t *tensor, const char *message
 {
     if (err_code != cudaSuccess)
     {
-        zend_throw_error(NULL, "%s CUDA Error: %s", message, cudaGetErrorString(err_code));
+        if (err_code == cudaErrorMemoryAllocation)
+            CUDA_THROW_OOM("%s CUDA Error: %s", message, cudaGetErrorString(err_code));
+        else
+            CUDA_THROW_RUNTIME("%s CUDA Error: %s", message, cudaGetErrorString(err_code));
     }
     else
     {
-        zend_throw_error(NULL, "%s Memory Error.", message);
+        CUDA_THROW_OOM("%s Memory Error.", message);
     }
 
     if (tensor)
@@ -424,7 +404,7 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
             int index = slice.data.index;
             if (index < 0 || index >= base_tensor->shape[i])
             {
-                zend_throw_error(NULL, "Index %d out of bounds for dimension %d (size %d)",
+                CUDA_THROW_INVALID("Index %d out of bounds for dimension %d (size %d)",
                                  index, i, base_tensor->shape[i]);
                 return NULL;
             }
@@ -442,7 +422,7 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
             int end = slice.data.range.end;
             if (start < 0 || end < start || end >= base_tensor->shape[i])
             {
-                zend_throw_error(NULL, "Range [%d:%d] out of bounds for dimension %d (size %d)",
+                CUDA_THROW_INVALID("Range [%d:%d] out of bounds for dimension %d (size %d)",
                                  start, end, i, base_tensor->shape[i]);
                 return NULL;
             }
@@ -456,7 +436,7 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
         }
 
         default:
-            zend_throw_error(NULL, "Invalid slice type for dimension %d", i);
+            CUDA_THROW_INVALID("Invalid slice type for dimension %d", i);
             return NULL;
         }
     }
@@ -468,12 +448,12 @@ tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *sl
     size_t base_total = base_tensor->total_size;
     if (element_offset >= base_total)
     {
-        zend_throw_error(NULL, "Slice offset %zu out of bounds (base size %zu)", element_offset, base_total);
+        CUDA_THROW_INVALID("Slice offset %zu out of bounds (base size %zu)", element_offset, base_total);
         return NULL;
     }
     if (element_offset + view_total > base_total)
     {
-        zend_throw_error(NULL, "Slice region (offset %zu length %zu) out of bounds (base size %zu)",
+        CUDA_THROW_INVALID("Slice region (offset %zu length %zu) out of bounds (base size %zu)",
                          element_offset, view_total, base_total);
         return NULL;
     }
@@ -581,7 +561,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
 
             if (index < 0 || index >= base_tensor->shape[i])
             {
-                zend_throw_error(NULL, "Index %d out of bounds for dimension %d (size %d)",
+                CUDA_THROW_INVALID("Index %d out of bounds for dimension %d (size %d)",
                                  index, i, base_tensor->shape[i]);
                 return NULL;
             }
@@ -603,7 +583,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
 
             if (start < 0 || end < start || end >= base_tensor->shape[i])
             {
-                zend_throw_error(NULL, "Range [%d:%d] out of bounds for dimension %d (size %d)",
+                CUDA_THROW_INVALID("Range [%d:%d] out of bounds for dimension %d (size %d)",
                                  start, end, i, base_tensor->shape[i]);
                 return NULL;
             }
@@ -620,7 +600,7 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
         }
 
         default:
-            zend_throw_error(NULL, "Invalid slice type for dimension %d", i);
+            CUDA_THROW_INVALID("Invalid slice type for dimension %d", i);
             return NULL;
         }
     }
@@ -632,12 +612,12 @@ tensor_t *cuda_tensor_create_dim_view(tensor_t *base_tensor, slice_info_t *slice
     size_t base_total = base_tensor->total_size;
     if (element_offset >= base_total)
     {
-        zend_throw_error(NULL, "Slice offset %zu out of bounds (base size %zu)", element_offset, base_total);
+        CUDA_THROW_INVALID("Slice offset %zu out of bounds (base size %zu)", element_offset, base_total);
         return NULL;
     }
     if (element_offset + view_total > base_total)
     {
-        zend_throw_error(NULL, "Slice region (offset %zu length %zu) out of bounds (base size %zu)",
+        CUDA_THROW_INVALID("Slice region (offset %zu length %zu) out of bounds (base size %zu)",
                          element_offset, view_total, base_total);
         return NULL;
     }

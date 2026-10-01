@@ -94,6 +94,17 @@ bytes, including the small pool and cached allocations. This allocator uses
 a mutex and synchronous `cudaMalloc`/`cudaFree`; compare it with CUDA's
 stream-ordered allocator on real GPUs before adopting an asynchronous backend.
 
+Runtime failures use `Cuda\Exception` and its `RuntimeException`,
+`InvalidArgumentException`, `OutOfMemoryException`, and `CompilationException`
+subclasses. Catch `Cuda\Exception` for all extension failures. Invalid input,
+CUDA operations, memory exhaustion, and NVRTC compilation use the corresponding
+subclass instead of a PHP `Error` or a warning with a sentinel return value.
+Diagnostics emitted during extension initialization and compatibility warnings
+remain PHP warnings.
+Async status queries and batch results still use booleans to represent normal
+pending or per-item states. The C allocator test runs before PHPTs when invoking
+`./run-tests.sh`; running `make test` directly only runs the PHP tests.
+
 ---
 
 ## Requirements

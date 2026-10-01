@@ -1,4 +1,5 @@
 #include "tensor_factory.h"
+#include "cuda_exceptions.h"
 #include "memory_pool.h"
 #include <time.h>
 #include <curand.h>
@@ -64,7 +65,7 @@ tensor_t *tensor_cast_string(tensor_t *tensor, const char *new_dtype_str)
     dtype_t new_dtype = dtype_from_string(new_dtype_str);
     if (new_dtype >= DTYPE_COUNT || new_dtype == DTYPE_UNKNOWN)
     {
-        php_error_docref(NULL, E_WARNING, "Invalid dtype string: %s", new_dtype_str);
+        CUDA_THROW_INVALID("Invalid dtype string: %s", new_dtype_str);
         return NULL;
     }
 
@@ -80,14 +81,14 @@ tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype)
 
     if (ndims == 0)
     {
-        zend_throw_error(NULL, "Invalid array: cannot determine dimensions");
+        CUDA_THROW_INVALID("Invalid array: cannot determine dimensions");
         return NULL;
     }
 
     tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
-        zend_throw_error(NULL, "Failed to create empty tensor");
+        CUDA_THROW_OOM("Failed to create empty tensor");
         return NULL;
     }
 
@@ -104,7 +105,7 @@ tensor_t *create_tensor_from_php_array(zval *data, dtype_t dtype)
     if (cuda_status != cudaSuccess)
     {
         cuda_tensor_destroy(tensor);
-        zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(cuda_status));
+        CUDA_THROW_RUNTIME("Failed to copy data to GPU: %s", cudaGetErrorString(cuda_status));
         return NULL;
     }
 
@@ -123,7 +124,7 @@ tensor_t *cuda_tensor_create_from_host_buffer(int *shape, int ndims, dtype_t dty
     if (byte_count != expected_bytes)
     {
         cuda_tensor_destroy(tensor);
-        zend_throw_error(NULL, "Host buffer size mismatch: expected %zu bytes, got %zu", expected_bytes, byte_count);
+        CUDA_THROW_INVALID("Host buffer size mismatch: expected %zu bytes, got %zu", expected_bytes, byte_count);
         return NULL;
     }
 
@@ -131,7 +132,7 @@ tensor_t *cuda_tensor_create_from_host_buffer(int *shape, int ndims, dtype_t dty
     if (status != cudaSuccess)
     {
         cuda_tensor_destroy(tensor);
-        zend_throw_error(NULL, "Failed to copy host buffer to GPU: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("Failed to copy host buffer to GPU: %s", cudaGetErrorString(status));
         return NULL;
     }
 
@@ -144,7 +145,7 @@ int cuda_tensor_get_scalar_value(tensor_t *t, float *result_val, int index)
     void *gpu_source_ptr = (void *)((char *)t->data + byte_offset);
     if (byte_offset >= (size_t)t->total_size * t->element_size)
     {
-        zend_error(E_WARNING, "Index out of bounds.");
+        CUDA_THROW_INVALID("Index out of bounds.");
         return FAILURE;
     }
 
@@ -156,7 +157,7 @@ int cuda_tensor_get_scalar_value(tensor_t *t, float *result_val, int index)
 
     if (status != cudaSuccess)
     {
-        zend_error(E_WARNING, "Failed to copy scalar data from GPU: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("Failed to copy scalar data from GPU: %s", cudaGetErrorString(status));
         return FAILURE;
     }
 
@@ -168,7 +169,7 @@ tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, scalar_value_t va
     scalar_value_t scalar_value = cast_single_value(value, dtype);
     if (scalar_value.dtype == DTYPE_UNKNOWN)
     {
-        zend_throw_error(NULL, "Failed create CudaArray object with dtype: %s, received %s as value.",
+        CUDA_THROW_INVALID("Failed create CudaArray object with dtype: %s, received %s as value.",
                          dtype_to_string(dtype),
                          dtype_to_string(value.dtype));
 
@@ -206,7 +207,7 @@ int set_rand_tensor_data(void *data,
     float *temp = cuda_mem_alloc(sizeof(float) * size);
     if (temp == NULL)
     {
-        zend_throw_error(NULL, "CUDA Out of Memory: Failed to allocate temporary buffer for Random.");
+        CUDA_THROW_OOM("CUDA Out of Memory: Failed to allocate temporary buffer for Random.");
         return FAILURE;
     }
 
@@ -251,7 +252,7 @@ int set_rand_tensor_data(void *data,
 
     if (err != cudaSuccess)
     {
-        zend_throw_error(NULL, "Kernel failed: %s", cudaGetErrorString(err));
+        CUDA_THROW_RUNTIME("Kernel failed: %s", cudaGetErrorString(err));
         return FAILURE;
     }
 
@@ -269,13 +270,13 @@ tensor_t *cuda_tensor_create_rand(
     tensor_t *tensor = cuda_tensor_create_empty_with_dtype(shape, ndims, dtype);
     if (!tensor)
     {
-        zend_throw_error(NULL, "Unable to create random tensor.");
+        CUDA_THROW_OOM("Unable to create random tensor.");
         return NULL;
     }
 
     if (can_cast_unsafe(min_value.dtype, dtype) != 1 || can_cast_unsafe(max_value.dtype, dtype) != 1)
     {
-        zend_throw_error(NULL, "Failed to cast min and max value to dtype: %s.", dtype_to_string(dtype));
+        CUDA_THROW_INVALID("Failed to cast min and max value to dtype: %s.", dtype_to_string(dtype));
         return NULL;
     }
 
@@ -291,7 +292,7 @@ tensor_t *cuda_tensor_create_rand(
             dtype) != SUCCESS)
     {
 
-        zend_throw_error(NULL, "Kernel failed.");
+        CUDA_THROW_RUNTIME("Kernel failed.");
         cuda_tensor_destroy(tensor);
         return NULL;
     }
@@ -323,7 +324,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
         if (err != cudaSuccess)
         {
             cuda_tensor_destroy(tensor);
-            zend_throw_error(NULL, "Failed to copy data to GPU: %s", cudaGetErrorString(err));
+            CUDA_THROW_RUNTIME("Failed to copy data to GPU: %s", cudaGetErrorString(err));
             return NULL;
         }
     }
@@ -374,7 +375,7 @@ tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, d
         efree(tensor->strides);
         efree(tensor->shape);
         efree(tensor);
-        zend_throw_error(NULL, "Failed to allocate Host memory for tensor.");
+        CUDA_THROW_OOM("Failed to allocate Host memory for tensor.");
         return NULL;
     }
 

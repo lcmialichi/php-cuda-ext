@@ -1,3 +1,4 @@
+#include "cuda_exceptions.h"
 #include "php.h"
 #include "contiguous_array_ce.h"
 #include "contiguous_array_arginfo.h"
@@ -116,7 +117,7 @@ static zval *contiguous_array_offset_get(zend_object *object, zval *offset, int 
 
     if (UNEXPECTED(idx < 0 || idx >= obj->shape[0]))
     {
-        zend_throw_error(NULL, "Index %ld out of bounds", idx);
+        CUDA_THROW_INVALID("Index %ld out of bounds", idx);
         ZVAL_NULL(rv);
         return rv;
     }
@@ -262,7 +263,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     zval *version = zend_hash_str_find(data, "__contiguous_array_v1", sizeof("__contiguous_array_v1") - 1);
     if (!version)
     {
-        zend_throw_exception(NULL, "Invalid serialized data version", 0);
+        CUDA_THROW_INVALID("Invalid serialized data version");
         RETURN_NULL();
     }
 
@@ -273,42 +274,42 @@ ZEND_METHOD(ContiguousArray, __unserialize)
 
     if ((tmp = zend_hash_str_find(data, "ndims", sizeof("ndims") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
     {
-        zend_throw_exception(NULL, "Missing or invalid ndims", 0);
+        CUDA_THROW_INVALID("Missing or invalid ndims");
         RETURN_NULL();
     }
     ndims = Z_LVAL_P(tmp);
 
     if ((tmp = zend_hash_str_find(data, "dtype", sizeof("dtype") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
     {
-        zend_throw_exception(NULL, "Missing or invalid dtype", 0);
+        CUDA_THROW_INVALID("Missing or invalid dtype");
         RETURN_NULL();
     }
     dtype = (dtype_t)Z_LVAL_P(tmp);
 
     if ((tmp = zend_hash_str_find(data, "total_elements", sizeof("total_elements") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
     {
-        zend_throw_exception(NULL, "Missing or invalid total_elements", 0);
+        CUDA_THROW_INVALID("Missing or invalid total_elements");
         RETURN_NULL();
     }
     total_elements = (size_t)Z_LVAL_P(tmp);
 
     if ((tmp = zend_hash_str_find(data, "element_size", sizeof("element_size") - 1)) == NULL || Z_TYPE_P(tmp) != IS_LONG)
     {
-        zend_throw_exception(NULL, "Missing or invalid element_size", 0);
+        CUDA_THROW_INVALID("Missing or invalid element_size");
         RETURN_NULL();
     }
     element_size = (size_t)Z_LVAL_P(tmp);
 
     if (ndims <= 0 || total_elements == 0 || element_size == 0)
     {
-        zend_throw_exception(NULL, "Invalid array dimensions or size", 0);
+        CUDA_THROW_INVALID("Invalid array dimensions or size");
         RETURN_NULL();
     }
 
     zval *shape_zv = zend_hash_str_find(data, "shape", sizeof("shape") - 1);
     if (!shape_zv || Z_TYPE_P(shape_zv) != IS_ARRAY || (int)zend_hash_num_elements(Z_ARRVAL_P(shape_zv)) != ndims)
     {
-        zend_throw_exception(NULL, "Missing or invalid shape", 0);
+        CUDA_THROW_INVALID("Missing or invalid shape");
         RETURN_NULL();
     }
 
@@ -325,7 +326,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
         if (shape[i] <= 0)
         {
             efree(shape);
-            zend_throw_exception(NULL, "Invalid shape value", 0);
+            CUDA_THROW_INVALID("Invalid shape value");
             RETURN_NULL();
         }
         calculated_elements *= shape[i];
@@ -336,7 +337,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     if (calculated_elements != total_elements)
     {
         efree(shape);
-        zend_throw_exception(NULL, "Shape does not match total_elements", 0);
+        CUDA_THROW_INVALID("Shape does not match total_elements");
         RETURN_NULL();
     }
 
@@ -344,7 +345,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     if (!strides_zv || Z_TYPE_P(strides_zv) != IS_ARRAY || (int)zend_hash_num_elements(Z_ARRVAL_P(strides_zv)) != ndims)
     {
         efree(shape);
-        zend_throw_exception(NULL, "Missing or invalid strides", 0);
+        CUDA_THROW_INVALID("Missing or invalid strides");
         RETURN_NULL();
     }
 
@@ -365,7 +366,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     {
         efree(shape);
         efree(strides);
-        zend_throw_exception(NULL, "Missing or invalid data", 0);
+        CUDA_THROW_INVALID("Missing or invalid data");
         RETURN_NULL();
     }
 
@@ -374,7 +375,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     {
         efree(shape);
         efree(strides);
-        zend_throw_exception(NULL, "Data size mismatch", 0);
+        CUDA_THROW_INVALID("Data size mismatch");
         RETURN_NULL();
     }
 
@@ -399,7 +400,7 @@ ZEND_METHOD(ContiguousArray, __unserialize)
     {
         efree(shape);
         efree(strides);
-        zend_throw_exception(NULL, "Failed to create tensor", 0);
+        CUDA_THROW_RUNTIME("Failed to create tensor");
         RETURN_NULL();
     }
 
@@ -465,7 +466,7 @@ ZEND_METHOD(ContiguousArray, at)
 
     if (UNEXPECTED(argc != (uint32_t)obj->ndims))
     {
-        zend_throw_error(NULL, "ContiguousArray: Expected %d indices, got %d", obj->ndims, argc);
+        CUDA_THROW_INVALID("ContiguousArray: Expected %d indices, got %d", obj->ndims, argc);
         return;
     }
 
@@ -484,7 +485,7 @@ ZEND_METHOD(ContiguousArray, at)
 
         if (UNEXPECTED((zend_ulong)idx >= (zend_ulong)obj->shape[i]))
         {
-            zend_throw_error(NULL, "Index %ld out of bounds at dimension %d", idx, i);
+            CUDA_THROW_INVALID("Index %ld out of bounds at dimension %d", idx, i);
             return;
         }
         final_offset += idx * obj->strides[i];
@@ -504,7 +505,7 @@ ZEND_METHOD(ContiguousArray, get)
     HashTable *ht = Z_ARRVAL_P(index_array);
     if (zend_hash_num_elements(ht) != obj->ndims)
     {
-        zend_throw_error(NULL, "Expected %d indices", obj->ndims);
+        CUDA_THROW_INVALID("Expected %d indices", obj->ndims);
         return;
     }
 
@@ -516,7 +517,7 @@ ZEND_METHOD(ContiguousArray, get)
         zend_long idx = zval_get_long(val);
         if (idx < 0 || idx >= obj->shape[dim])
         {
-            zend_throw_error(NULL, "Index out of bounds");
+            CUDA_THROW_INVALID("Index out of bounds");
             return;
         }
         final_offset += idx * obj->strides[dim];
@@ -562,7 +563,7 @@ ZEND_METHOD(ContiguousArray, getShape)
 
 ZEND_METHOD(ContiguousArray, __construct)
 {
-    zend_throw_error(NULL, "Cannot instantiate ContiguousArray directly.");
+    CUDA_THROW_INVALID("Cannot instantiate ContiguousArray directly.");
 }
 
 static void contiguous_array_iterator_dtor(zend_object_iterator *iter)
@@ -625,7 +626,7 @@ static zend_object_iterator *contiguous_array_get_iterator(zend_class_entry *ce,
 {
     if (by_ref)
     {
-        zend_throw_error(NULL, "An iterator cannot be used with foreach by reference");
+        CUDA_THROW_INVALID("An iterator cannot be used with foreach by reference");
         return NULL;
     }
 

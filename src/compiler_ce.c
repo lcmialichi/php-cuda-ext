@@ -1,3 +1,4 @@
+#include "cuda_exceptions.h"
 #include "compiler_ce.h"
 #include "compiler_arginfo.h"
 #include "php.h"
@@ -217,7 +218,7 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
 
     if (driver_version < 6000)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "CUDA driver version %.1f is too old. Minimum required: 6.0",
                                 driver_version / 1000.0);
         return 0;
@@ -241,7 +242,7 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
 
     if (validation_result == -1)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "Driver version %.1f does not support any compatible architecture",
                                 driver_version / 1000.0);
         return 0;
@@ -364,7 +365,7 @@ static int check_cuda_compatibility(cuda_compiler_object *compiler)
 
     if (driver_version < 6000)
     {
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_RUNTIME(
                                 "CUDA driver version %.1f is too old. Minimum required: 6.0", driver_ver);
         return 0;
     }
@@ -727,13 +728,13 @@ static zend_bool add_headers_from_array(cuda_compiler_object *compiler, HashTabl
     {
         if (Z_TYPE_P(header_zv) != IS_STRING)
         {
-            zend_throw_exception_ex(NULL, 0, "CUDA headers must be strings");
+            CUDA_THROW_INVALID("CUDA headers must be strings");
             return 0;
         }
 
         if (!add_header_string(compiler, Z_STR_P(header_zv)))
         {
-            zend_throw_exception_ex(NULL, 0, "Failed to add CUDA header");
+            CUDA_THROW_RUNTIME("Failed to add CUDA header");
             return 0;
         }
     }
@@ -761,7 +762,7 @@ static func_parameter_list_t *create_parameter_list_from_array(HashTable *params
     {
         if (Z_TYPE_P(param_zv) != IS_ARRAY)
         {
-            zend_throw_exception_ex(NULL, 0, "Kernel parameter %u must be an array", index);
+            CUDA_THROW_INVALID("Kernel parameter %u must be an array", index);
             free_parameter_list(params);
             return NULL;
         }
@@ -773,14 +774,14 @@ static func_parameter_list_t *create_parameter_list_from_array(HashTable *params
 
         if (!name_zv || Z_TYPE_P(name_zv) != IS_STRING || Z_STRLEN_P(name_zv) == 0)
         {
-            zend_throw_exception_ex(NULL, 0, "Kernel parameter %u requires a non-empty string name", index);
+            CUDA_THROW_INVALID("Kernel parameter %u requires a non-empty string name", index);
             free_parameter_list(params);
             return NULL;
         }
 
         if (!dtype_zv || Z_TYPE_P(dtype_zv) != IS_STRING)
         {
-            zend_throw_exception_ex(NULL, 0, "Kernel parameter '%s' requires a string dtype", Z_STRVAL_P(name_zv));
+            CUDA_THROW_INVALID("Kernel parameter '%s' requires a string dtype", Z_STRVAL_P(name_zv));
             free_parameter_list(params);
             return NULL;
         }
@@ -788,7 +789,7 @@ static func_parameter_list_t *create_parameter_list_from_array(HashTable *params
         dtype_t dtype = dtype_from_string(Z_STRVAL_P(dtype_zv));
         if (dtype == DTYPE_UNKNOWN || dtype == DTYPE_VOID || dtype == DTYPE_LIST)
         {
-            zend_throw_exception_ex(NULL, 0, "Kernel parameter '%s' has unsupported dtype '%s'", Z_STRVAL_P(name_zv), Z_STRVAL_P(dtype_zv));
+            CUDA_THROW_INVALID("Kernel parameter '%s' has unsupported dtype '%s'", Z_STRVAL_P(name_zv), Z_STRVAL_P(dtype_zv));
             free_parameter_list(params);
             return NULL;
         }
@@ -846,7 +847,7 @@ ZEND_METHOD(Compiler, __construct)
 
     if (source_len == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "CUDA source cannot be empty");
+        CUDA_THROW_INVALID("CUDA source cannot be empty");
         return;
     }
     compiler->global_source = estrndup(source_str, source_len);
@@ -857,7 +858,7 @@ ZEND_METHOD(Compiler, __construct)
         const char *arch = ZSTR_VAL(target_str);
         if (strncmp(arch, "sm_", 3) != 0 && strncmp(arch, "compute_", 8) != 0)
         {
-            zend_throw_exception_ex(NULL, 0,
+            CUDA_THROW_INVALID(
                                     "Invalid architecture format. Must start with 'sm_' or 'compute_'");
             return;
         }
@@ -871,7 +872,7 @@ ZEND_METHOD(Compiler, __construct)
 
         if (result == -1)
         {
-            zend_throw_exception_ex(NULL, 0,
+            CUDA_THROW_RUNTIME(
                                     "CUDA driver version is too old (%.1f). Minimum required: 6.0",
                                     driver_version / 1000.0);
             return;
@@ -926,9 +927,8 @@ ZEND_METHOD(Compiler, __construct)
 
     if (optimization < 0 || optimization > 3)
     {
-        php_error_docref(NULL, E_WARNING,
-                         "Optimization level %ld is invalid. Using default (2)", optimization);
-        optimization = 2;
+        CUDA_THROW_INVALID("Optimization level %ld must be between 0 and 3", optimization);
+        return;
     }
 
     compiler->optimization_level = optimization;
@@ -967,7 +967,7 @@ ZEND_METHOD(Compiler, kernel)
 
     if (ZSTR_LEN(kernel_name) == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "Kernel name cannot be empty");
+        CUDA_THROW_INVALID("Kernel name cannot be empty");
         return;
     }
 
@@ -1021,13 +1021,13 @@ ZEND_METHOD(Compiler, header)
 
     if (ZSTR_LEN(header) == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "CUDA header cannot be empty");
+        CUDA_THROW_INVALID("CUDA header cannot be empty");
         return;
     }
 
     if (!add_header_string(compiler, header))
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to add CUDA header");
+        CUDA_THROW_RUNTIME("Failed to add CUDA header");
         return;
     }
 
@@ -1055,13 +1055,13 @@ ZEND_METHOD(Compiler, compile)
 
     if (zend_hash_num_elements(compiler->kernels) == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "No CUDA kernels registered");
+        CUDA_THROW_INVALID("No CUDA kernels registered");
         RETURN_NULL();
     }
 
     if (!compiler_has_cuda_source(compiler))
     {
-        zend_throw_exception_ex(NULL, 0, "No CUDA source registered. Pass source to kernel() or call addSource() before compile().");
+        CUDA_THROW_INVALID("No CUDA source registered. Pass source to kernel() or call addSource() before compile().");
         RETURN_NULL();
     }
 
@@ -1075,7 +1075,7 @@ ZEND_METHOD(Compiler, compile)
         if (!cached->ptx || cached->ptx_size == 0)
         {
             zend_string_release(hash_zstr);
-            zend_throw_exception_ex(NULL, 0, "Invalid cached PTX data");
+            CUDA_THROW_RUNTIME("Invalid cached PTX data");
             RETURN_NULL();
         }
 
@@ -1087,7 +1087,7 @@ ZEND_METHOD(Compiler, compile)
         if (!module_ce)
         {
             zend_string_release(hash_zstr);
-            zend_throw_exception_ex(NULL, 0, "CompiledModule class not found");
+            CUDA_THROW_RUNTIME("CompiledModule class not found");
             RETURN_NULL();
         }
 
@@ -1127,7 +1127,7 @@ ZEND_METHOD(Compiler, compile)
             efree(cuda_program);
         }
         zend_string_release(hash_zstr);
-        zend_throw_exception_ex(NULL, 0, "Failed to build CUDA program");
+        CUDA_THROW_COMPILATION("Failed to build CUDA program");
         RETURN_NULL();
     }
 
@@ -1135,7 +1135,9 @@ ZEND_METHOD(Compiler, compile)
     int option_count = get_cached_nvrtc_options(compiler, &options);
     if (option_count == 0)
     {
-        zend_throw_exception_ex(NULL, 0, "Failed to build CUDA program options");
+        efree(cuda_program);
+        zend_string_release(hash_zstr);
+        CUDA_THROW_COMPILATION("Failed to build CUDA program options");
         RETURN_NULL();
     }
 
@@ -1154,7 +1156,7 @@ ZEND_METHOD(Compiler, compile)
         }
 
         zend_string_release(hash_zstr);
-        zend_throw_exception_ex(NULL, 0,
+        CUDA_THROW_COMPILATION(
                                 "NVRTC compilation failed: %s (code: %d)",
                                 get_nvrtc_error_string(nvrtc_result), nvrtc_result);
         RETURN_NULL();
@@ -1169,7 +1171,7 @@ ZEND_METHOD(Compiler, compile)
     {
         efree(ptx_code);
         zend_string_release(hash_zstr);
-        zend_throw_exception_ex(NULL, 0, "CompiledModule class not found");
+        CUDA_THROW_RUNTIME("CompiledModule class not found");
         RETURN_NULL();
     }
 

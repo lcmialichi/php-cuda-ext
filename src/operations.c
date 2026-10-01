@@ -1,3 +1,4 @@
+#include "cuda_exceptions.h"
 #include "operations.h"
 #include "php.h"
 #include "cuda.h"
@@ -78,7 +79,7 @@ int calculate_reduction_shape(tensor_t *input, int axis, int *result_shape, size
 {
     if (axis < 0 || axis >= input->ndims)
     {
-        zend_throw_error(NULL, "Invalid axis %d for reduction operation. Must be between 0 and %d.", axis, input->ndims - 1);
+        CUDA_THROW_INVALID("Invalid axis %d for reduction operation. Must be between 0 and %d.", axis, input->ndims - 1);
         return 0;
     }
 

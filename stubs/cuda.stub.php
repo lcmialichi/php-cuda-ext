@@ -5,6 +5,12 @@ namespace Cuda;
 use Countable;
 use IteratorAggregate;
 
+class Exception extends \Exception {}
+class RuntimeException extends Exception {}
+class InvalidArgumentException extends Exception {}
+class OutOfMemoryException extends RuntimeException {}
+class CompilationException extends RuntimeException {}
+
 class Compiler
 {
     public function __construct(

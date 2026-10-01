@@ -10,6 +10,7 @@
 #include <string.h>
 #include "php.h"
 #include "tensor.h"
+#include "cuda_exceptions.h"
 
 tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_type)
 {
@@ -24,23 +25,21 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
     if (!prepare_broadcast_operation(a, b, result_shape, &result_dims,
                                      a_strides, b_strides, &total_elements))
     {
-        zend_throw_error(NULL, "Broadcast failed: shapes %s and %s are incompatible",
-                         tensor_shape_as_string(a),
-                         tensor_shape_as_string(b));
+        CUDA_THROW_INVALID("Broadcast failed: operand shapes are incompatible");
         return NULL;
     }
 
     dtype_t promoted_type = promote_types_for_arithmetic(a->dtype, b->dtype, operation_type);
     if (!can_safely_cast_to(a->dtype, promoted_type))
     {
-        zend_throw_error(NULL, "Cannot safely promote operand A (%s) to %s",
+        CUDA_THROW_INVALID("Cannot safely promote operand A (%s) to %s",
                          dtype_to_string(a->dtype), dtype_to_string(promoted_type));
         return NULL;
     }
 
     if (!can_safely_cast_to(b->dtype, promoted_type))
     {
-        zend_throw_error(NULL, "Cannot safely promote operand B (%s) to %s",
+        CUDA_THROW_INVALID("Cannot safely promote operand B (%s) to %s",
                          dtype_to_string(b->dtype), dtype_to_string(promoted_type));
         return NULL;
     }
@@ -48,17 +47,15 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
     tensor_t *result = cuda_tensor_create_empty_dtype(result_shape, result_dims, promoted_type);
     if (!result)
     {
-        zend_throw_error(NULL, "Failed to create result tensor for operation between %s%s and %s%s",
-                         dtype_to_string(a->dtype),
-                         tensor_shape_as_string(a),
-                         dtype_to_string(b->dtype),
-                         tensor_shape_as_string(b));
+        CUDA_THROW_OOM("Failed to create result tensor for operation between %s and %s",
+                   dtype_to_string(a->dtype), dtype_to_string(b->dtype));
         return NULL;
     }
 
     if (a->data == NULL || b->data == NULL || result->data == NULL)
     {
         cuda_tensor_destroy(result);
+        CUDA_THROW_RUNTIME("Cannot operate on tensor without GPU data");
         return NULL;
     }
 
@@ -70,7 +67,13 @@ tensor_t *cuda_tensor_op(tensor_t *a, tensor_t *b, operation_type_t operation_ty
                      total_elements, a->offset, b->offset);
 
     cudaError_t status = cudaDeviceSynchronize();
-    return (status == cudaSuccess) ? result : NULL;
+    if (status != cudaSuccess)
+    {
+        cuda_tensor_destroy(result);
+        CUDA_THROW_RUNTIME("Broadcast operation failed: %s", cudaGetErrorString(status));
+        return NULL;
+    }
+    return result;
 }
 
 tensor_t *cuda_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t operation_type)
@@ -81,7 +84,7 @@ tensor_t *cuda_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t op
     tensor_t *result = cuda_tensor_create_empty_dtype(a->shape, a->ndims, promoted_type);
     if (!result)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        CUDA_THROW_OOM("Failed to create result tensor");
         return NULL;
     }
 
@@ -102,7 +105,7 @@ tensor_t *cuda_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_t op
 
     if (status != cudaSuccess)
     {
-        php_error_docref(NULL, E_WARNING, "Scalar operation failed: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("Scalar operation failed: %s", cudaGetErrorString(status));
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -119,7 +122,7 @@ tensor_t *cuda_inv_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_
     tensor_t *result = cuda_tensor_create_empty_dtype(a->shape, a->ndims, promoted_type);
     if (!result)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        CUDA_THROW_OOM("Failed to create result tensor");
         return NULL;
     }
 
@@ -141,7 +144,7 @@ tensor_t *cuda_inv_scalar_op(tensor_t *a, scalar_value_t scalar, operation_type_
 
     if (status != cudaSuccess)
     {
-        php_error_docref(NULL, E_WARNING, "Scalar operation failed: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("Scalar operation failed: %s", cudaGetErrorString(status));
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -156,7 +159,7 @@ tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
     tensor_t *result = resolve_result_tensor(a);
     if (!result)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to create result tensor");
+        CUDA_THROW_OOM("Failed to create result tensor");
         return NULL;
     }
 
@@ -164,7 +167,7 @@ tensor_t *cuda_unary_op(tensor_t *a, operation_type_t operation_type)
     cudaError_t status = cudaDeviceSynchronize();
     if (status != cudaSuccess)
     {
-        php_error_docref(NULL, E_WARNING, "Unary operation failed: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("Unary operation failed: %s", cudaGetErrorString(status));
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -203,16 +206,10 @@ tensor_t *cuda_tensor_reduce_arg(tensor_t *input, int axis, operation_type_t ope
         total_elements_out,
         input->offset);
 
-    if (!result)
-    {
-        zend_throw_error(NULL, "CudaArray creation failed during reduction.");
-        return NULL;
-    }
-
     err = cudaDeviceSynchronize();
     if (err != cudaSuccess)
     {
-        zend_throw_error(NULL, "Failed to synchronize device after reduction: %s", cudaGetErrorString(err));
+        CUDA_THROW_RUNTIME("Failed to synchronize device after reduction: %s", cudaGetErrorString(err));
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -231,26 +228,23 @@ tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operati
         return NULL;
     }
 
-    tensor_t *result = NULL;
-    cudaError_t err = cudaSuccess;
-
-    result = cuda_tensor_create_empty_dtype(result_shape_arr, result_ndims, input->dtype);
-    if (!result)
-        return NULL;
-
     if (operation_type == OP_REDUCE_MEAN)
     {
-        size_t block_size = input->shape[axis];
-        zend_throw_error(NULL, "OP_REDUCE_MEAN not implemented yet.");
+        CUDA_THROW_RUNTIME("OP_REDUCE_MEAN not implemented yet.");
+        return NULL;
     }
+
+    tensor_t *result = cuda_tensor_create_empty_dtype(result_shape_arr, result_ndims, input->dtype);
+    if (!result)
+        return NULL;
 
     launch_reduction(input->data, result->data, input->dtype, operation_type, input->shape, input->ndims,
                      result_shape_arr, input->strides, result_ndims, axis, total_elements_out, input->offset);
 
-    err = cudaDeviceSynchronize();
+    cudaError_t err = cudaDeviceSynchronize();
     if (err != cudaSuccess)
     {
-        zend_throw_error(NULL, "Failed to synchronize device after reduction: %s", cudaGetErrorString(err));
+        CUDA_THROW_RUNTIME("Failed to synchronize device after reduction: %s", cudaGetErrorString(err));
         cuda_tensor_destroy(result);
         return NULL;
     }
@@ -283,14 +277,14 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
         {
             if (wildcard_index != -1)
             {
-                php_error_docref(NULL, E_WARNING, "Reshape allows only one wildcard dimension (-1) in the new shape.");
+                CUDA_THROW_INVALID("Reshape allows only one wildcard dimension (-1) in the new shape.");
                 return NULL;
             }
             wildcard_index = i;
         }
         else if (new_shape[i] == 0)
         {
-            php_error_docref(NULL, E_WARNING, "Reshape dimension cannot be 0.");
+            CUDA_THROW_INVALID("Reshape dimension cannot be 0.");
             return NULL;
         }
         else
@@ -303,7 +297,7 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
     {
         if (original_size % new_size_known != 0)
         {
-            php_error_docref(NULL, E_WARNING, "Cannot reshape array of size %zu into shape with known elements %zu.", original_size, new_size_known);
+            CUDA_THROW_INVALID("Cannot reshape array of size %zu into shape with known elements %zu.", original_size, new_size_known);
             return NULL;
         }
         final_shape[wildcard_index] = original_size / new_size_known;
@@ -312,13 +306,13 @@ tensor_t *cuda_tensor_reshape(tensor_t *original, int *new_shape, int new_ndims)
 
     if (original_size != new_size_known)
     {
-        php_error_docref(NULL, E_WARNING, "Reshape requires that the number of elements remains the same. Original: %zu, New: %zu.", original_size, new_size_known);
+        CUDA_THROW_INVALID("Reshape requires that the number of elements remains the same. Original: %zu, New: %zu.", original_size, new_size_known);
         return NULL;
     }
 
     if (!is_contiguous(original))
     {
-        php_error_docref(NULL, E_WARNING, "Reshape of non-contiguous tensor requires a memory copy/reorder operation, which is not yet implemented. Returning NULL.");
+        CUDA_THROW_RUNTIME("Reshape of non-contiguous tensor requires a memory copy/reorder operation, which is not yet implemented.");
         return NULL;
     }
 

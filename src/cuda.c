@@ -14,6 +14,7 @@
 #include "compiler_ce.h"
 #include "module_ce.h"
 #include "contiguous_array_ce.h"
+#include "cuda_exceptions.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(cuda);
 
@@ -51,6 +52,7 @@ static PHP_GINIT_FUNCTION(cuda)
 PHP_MINIT_FUNCTION(cuda)
 {
     REGISTER_INI_ENTRIES();
+    cuda_register_exceptions();
 
     const char *ini_value = INI_STR("cuda.memory_size");
     size_t pool_size = parse_size_string(ini_value);
@@ -80,8 +82,8 @@ ZEND_FUNCTION(cuda_get_device_count)
 
     if (count < 0)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to get device count");
-        RETURN_LONG(-1);
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to get device count", 0);
+        RETURN_THROWS();
     }
 
     RETURN_LONG(count);
@@ -106,8 +108,8 @@ ZEND_FUNCTION(cuda_get_device_info)
 
     if (ok != 1)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to get device properties");
-        RETURN_NULL();
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to get device properties", 0);
+        RETURN_THROWS();
     }
 
     array_init(return_value);
@@ -127,8 +129,8 @@ ZEND_FUNCTION(cuda_set_device)
 
     if (!cuda_wrapper_set_device((int)device_id))
     {
-        php_error_docref(NULL, E_WARNING, "Failed to set device %d", (int)device_id);
-        RETURN_FALSE;
+        zend_throw_exception_ex(cuda_runtime_exception_ce, 0, "Failed to set device %d", (int)device_id);
+        RETURN_THROWS();
     }
 
     RETURN_TRUE;
@@ -140,8 +142,8 @@ ZEND_FUNCTION(cuda_get_current_device)
 
     if (device == -1)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to get current device");
-        RETURN_LONG(-1);
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to get current device", 0);
+        RETURN_THROWS();
     }
 
     RETURN_LONG(device);
@@ -153,8 +155,8 @@ ZEND_FUNCTION(cuda_get_memory_info)
 
     if (!cuda_wrapper_get_memory_info(&free_mem, &total_mem))
     {
-        php_error_docref(NULL, E_WARNING, "Failed to get memory info");
-        RETURN_NULL();
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to get memory info", 0);
+        RETURN_THROWS();
     }
 
     array_init(return_value);
@@ -170,8 +172,8 @@ ZEND_FUNCTION(cuda_device_reset)
 {
     if (!cuda_wrapper_device_reset())
     {
-        php_error_docref(NULL, E_WARNING, "Failed to reset device");
-        RETURN_FALSE;
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to reset device", 0);
+        RETURN_THROWS();
     }
 
     RETURN_TRUE;
@@ -183,8 +185,8 @@ ZEND_FUNCTION(cuda_get_driver_version)
 
     if (version == -1)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to get driver version");
-        RETURN_NULL();
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to get driver version", 0);
+        RETURN_THROWS();
     }
 
     array_init(return_value);
@@ -201,8 +203,8 @@ ZEND_FUNCTION(cuda_get_runtime_version)
 
     if (version == -1)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to get runtime version");
-        RETURN_NULL();
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to get runtime version", 0);
+        RETURN_THROWS();
     }
 
     array_init(return_value);
@@ -217,8 +219,8 @@ ZEND_FUNCTION(cuda_synchronize)
 {
     if (!cuda_wrapper_synchronize())
     {
-        php_error_docref(NULL, E_WARNING, "Failed to synchronize device");
-        RETURN_FALSE;
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to synchronize device", 0);
+        RETURN_THROWS();
     }
 
     RETURN_TRUE;
@@ -258,8 +260,8 @@ ZEND_FUNCTION(cuda_get_peer_access)
 
     if (result == -1)
     {
-        php_error_docref(NULL, E_WARNING, "Failed to check peer access");
-        RETURN_NULL();
+        zend_throw_exception(cuda_runtime_exception_ce, "Failed to check peer access", 0);
+        RETURN_THROWS();
     }
 
     RETURN_BOOL(result);

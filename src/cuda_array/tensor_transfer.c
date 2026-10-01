@@ -1,4 +1,5 @@
 #include "tensor_transfer.h"
+#include "cuda_exceptions.h"
 #include "contiguous_array_ce.h"
 
 static void build_php_array(zval *result, const void *data, int dim, const tensor_t *tensor, size_t offset)
@@ -78,7 +79,7 @@ void tensor_to_php_array(zval *result, const tensor_t *tensor)
     if (status != cudaSuccess)
     {
         efree(host_data);
-        zend_throw_error(NULL, "GPU Copy Failed: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("GPU Copy Failed: %s", cudaGetErrorString(status));
         return;
     }
 
@@ -118,7 +119,7 @@ tensor_t *tensor_copy_to_host(const tensor_t *tensor)
         if (host_tensor->strides)
             efree(host_tensor->strides);
         efree(host_tensor);
-        zend_throw_error(NULL, "Failed to allocate host memory");
+        CUDA_THROW_OOM("Failed to allocate host memory");
         return NULL;
     }
 
@@ -132,7 +133,7 @@ tensor_t *tensor_copy_to_host(const tensor_t *tensor)
         if (host_tensor->strides)
             efree(host_tensor->strides);
         efree(host_tensor);
-        zend_throw_error(NULL, "CUDA error copying data to host: %s", cudaGetErrorString(status));
+        CUDA_THROW_RUNTIME("CUDA error copying data to host: %s", cudaGetErrorString(status));
         return NULL;
     }
 

@@ -205,10 +205,9 @@ void launch_reduce_op_kernel(T *input, T *result,
 
     cudaOccupancyMaxPotentialBlockSize(&minGridSize, &threads, reduce_kernel<T, Op>, 0, 0);
 
-    int blocks = (total_elements_out < minGridSize) ? total_elements_out : minGridSize;
     size_t shared_mem_size = (threads / 32) * sizeof(T);
 
-    reduce_kernel<T, Op><<<blocks, threads, shared_mem_size>>>(
+    reduce_kernel<T, Op><<<total_elements_out, threads, shared_mem_size>>>(
         input, result, input_base_offset);
 
     cudaDeviceSynchronize();

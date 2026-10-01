@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include "factory_kernels.cuh"
+#include "launch_config.cuh"
 #include "dispatcher.h"
 #include "../data_types.h"
 
@@ -22,13 +23,10 @@ extern "C" void launch_bernoulli_kernel(
     size_t total_elements,
     float p)
 {
-    int threads = 256;
-    int blocks = (total_elements + threads - 1) / threads;
-    if (blocks > 65535){
-        blocks = 65535;
-    }
+    if (total_elements == 0)
+        return;
 
-    bernoulli_kernel<<<blocks, threads>>>(values, base, total_elements, p);
+    bernoulli_kernel<<<cuda_grid_1d(total_elements), 256>>>(values, base, total_elements, p);
 }
 
 extern "C" void launch_assign_scalar_val_kernel(
@@ -118,10 +116,7 @@ extern "C" void launch_scale_range_kernel(
             break;
         }
 
-        int threadsPerBlock = 256;
-        int blocksPerGrid = (total_elements + threadsPerBlock - 1) / threadsPerBlock;
-
-        scale_kernel<scalar_t><<<blocksPerGrid, threadsPerBlock>>>(
+        scale_kernel<scalar_t><<<cuda_grid_1d(total_elements), 256>>>(
             values,
             (scalar_t *)base,
             total_elements,

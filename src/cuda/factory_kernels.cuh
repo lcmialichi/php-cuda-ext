@@ -2,6 +2,7 @@
 #define FACTORY_KERNELS_CUH
 
 #include "../data_types.h"
+#include "launch_config.cuh"
 
 template <typename T>
 static __host__ T get_scalar_value(scalar_value_t s)
@@ -64,24 +65,20 @@ __global__ void bernoulli_kernel(const float *values, bool *output_data, size_t 
 template <typename T>
 void launch_fill_kernel_with_scalar(T *base, T scalar, size_t total_elements)
 {
-    int threads = 256;
-    int blocks = (total_elements + threads - 1) / threads;
-    if (blocks > 65535)
-        blocks = 65535;
+    if (total_elements == 0)
+        return;
 
-    assign_scalar_val_kernel<T><<<blocks, threads>>>(
+    assign_scalar_val_kernel<T><<<cuda_grid_1d(total_elements), 256>>>(
         base, scalar, total_elements);
 }
 
 template <typename T>
 void launch_scale_kernel(float *values, T *data, size_t size, T min_value, T max_value)
 {
-    int threads = 256;
-    int blocks = (size + threads - 1) / threads;
-    if (blocks > 65535)
-        blocks = 65535;
+    if (size == 0)
+        return;
 
-    scale_kernel<T><<<blocks, threads>>>(values, data, size, min_value, max_value);
+    scale_kernel<T><<<cuda_grid_1d(size), 256>>>(values, data, size, min_value, max_value);
 }
 
 #endif

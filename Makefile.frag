@@ -1,4 +1,4 @@
-CUDA_SRCS = src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu src/cuda/factory_kernels.cu
+CUDA_SRCS = src/cuda/float_kernels.cu src/cuda/activation_kernels.cu src/cuda/matmul_kernels.cu src/cuda/concat_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu src/cuda/factory_kernels.cu
 CUDA_OBJS = $(CUDA_SRCS:.cu=.o)
 
 NVCC_FLAGS = -arch=sm_60 -O2 -Xcompiler -fPIC

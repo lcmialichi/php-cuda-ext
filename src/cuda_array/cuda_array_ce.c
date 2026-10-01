@@ -3,12 +3,14 @@
 #include "ca_private.h"
 #include "ca_arginfo.h"
 #include "operations.h"
-#include "tensor_fabric.h"
+#include "tensor_factory.h"
 #include "memory_pool.h"
 #include "cuda.h"
 #include "zend_smart_str.h"
 #include "data_types.h"
 #include "contiguous_array_ce.h"
+#include "tensor_transfer.h"
+#include "concat_kernels.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -32,69 +34,6 @@ static void unary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *op
 static void binary_operation_handler(INTERNAL_FUNCTION_PARAMETERS, const char *operation_name, operation_type_t operation_type);
 
 static void sync_php_object_shape(cuda_array_obj *obj, tensor_t *tensor);
-
-static void php_cuda_build_recursive(zval *result, void *data, int dim, tensor_t *t, size_t current_offset)
-{
-    array_init(result);
-    int size = t->shape[dim];
-    size_t stride = t->strides[dim];
-
-    for (int i = 0; i < size; i++)
-    {
-        size_t child_offset = current_offset + i * stride;
-
-        if (dim == t->ndims - 1)
-        {
-            zval val;
-            switch (t->dtype)
-            {
-            case DTYPE_FLOAT32:
-                ZVAL_DOUBLE(&val, (double)((float *)data)[child_offset]);
-                break;
-            case DTYPE_FLOAT64:
-                ZVAL_DOUBLE(&val, ((double *)data)[child_offset]);
-                break;
-            case DTYPE_INT8:
-                ZVAL_LONG(&val, (zend_long)((int8_t *)data)[child_offset]);
-                break;
-            case DTYPE_INT16:
-                ZVAL_LONG(&val, (zend_long)((int16_t *)data)[child_offset]);
-                break;
-            case DTYPE_INT32:
-                ZVAL_LONG(&val, (zend_long)((int32_t *)data)[child_offset]);
-                break;
-            case DTYPE_INT64:
-                ZVAL_LONG(&val, (zend_long)((int64_t *)data)[child_offset]);
-                break;
-            case DTYPE_UINT8:
-                ZVAL_LONG(&val, (zend_long)((uint8_t *)data)[child_offset]);
-                break;
-            case DTYPE_UINT16:
-                ZVAL_LONG(&val, (zend_long)((uint16_t *)data)[child_offset]);
-                break;
-            case DTYPE_UINT32:
-                ZVAL_LONG(&val, (zend_long)((uint32_t *)data)[child_offset]);
-                break;
-            case DTYPE_UINT64:
-                ZVAL_LONG(&val, (zend_long)((uint64_t *)data)[child_offset]);
-                break;
-            case DTYPE_BOOL:
-                ZVAL_BOOL(&val, ((bool *)data)[child_offset]);
-                break;
-            default:
-                ZVAL_NULL(&val);
-                break;
-            }
-            zend_hash_index_update(Z_ARRVAL_P(result), i, &val);
-        }
-        else
-        {
-            zval sub;
-            php_cuda_build_recursive(&sub, data, dim + 1, t, child_offset);
-            zend_hash_index_update(Z_ARRVAL_P(result), i, &sub);
-        }
-    }
-}
 
 static dtype_t parse_dtype_param(zend_string *dtype_str)
 {
@@ -866,122 +805,17 @@ ZEND_METHOD(CudaArray, concat)
 ZEND_METHOD(CudaArray, toArray)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-    tensor_t *tensor = obj->tensor_handle;
-
-    tensor_t *base = tensor->is_view ? tensor->base_tensor : tensor;
-    void *host_data = emalloc(base->total_size * tensor->element_size);
-
-    cudaError_t status = cudaMemcpy(
-        host_data,
-        base->data,
-        base->total_size * tensor->element_size,
-        cudaMemcpyDeviceToHost);
-
-    if (status != cudaSuccess)
-    {
-        efree(host_data);
-        zend_throw_error(NULL, "GPU Copy Failed: %s", cudaGetErrorString(status));
-        RETURN_NULL();
-    }
-
-    size_t offset_elements = tensor->offset / tensor->element_size;
-
-    php_cuda_build_recursive(return_value, host_data, 0, tensor, offset_elements);
-
-    efree(host_data);
+    tensor_to_php_array(return_value, obj->tensor_handle);
 }
 
 ZEND_METHOD(CudaArray, toHost)
 {
     cuda_array_obj *obj = php_cuda_array_fetch_valid_object(Z_OBJ_P(ZEND_THIS));
-    tensor_t *tensor = obj->tensor_handle;
-
-    tensor_t *host_tensor = (tensor_t *)emalloc(sizeof(tensor_t));
+    tensor_t *host_tensor = tensor_copy_to_host(obj->tensor_handle);
     if (!host_tensor)
     {
-        zend_throw_error(NULL, "Failed to allocate tensor structure");
-        RETURN_NULL();
+        RETURN_THROWS();
     }
-    memset(host_tensor, 0, sizeof(tensor_t));
-
-    host_tensor->dtype = tensor->dtype;
-    host_tensor->ndims = tensor->ndims;
-    host_tensor->element_size = dtype_to_size(tensor->dtype);
-    host_tensor->offset = 0;
-
-    if (tensor->ndims > 0)
-    {
-        host_tensor->shape = (int *)emalloc(sizeof(int) * tensor->ndims);
-        if (!host_tensor->shape)
-        {
-            efree(host_tensor);
-            zend_throw_error(NULL, "Failed to allocate shape array");
-            RETURN_NULL();
-        }
-        memcpy(host_tensor->shape, tensor->shape, sizeof(int) * tensor->ndims);
-
-        host_tensor->strides = (size_t *)emalloc(sizeof(size_t) * tensor->ndims);
-        if (!host_tensor->strides)
-        {
-            efree(host_tensor->shape);
-            efree(host_tensor);
-            zend_throw_error(NULL, "Failed to allocate strides array");
-            RETURN_NULL();
-        }
-        memcpy(host_tensor->strides, tensor->strides, sizeof(size_t) * tensor->ndims);
-    }
-    else
-    {
-        host_tensor->shape = NULL;
-        host_tensor->strides = NULL;
-    }
-
-    host_tensor->total_size = 1;
-    for (int i = 0; i < tensor->ndims; i++)
-    {
-        host_tensor->total_size *= tensor->shape[i];
-    }
-
-    host_tensor->allocated_size = host_tensor->total_size * host_tensor->element_size;
-    host_tensor->data = allocate_for_dtype(host_tensor->dtype, host_tensor->total_size);
-
-    if (!host_tensor->data)
-    {
-        if (host_tensor->shape)
-            efree(host_tensor->shape);
-        if (host_tensor->strides)
-            efree(host_tensor->strides);
-        efree(host_tensor);
-        zend_throw_error(NULL, "Failed to allocate host memory");
-        RETURN_NULL();
-    }
-
-    cudaError_t err = cudaMemcpy(host_tensor->data, tensor->data,
-                                 host_tensor->allocated_size,
-                                 cudaMemcpyDeviceToHost);
-
-    if (err != cudaSuccess)
-    {
-        efree(host_tensor->data);
-        if (host_tensor->shape)
-            efree(host_tensor->shape);
-        if (host_tensor->strides)
-            efree(host_tensor->strides);
-        efree(host_tensor);
-        zend_throw_error(NULL, "CUDA error copying data to host: %s", cudaGetErrorString(err));
-        RETURN_NULL();
-    }
-
-    host_tensor->is_on_gpu = 0;
-    host_tensor->is_view = 0;
-    host_tensor->base_tensor = NULL;
-    host_tensor->ref_count = 1;
-    host_tensor->is_dirty = 0;
-    host_tensor->offset = 0;
-    host_tensor->slices = NULL;
-    host_tensor->num_slices = 0;
-    host_tensor->d_strides = NULL;
-    host_tensor->d_shape = NULL;
 
     zend_object *host_obj = contiguous_array_from_tensor(host_tensor);
     if (!host_obj)
@@ -1832,34 +1666,6 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
         return NULL;
     }
 
-    void *input_ptrs[MAX_CONCAT_TENSORS];
-    int input_axis_sizes[MAX_CONCAT_TENSORS];
-    size_t input_strides_axis[MAX_CONCAT_TENSORS];
-    size_t input_axis_offsets[MAX_CONCAT_TENSORS];
-
-    size_t current_offset = 0;
-    size_t output_stride_axis = 1;
-
-    for (int d = axis + 1; d < new_tensor->ndims; d++)
-    {
-        output_stride_axis *= new_tensor->shape[d];
-    }
-    for (i = 0; i < list_count; i++)
-    {
-        tensor_t *current = tensor_list[i];
-        input_ptrs[i] = current->data;
-        input_axis_sizes[i] = current->shape[axis];
-        input_axis_offsets[i] = current_offset;
-
-        size_t input_stride_axis = 1;
-        for (int d = axis + 1; d < current->ndims; d++)
-        {
-            input_stride_axis *= current->shape[d];
-        }
-        input_strides_axis[i] = input_stride_axis;
-        current_offset += input_axis_sizes[i];
-    }
-
     size_t outer_dims = 1;
     for (int d = 0; d < axis; d++)
     {
@@ -1877,9 +1683,6 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
         list_count,
         new_tensor,
         axis,
-        input_axis_offsets,
-        input_strides_axis,
-        output_stride_axis,
         outer_dims,
         inner_dims,
         (int)total_length_on_axis);
@@ -1888,6 +1691,7 @@ static tensor_t *cuda_tensor_concat(zval *tensors_array, int axis)
 
     if (result != SUCCESS)
     {
+        cuda_tensor_destroy(new_tensor);
         zend_throw_error(NULL, "CUDA concat kernel failed.");
         return NULL;
     }

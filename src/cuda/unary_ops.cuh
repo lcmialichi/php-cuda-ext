@@ -2,6 +2,7 @@
 #define UNARY_OPS_CUH
 
 #include <cuda_runtime.h>
+#include "launch_config.cuh"
 
 #define MAX_DIMS 10
 struct UnaryParams
@@ -47,8 +48,8 @@ void launch_unary_op_kernel(
     int ndims,
     size_t total_size)
 {
-    int threads = 256;
-    int blocks = (total_size + threads - 1) / threads;
+    if (total_size == 0)
+        return;
 
     UnaryParams h_params;
 
@@ -58,7 +59,7 @@ void launch_unary_op_kernel(
     h_params.ndims = ndims;
 
     cudaMemcpyToSymbol(d_unary_params, &h_params, sizeof(UnaryParams));
-    unary_kernel_strided<T, Op><<<blocks, threads>>>(
+    unary_kernel_strided<T, Op><<<cuda_grid_1d(total_size), 256>>>(
         base,
         result,
         base_offset,

@@ -3,7 +3,6 @@
 
 #include <cuda_runtime.h>
 #include "php.h"
-#include "cuda_kernels.h"
 #include "tensor.h"
 #include "operations.h"
 

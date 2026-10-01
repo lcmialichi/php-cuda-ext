@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 #include "cuda_op_functors.cuh"
 #include "cast.cuh"
+#include "launch_config.cuh"
 
 template <typename T, typename Op>
 __global__ void scalar_kernel_strided(
@@ -110,15 +111,16 @@ void launch_inv_scalar_op(
     size_t total_size,
     int is_contiguous)
 {
+    if (total_size == 0)
+        return;
+
     if (is_contiguous == 1)
     {
         int minGridSize;
         int blockSize;
         cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, scalar_kernel_contiguous_inv<T, Op>, 0, 0);
 
-        int gridSize = (total_size + blockSize - 1) / blockSize;
-
-        scalar_kernel_contiguous_inv<T, Op><<<gridSize, blockSize>>>(
+        scalar_kernel_contiguous_inv<T, Op><<<cuda_grid_1d(total_size, blockSize), blockSize>>>(
             base,
             base_dtype,
             scalar,
@@ -132,9 +134,7 @@ void launch_inv_scalar_op(
     int blockSize;
     cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, inv_scalar_kernel_strided<T, Op>, 0, 0);
 
-    int gridSize = (total_size + blockSize - 1) / blockSize;
-
-    inv_scalar_kernel_strided<T, Op><<<gridSize, blockSize>>>(
+    inv_scalar_kernel_strided<T, Op><<<cuda_grid_1d(total_size, blockSize), blockSize>>>(
         base,
         base_dtype,
         scalar,
@@ -159,6 +159,8 @@ void launch_scalar_op(
     size_t total_size,
     int is_contiguous)
 {
+    if (total_size == 0)
+        return;
 
     if (is_contiguous == 1)
     {
@@ -166,9 +168,7 @@ void launch_scalar_op(
         int blockSize;
         cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, scalar_kernel_contiguous<T, Op>, 0, 0);
 
-        int gridSize = (total_size + blockSize - 1) / blockSize;
-
-        scalar_kernel_contiguous<T, Op><<<gridSize, blockSize>>>(
+        scalar_kernel_contiguous<T, Op><<<cuda_grid_1d(total_size, blockSize), blockSize>>>(
             base,
             base_dtype,
             scalar,
@@ -182,9 +182,7 @@ void launch_scalar_op(
     int blockSize;
     cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, scalar_kernel_strided<T, Op>, 0, 0);
 
-    int gridSize = (total_size + blockSize - 1) / blockSize;
-
-    scalar_kernel_strided<T, Op><<<gridSize, blockSize>>>(
+    scalar_kernel_strided<T, Op><<<cuda_grid_1d(total_size, blockSize), blockSize>>>(
         base,
         base_dtype,
         scalar,

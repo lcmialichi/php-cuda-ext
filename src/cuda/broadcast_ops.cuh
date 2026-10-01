@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 #include "../data_types.h"
 #include "cast.cuh"
+#include "launch_config.cuh"
 
 #define MAX_DIMS 10
 
@@ -127,15 +128,16 @@ void launch_broadcast_kernel_with_cast(void *a, dtype_t dtype_a, void *b, dtype_
                                        size_t a_base_offset,
                                        size_t b_base_offset)
 {
+    if (total_elements == 0)
+        return;
+
     BroadcastParams h_params = setup_params(a_strides, a_dims, b_strides, b_dims, result_shape, result_dims);
 
     int minGridSize;
     int blockSize;
     cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, broadcast_kernel_with_cast<T, Op>, 0, 0);
 
-    int gridSize = (total_elements + blockSize - 1) / blockSize;
-
-    broadcast_kernel_with_cast<T, Op><<<gridSize, blockSize>>>(
+    broadcast_kernel_with_cast<T, Op><<<cuda_grid_1d(total_elements, blockSize), blockSize>>>(
         a, dtype_a, b, dtype_b, result,
         total_elements, h_params, a_base_offset, b_base_offset);
 }
@@ -149,15 +151,16 @@ void launch_broadcast_kernel(T *a, T *b, T *result,
                              size_t a_base_offset,
                              size_t b_base_offset)
 {
+    if (total_elements == 0)
+        return;
+
     BroadcastParams h_params = setup_params(a_strides, a_dims, b_strides, b_dims, result_shape, result_dims);
 
     int minGridSize;
     int blockSize;
     cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, broadcast_kernel<T, Op>, 0, 0);
 
-    int gridSize = (total_elements + blockSize - 1) / blockSize;
-
-    broadcast_kernel<T, Op><<<gridSize, blockSize>>>(
+    broadcast_kernel<T, Op><<<cuda_grid_1d(total_elements, blockSize), blockSize>>>(
         a, b, result,
         total_elements, h_params, a_base_offset, b_base_offset);
 }

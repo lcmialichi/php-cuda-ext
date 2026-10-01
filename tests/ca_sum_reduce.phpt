@@ -11,6 +11,9 @@ var_dump($ca->sum(1)->toArray());
 var_dump($ca->sum(0)->toArray());
 var_dump($ca->sum(2)->toArray());
 var_dump($ca->sum()->toArray());
+$rows = array_fill(0, 4096, [1, 2]);
+$large = new Cuda\CudaArray($rows);
+var_dump($large->sum(1)->toArray() === array_fill(0, 4096, 3.0));
 ?>
 --EXPECT--
 array(2) {
@@ -65,3 +68,4 @@ array(1) {
   [0]=>
   float(36)
 }
+bool(true)

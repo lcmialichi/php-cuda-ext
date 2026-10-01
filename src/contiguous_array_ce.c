@@ -3,7 +3,7 @@
 #include "contiguous_array_arginfo.h"
 #include "zend_smart_str.h"
 #include <string.h>
-#include "tensor_fabric.h"
+#include "tensor_factory.h"
 #include "ca_struct.h"
 #include "zend_exceptions.h"
 

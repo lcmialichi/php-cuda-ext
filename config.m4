@@ -40,7 +40,7 @@ if test "$PHP_CUDA" != "no"; then
     CXXFLAGS="$CXXFLAGS -O2"
     CFLAGS="$CFLAGS -O2"
     
-    CUDA_FILES="src/cuda/cuda_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu src/cuda/factory_kernels.cu"
+    CUDA_FILES="src/cuda/float_kernels.cu src/cuda/activation_kernels.cu src/cuda/matmul_kernels.cu src/cuda/concat_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu src/cuda/factory_kernels.cu"
 
     AC_MSG_CHECKING([for CUDA GPU architecture])
     DETECTED_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '.')
@@ -58,6 +58,7 @@ if test "$PHP_CUDA" != "no"; then
 
     TOTAL_FILES=$(echo $CUDA_FILES | wc -w)
     CURRENT_FILE=1
+    CUDA_OBJECTS=""
 
     for f in $CUDA_FILES; do
         printf "  [%d/%d] Compiling..." "$CURRENT_FILE" "$TOTAL_FILES"
@@ -68,12 +69,13 @@ if test "$PHP_CUDA" != "no"; then
         }
         
         printf "[OK]\n"
+        CUDA_OBJECTS="$CUDA_OBJECTS ${f%.cu}.o"
         CURRENT_FILE=$((CURRENT_FILE + 1))
     done
 
     AC_MSG_RESULT([all kernels compiled successfully])
 
-    ar rcs libcudakernels.a src/cuda/*.o
+    ar rcs libcudakernels.a $CUDA_OBJECTS
 
     PHP_EVAL_LIBLINE([-L. -lcudakernels], CUDA_SHARED_LIBADD)
     
@@ -87,10 +89,11 @@ if test "$PHP_CUDA" != "no"; then
     src/cuda_array/cuda_array_ce.c \ 
     src/contiguous_array_ce.c \
     src/cuda_array/ca_private.c \
+    src/cuda_array/tensor_transfer.c \
     src/data_types.c \
     src/tensor.c \
     src/cuda/memory_pool.c \
-    src/cuda_array/tensor_fabric.c \
+    src/cuda_array/tensor_factory.c \
     src/operations.c \
     src/compiler_ce.c \
     src/module_ce.c"

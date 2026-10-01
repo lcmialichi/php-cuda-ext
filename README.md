@@ -62,6 +62,31 @@ required to implement ML and data science systems directly in PHP.
 This approach favors flexibility, performance, and transparency over
 opinionated high-level APIs.
 
+## Architecture and API direction
+
+`Cuda\CudaArray` currently means a tensor whose operations require CUDA. The
+internal `tensor_t` describes shape, dtype, storage and views; `tensor_factory`
+creates tensors from PHP values or host buffers, while `tensor_transfer` owns
+device-to-host transfers and PHP array conversion. PHP class methods delegate
+to these internal components and the CUDA operation layer.
+
+`CudaArray` remains the public name while CUDA is the only execution backend.
+A backend-neutral `Tensor` should only become the primary API when CPU storage
+and operations actually exist; a compatibility alias or migration path will be
+needed for current users. Fused execution graphs will need a separate execution
+layer between tensor operations and CUDA kernels. Neither CPU fallback nor
+graph execution is implemented yet.
+
+CUDA launch conventions: one-thread-per-element kernels use `cuda_grid_1d`
+from `src/cuda/launch_config.cuh` and skip empty inputs. Matrix multiplication
+uses `cuda_grid_2d` in `src/cuda/matmul_kernels.cu`; activations, concatenation
+and float-buffer kernels have separate files. Reductions are different:
+each output needs its own block, so occupancy recommendations select the block
+size but must not cap the number of output blocks. Status-returning launchers
+use `cuda_launch_status`, synchronizing only when their existing API requires
+it; void launchers remain asynchronous. New `.cu` files must be
+listed in both `config.m4` and `Makefile.frag`.
+
 ---
 
 ## Requirements

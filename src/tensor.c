@@ -87,6 +87,7 @@ tensor_t *tensor_cast(tensor_t *tensor, dtype_t new_dtype)
 
     if (tensor->dtype == new_dtype)
     {
+        tensor->ref_count++;
         return tensor;
     }
 

@@ -1,8 +1,8 @@
 # php-cuda-ext Roadmap
 
-This document describes the project's direction. It's a living document —
-suggestions are welcome via
-[GitHub Discussions](https://github.com/lcmialichi/php-cuda-ext/discussions).
+This document describes possible directions, not promised deadlines.
+Suggestions and concrete proposals are welcome via GitHub issues; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Vision
 
@@ -50,7 +50,7 @@ Focus: **stability and foundation**
 Focus: **expanding capabilities**
 
 ### Operations & Types
-- [ ] Optimized matmul (using cuBLAS)
+- [ ] Extend cuBLAS coverage beyond compatible `float32` matrix products and batched GEMMs
 - [ ] More activation functions: `tanh`, `sigmoid`, `relu`, `softmax`
 - [ ] Linear algebra ops: `dot`, `norm`, basic `einsum`
 - [ ] Support `complex64` / `complex128`
@@ -60,7 +60,7 @@ Focus: **expanding capabilities**
 - [ ] Multi-GPU support
 - [ ] Explicit CUDA streams for parallelism
 - [ ] Integration with PHP's `ffi` for advanced use cases
-- [ ] Export/import in common formats (NumPy `.npy`, safetensors)
+- [ ] Export `.npy` and explore safetensors (C-order `.npy` import already exists)
 
 ### Tooling
 - [ ] Built-in profiler (kernel time, memory usage)
@@ -68,7 +68,7 @@ Focus: **expanding capabilities**
 - [ ] Debug mode with shape/bounds checking
 
 ### Performance
-- [ ] Reduce CPU↔GPU transfer overhead (pinned memory, streams)
+- [ ] Benchmark and improve existing pinned host transfers and stream usage
 - [ ] Automatic kernel fusion for chained expressions
 - [ ] Public, comparable benchmark suite
 
@@ -84,7 +84,7 @@ Focus: **ecosystem**
 
 ### Integrations
 - [ ] Windows support (at least via WSL2) and macOS (via eGPU if viable)
-- [ ] Bindings to advanced CUDA libraries: cuDNN, cuBLAS, cuSPARSE
+- [ ] Bindings to further CUDA libraries: cuDNN and cuSPARSE (cuBLAS is optional today)
 - [ ] Plugins for PHP frameworks (Laravel, Symfony) for ML tasks
 
 ### Education
@@ -102,7 +102,7 @@ Focus: **ecosystem**
 Any item here can become an issue. If you want to work on something:
 
 1. Open an issue referencing the roadmap item
-2. Use the `roadmap` label to track it
+2. Describe the expected behavior and test strategy
 3. Read [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Out of Scope (for now)

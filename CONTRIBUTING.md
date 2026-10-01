@@ -1,0 +1,61 @@
+# Contributing to php-cuda-ext
+
+Thanks for considering a contribution. The extension is experimental: small,
+reproducible changes with tests and clear API behavior are especially useful.
+Documentation, examples, bug reports, and results from other GPUs and PHP
+versions count as contributions too.
+
+## Start a conversation
+
+Search existing GitHub issues before opening a new one. For a bug, include
+your PHP version, CUDA Toolkit version, NVIDIA driver/GPU, build command,
+minimal PHP reproducer, actual behavior, and expected behavior. Paste text
+logs (remove private paths and secrets) rather than screenshots of errors.
+
+For new public APIs or changes to ownership, synchronization, or dtypes,
+describe the desired behavior in an issue before implementing it. The
+[roadmap](ROADMAP.md) suggests directions, not a prerequisite for proposals.
+Issues with a narrowly scoped reproducer or a missing regression test are
+good places to begin.
+
+## Build and test
+
+Linux, a compatible NVIDIA driver and CUDA Toolkit, and PHP development tools
+are needed for GPU tests. Build without installing the extension system-wide:
+
+```bash
+./compile.sh
+./run-tests.sh --require-gpu
+```
+
+Use `PHP_BIN`, `PHPIZE`, and `PHP_CONFIG` for non-default PHP installations;
+see the [README](README.md) for versioned builds and Docker. `./run-tests.sh`
+runs CPU-side C tests before the PHPT suite. With no accessible NVIDIA GPU,
+you can still build and run CPU-side tests, but GPU PHPTs will skip; mention
+this limitation in the pull request. Do not treat skipped tests as GPU coverage.
+
+If a test fails, include the command, relevant test name and diff, and whether
+the failure reproduces without your changes. GPU benchmarks are optional and
+should identify hardware, software versions, tensor shapes, and whether data
+transfers were timed.
+
+## Submit a change
+
+1. Keep the patch focused; avoid generated build files and benchmark reports.
+2. Add or update a `tests/*.phpt` regression for behavior changes. Use the
+   existing CPU-side tests for shape, format, or allocator logic when possible.
+3. Update the PHP signatures and docblocks in `stubs/` and any affected
+   README or example when the public API changes. Check PHP syntax with
+   `php -n -l stubs/cuda.stub.php` (the `-n` avoids loading the extension
+   while parsing its declarations).
+4. Run the relevant tests and report your environment, results, and remaining
+   coverage gaps in the pull request. Explain why the chosen behavior is safe
+   for PHP reference counting and asynchronous CUDA execution.
+
+Reviews look for predictable error handling (`Cuda\Exception` subclasses),
+correct ownership of device/host memory, reproducible tests, and compatibility
+with supported PHP builds. Please be patient with iteration: CUDA hardware
+and toolchain combinations are varied, and this is not yet a stable release.
+
+By contributing, you agree that your changes are distributed under the
+repository's [MIT License](LICENSE).

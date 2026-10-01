@@ -150,6 +150,13 @@ overwrite each other. `./run-tests.sh` always runs CPU-side C checks; with
 `--require-gpu` it fails early unless the extension loads and a CUDA device is
 visible, rather than reporting only skipped PHPTs.
 
+cuBLAS is used automatically when its headers and library are available in the
+CUDA toolkit for large compatible `float32` matrix products and batched GEMMs.
+Small matrices and unsupported strides use the built-in CUDA kernels. To build
+without cuBLAS (no additional library needed), run
+`CUDA_USE_CUBLAS=no ./compile.sh`. Run `php -n -d extension=./cuda_build-8.1/modules/cuda.so run_benchmarks.php --matmul`
+to save focused JSON/HTML matmul results before and after tuning.
+
 To compare CPU-to-GPU import paths on your own device after building:
 
 ```bash
@@ -157,8 +164,8 @@ php -n -d extension=./cuda_build-8.1/modules/cuda.so run_benchmarks.php --import
 ```
 
 The focused benchmark prepares arrays, packed bytes and temporary files before
-timing, and reports the average cost of each import method, including file I/O
-for `fromFile()`. Both `--import` and the full run export JSON and HTML under
+timing, including pageable and pinned `HostArray` storage created ahead of time;
+`fromFile()` also includes file I/O. Both `--import` and the full run export JSON and HTML under
 `benchmarks/reports/`; the full run already includes the import cases. Reports
 include median and p95 alongside average time to expose timing spikes.
 Benchmarks vary with storage and GPU; `pack()` time is excluded. The reported
@@ -227,34 +234,65 @@ one-argument indices form of NumPy/CuPy `where` is not provided.
 
 ```php
 use Cuda\CudaArray;
-// CPU → GPU
+use Cuda\HostArray;
+
+// Numeric PHP arrays become contiguous CPU storage without a GPU round-trip.
+$host = new HostArray([[1, 2], [3, 4]], 'float32');
+$packedHost = HostArray::fromBuffer(pack('g*', 1, 2, 3, 4), [2, 2]);
+$pinnedHost = HostArray::fromBuffer(pack('g*', 1, 2, 3, 4), [2, 2], 'float32', pinned: true);
+$pinnedHost->isPinned(); // true
+$bytes = $host->toBuffer();
+$rowOnGpu = $host[0]->toGpu();
+
+// CPU -> GPU
 $ca = new CudaArray([[1, 2], [3, 4]]);
 
 // GPU-only allocation
 $ones  = CudaArray::ones([1024, 1024]);
 $zeros = CudaArray::zeros([512]);
 
-// GPU → CPU
+// GPU -> CPU as PHP values
 $data = $ca->toArray();
 
-// GPU → Contiguous list 
+// GPU -> contiguous CPU memory
 $host = $ca->toHost();
 
-// Contiguous list → CPU memory
-$host->toGpu();
+// Contiguous CPU memory -> GPU (without building a PHP array)
+$gpuCopy = $host->toGpu();
 
-// Contiguous list → PHP Array
+// Contiguous CPU memory -> PHP array
 $host->toArray();
+
+// Element selection remains on GPU.
+$mask = CudaArray::fromBuffer(pack('C*', 1, 0), [2], 'bool');
+$selected = CudaArray::where($mask, CudaArray::ones([2]), CudaArray::zeros([2]));
 
 // Save to file (PHP serialization)
 file_put_contents('/data/array.ser', serialize($host));
 
 // Load from file
-$restored = unserialize(file_get_contents('/data/array.ser')); // Cuda\ContiguousArray
+$restored = unserialize(file_get_contents('/data/array.ser')); // Cuda\ContiguousArray (also Cuda\HostArray)
 
 // Convert back to GPU when needed
 $gpu_restored = $restored->toGpu(); // Cuda\CudaArray
 ```
+
+`Cuda\HostArray` is a public alias of `Cuda\ContiguousArray`; the original name
+remains available. The constructor requires a rectangular numeric PHP array.
+Use `fromBuffer()` when bytes are already packed, and `toBuffer()` to pass data
+on without expanding it into per-element PHP values. Pinning is opt-in because
+page-locked host memory consumes system resources; on the RTX A2000, repeated
+4 MiB uploads measured about 0.268 ms pinned versus 0.278 ms pageable.
+The batch input paths in
+`fused.php` can be compared with `FUSED_TRANSFER_MODE=buffer` and
+`FUSED_PROFILE=1`; `FUSED_EPOCHS=2` and `FUSED_SKIP_EVALUATION=1` make a short
+training run. `FUSED_FORCE_TRAIN=1` retrains and overwrites the model, so use
+a temporary copy of the script and dataset when benchmarking. The JIT kernels
+run on nonblocking streams, so the example synchronizes when a CUDA runtime
+result becomes a JIT input, and before consuming an async JIT result. With
+buffer transfers and cuBLAS, 1000 epochs completed in 89.84 seconds with
+97.25% test accuracy on the RTX A2000; input preparation and upload accounted
+for 13.92 seconds of that run.
 
 ## Supported Operations
 ### Arithmetic & Math

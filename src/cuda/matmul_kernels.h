@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+void cuda_blas_shutdown(void);
+
 int cuda_matmul_launcher(float *a, float *b, float *c,
                         int m, int n, int k,
                         size_t a_stride0, size_t a_stride1,

@@ -699,7 +699,10 @@ void cuda_tensor_destroy(tensor_t *tensor)
         }
         else if (tensor->data && !tensor->is_on_gpu)
         {
-            efree(tensor->data);
+            if (tensor->host_pinned)
+                cudaFreeHost(tensor->data);
+            else
+                efree(tensor->data);
         }
     }
 

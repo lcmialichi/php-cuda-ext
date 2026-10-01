@@ -332,7 +332,7 @@ tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dty
     return tensor;
 }
 
-tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, dtype_t dtype)
+static tensor_t *cuda_tensor_create_on_host_impl(const int shape[], int ndims, void *data, dtype_t dtype, int pinned)
 {
     tensor_t *tensor = (tensor_t *)emalloc(sizeof(tensor_t));
     if (!tensor)
@@ -364,12 +364,21 @@ tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, d
     tensor->d_strides = NULL;
     tensor->element_size = element_size;
     tensor->is_on_gpu = 0;
+    tensor->host_pinned = pinned;
     tensor->is_contiguous_cached = -1;
 
     size_t required_bytes = tensor->total_size * element_size;
     tensor->allocated_size = required_bytes;
 
-    tensor->data = emalloc(required_bytes);
+    if (pinned)
+    {
+        if (cudaMallocHost(&tensor->data, required_bytes) != cudaSuccess)
+            tensor->data = NULL;
+    }
+    else
+    {
+        tensor->data = emalloc(required_bytes);
+    }
     if (!tensor->data)
     {
         efree(tensor->strides);
@@ -389,6 +398,16 @@ tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, d
     }
 
     return tensor;
+}
+
+tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, dtype_t dtype)
+{
+    return cuda_tensor_create_on_host_impl(shape, ndims, data, dtype, 0);
+}
+
+tensor_t *cuda_tensor_create_on_host_pinned(const int shape[], int ndims, void *data, dtype_t dtype)
+{
+    return cuda_tensor_create_on_host_impl(shape, ndims, data, dtype, 1);
 }
 
 tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[])

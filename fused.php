@@ -44,6 +44,9 @@ class DatasetManager
     public array $trainY = [];
     public array $testX = [];
     public array $testTargets = [];
+    public string $trainXBuffer = '';
+    public string $trainYBuffer = '';
+    public string $testXBuffer = '';
 
     public int $trainSamples = 0;
     public int $testSamples = 0;
@@ -81,12 +84,18 @@ class DatasetManager
 
         foreach ($samples as $index => [$normalizedPixels, $oneHot, $target]) {
             if ($index < $this->trainSamples) {
-                $this->trainX = array_merge($this->trainX, $normalizedPixels);
-                $this->trainY = array_merge($this->trainY, $oneHot);
+                foreach ($normalizedPixels as $pixel) $this->trainX[] = $pixel;
+                foreach ($oneHot as $label) $this->trainY[] = $label;
             } else {
-                $this->testX = array_merge($this->testX, $normalizedPixels);
+                foreach ($normalizedPixels as $pixel) $this->testX[] = $pixel;
                 $this->testTargets[] = $target;
             }
+        }
+
+        if (getenv('FUSED_TRANSFER_MODE') === 'buffer') {
+            $this->trainXBuffer = pack('g*', ...$this->trainX);
+            $this->trainYBuffer = pack('g*', ...$this->trainY);
+            $this->testXBuffer = pack('g*', ...$this->testX);
         }
 
         echo CLI::green("Loaded {$this->trainSamples} training samples and {$this->testSamples} testing samples.\n\n");
@@ -344,6 +353,9 @@ class NeuralNetwork
 
         $numBatches = (int) ceil($dataset->trainSamples / $batchSize);
         $module = $this->kernels->getModule();
+        $useBuffer = getenv('FUSED_TRANSFER_MODE') === 'buffer';
+        $profile = getenv('FUSED_PROFILE') === '1';
+        $transferNanoseconds = 0;
 
         for ($epoch = 0; $epoch < $epochs; $epoch++) {
             $epochLoss = 0.0;
@@ -352,23 +364,33 @@ class NeuralNetwork
                 $startIdx = $b * $batchSize;
                 $currentBatchSize = min($batchSize, $dataset->trainSamples - $startIdx);
 
-                $batchXHost = array_slice($dataset->trainX, $startIdx * $this->inputFeatures, $currentBatchSize * $this->inputFeatures);
-                $batchYHost = array_slice($dataset->trainY, $startIdx * $this->numClasses, $currentBatchSize * $this->numClasses);
-                $X = (new CudaArray($batchXHost, 'float32'))->reshape([$currentBatchSize, $this->inputFeatures]);
-                $Y = (new CudaArray($batchYHost, 'float32'))->reshape([$currentBatchSize, $this->numClasses]);
+                if ($profile) $transferStart = hrtime(true);
+                if ($useBuffer) {
+                    $X = CudaArray::fromBuffer(substr($dataset->trainXBuffer, $startIdx * $this->inputFeatures * 4, $currentBatchSize * $this->inputFeatures * 4), [$currentBatchSize, $this->inputFeatures]);
+                    $Y = CudaArray::fromBuffer(substr($dataset->trainYBuffer, $startIdx * $this->numClasses * 4, $currentBatchSize * $this->numClasses * 4), [$currentBatchSize, $this->numClasses]);
+                } else {
+                    $batchXHost = array_slice($dataset->trainX, $startIdx * $this->inputFeatures, $currentBatchSize * $this->inputFeatures);
+                    $batchYHost = array_slice($dataset->trainY, $startIdx * $this->numClasses, $currentBatchSize * $this->numClasses);
+                    $X = (new CudaArray($batchXHost, 'float32'))->reshape([$currentBatchSize, $this->inputFeatures]);
+                    $Y = (new CudaArray($batchYHost, 'float32'))->reshape([$currentBatchSize, $this->numClasses]);
+                }
+                if ($profile) $transferNanoseconds += hrtime(true) - $transferStart;
 
                 $A1 = CudaArray::zeros([$currentBatchSize, $this->hiddenNodes], 'float32');
                 $sizeA1 = $currentBatchSize * $this->hiddenNodes;
+                cuda_synchronize();
                 $module->launch('linear_forward_relu', config: $module->autoGrid('linear_forward_relu', $sizeA1), args: [$X, $this->W1, $this->b1, $A1, $currentBatchSize, $this->inputFeatures, $this->hiddenNodes]);
 
                 $Z2 = CudaArray::zeros([$currentBatchSize, $this->numClasses], 'float32');
                 $sizeZ2 = $currentBatchSize * $this->numClasses;
+                cuda_synchronize();
                 $module->launch('linear_forward', config: $module->autoGrid('linear_forward', $sizeZ2), args: [$A1, $this->W2, $this->b2, $Z2, $currentBatchSize, $this->hiddenNodes, $this->numClasses]);
 
                 $probs = CudaArray::zeros([$currentBatchSize, $this->numClasses], 'float32');
                 $dZ2 = CudaArray::zeros([$currentBatchSize, $this->numClasses], 'float32');
                 $batchLoss = CudaArray::zeros([$currentBatchSize], 'float32');
 
+                cuda_synchronize();
                 $module->launch('softmax_cross_entropy', config: $module->autoGrid('softmax_cross_entropy', $currentBatchSize), args: [$Z2, $Y, $probs, $dZ2, $batchLoss, $currentBatchSize, $this->numClasses]);
 
                 if ($epoch % 50 === 0 || $epoch === $epochs - 1) {
@@ -381,9 +403,11 @@ class NeuralNetwork
 
                 $dZ1 = CudaArray::zeros($A1->getShape(), 'float32');
                 $size = $A1->getSize();
-                $module->launchAsync('relu_backward', config: $module->autoGrid('relu_backward', $size), args: [$A1, $dA1, $dZ1, $size]);
+                cuda_synchronize();
+                $reluOperation = $module->launchAsync('relu_backward', config: $module->autoGrid('relu_backward', $size), args: [$A1, $dA1, $dZ1, $size]);
 
                 $X_T = $X->transpose([1, 0]);
+                $module->sync($reluOperation);
                 $dW1 = $X_T->matmul($dZ1);
 
                 $tmpDb1 = $dZ1->sum(0);
@@ -398,6 +422,8 @@ class NeuralNetwork
                     $sz = $w->getSize();
                     $module->launchAsync('update_weights', config: $module->autoGrid('update_weights', $sz), args: [$w, $g, $learningRate, $sz]);
                 }
+                $module->sync();
+                $module->cleanup();
             }
 
             if ($epoch % 50 === 0 || $epoch === $epochs - 1) {
@@ -411,22 +437,32 @@ class NeuralNetwork
         }
 
         echo CLI::green("\nTraining completed in " . sprintf("%.2f ms", (microtime(true) - $trainStart) * 1000) . ".\n");
+        if ($profile) {
+            echo "   Batch input preparation + upload: " . sprintf("%.2f ms", $transferNanoseconds / 1e6) . "\n";
+        }
     }
 
     public function evaluate(DatasetManager $dataset): void
     {
         echo CLI::bold(CLI::blue("🧪 Running Inference on Test Dataset...\n"));
 
-        $xTest = (new CudaArray($dataset->testX, 'float32'))->reshape([$dataset->testSamples, $this->inputFeatures]);
+        $xTest = getenv('FUSED_TRANSFER_MODE') === 'buffer'
+            ? CudaArray::fromBuffer($dataset->testXBuffer, [$dataset->testSamples, $this->inputFeatures])
+            : (new CudaArray($dataset->testX, 'float32'))->reshape([$dataset->testSamples, $this->inputFeatures]);
         $module = $this->kernels->getModule();
 
         $testA1 = CudaArray::zeros([$dataset->testSamples, $this->hiddenNodes], 'float32');
         $sizeA1 = $dataset->testSamples * $this->hiddenNodes;
-        $module->launchAsync('linear_forward_relu', config: $module->autoGrid('linear_forward_relu', $sizeA1), args: [$xTest, $this->W1, $this->b1, $testA1, $dataset->testSamples, $this->inputFeatures, $this->hiddenNodes]);
+        cuda_synchronize();
+        $firstForward = $module->launchAsync('linear_forward_relu', config: $module->autoGrid('linear_forward_relu', $sizeA1), args: [$xTest, $this->W1, $this->b1, $testA1, $dataset->testSamples, $this->inputFeatures, $this->hiddenNodes]);
+        $module->sync($firstForward);
 
         $testPredictions = CudaArray::zeros([$dataset->testSamples, $this->numClasses], 'float32');
         $sizeZ2 = $dataset->testSamples * $this->numClasses;
-        $module->launchAsync('linear_forward', config: $module->autoGrid('linear_forward', $sizeZ2), args: [$testA1, $this->W2, $this->b2, $testPredictions, $dataset->testSamples, $this->hiddenNodes, $this->numClasses]);
+        cuda_synchronize();
+        $secondForward = $module->launchAsync('linear_forward', config: $module->autoGrid('linear_forward', $sizeZ2), args: [$testA1, $this->W2, $this->b2, $testPredictions, $dataset->testSamples, $this->hiddenNodes, $this->numClasses]);
+        $module->sync($secondForward);
+        $module->cleanup();
 
         $predictedClasses = $testPredictions->argMax(1)->toArray();
 
@@ -462,7 +498,7 @@ $CONFIG = [
     'numClasses' => 10,
     'hiddenNodes' => 64,
     'batchSize' => 256,
-    'epochs' => 1000,
+    'epochs' => getenv('FUSED_EPOCHS') !== false ? max(1, (int) getenv('FUSED_EPOCHS')) : 1000,
     'learningRate' => 0.05
 ];
 
@@ -473,13 +509,15 @@ try {
     $kernels = new CudaKernelProvider();
     $network = new NeuralNetwork($kernels, $CONFIG['inputFeatures'], $CONFIG['hiddenNodes'], $CONFIG['numClasses']);
 
-    if (!$network->loadModel($CONFIG['modelPath'], $CONFIG['modelVersion'])) {
+    if (getenv('FUSED_FORCE_TRAIN') === '1' || !$network->loadModel($CONFIG['modelPath'], $CONFIG['modelVersion'])) {
         $network->initWeights();
         $network->train($dataset, $CONFIG['epochs'], $CONFIG['batchSize'], $CONFIG['learningRate']);
         $network->saveModel($CONFIG['modelPath'], $CONFIG['modelVersion']);
     }
 
-    $network->evaluate($dataset);
+    if (getenv('FUSED_SKIP_EVALUATION') !== '1') {
+        $network->evaluate($dataset);
+    }
 
 } catch (Exception $e) {
     echo CLI::red("\nError: " . $e->getMessage() . "\n");

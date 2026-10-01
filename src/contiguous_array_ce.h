@@ -45,6 +45,7 @@ const char *dtype_to_string(dtype_t dtype);
 void *allocate_for_dtype(dtype_t dtype, size_t count);
 
 ZEND_METHOD(ContiguousArray, __construct);
+ZEND_METHOD(ContiguousArray, fromBuffer);
 ZEND_METHOD(ContiguousArray, get);
 ZEND_METHOD(ContiguousArray, getShape);
 ZEND_METHOD(ContiguousArray, getNdims);
@@ -52,6 +53,8 @@ ZEND_METHOD(ContiguousArray, getSize);
 ZEND_METHOD(ContiguousArray, getDtype);
 ZEND_METHOD(ContiguousArray, toArray);
 ZEND_METHOD(ContiguousArray, toGpu);
+ZEND_METHOD(ContiguousArray, toBuffer);
+ZEND_METHOD(ContiguousArray, isPinned);
 ZEND_METHOD(ContiguousArray, getElementSize);
 ZEND_METHOD(ContiguousArray, count);
 ZEND_METHOD(ContiguousArray, at);

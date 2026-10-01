@@ -14,6 +14,7 @@
 #include "compiler_ce.h"
 #include "module_ce.h"
 #include "contiguous_array_ce.h"
+#include "matmul_kernels.h"
 #include "cuda_exceptions.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(cuda);
@@ -170,6 +171,7 @@ ZEND_FUNCTION(cuda_get_memory_info)
 
 ZEND_FUNCTION(cuda_device_reset)
 {
+    cuda_blas_shutdown();
     if (!cuda_wrapper_device_reset())
     {
         zend_throw_exception(cuda_runtime_exception_ce, "Failed to reset device", 0);
@@ -284,13 +286,15 @@ static zend_function_entry cuda_functions[] = {
 
 PHP_MSHUTDOWN_FUNCTION(cuda)
 {
-    cuda_wrapper_device_reset();
+    cuda_blas_shutdown();
     cuda_array_shutdown();
+    cuda_wrapper_device_reset();
     return SUCCESS;
 }
 
 PHP_RSHUTDOWN_FUNCTION(cuda)
 {
+    cuda_blas_shutdown();
     return SUCCESS;
 }
 

@@ -1921,10 +1921,9 @@ ZEND_METHOD(CompiledModule, sync)
     cuda_module_object *module = Z_CUDA_MODULE_P(ZEND_THIS);
     CUresult cu_result;
 
-    module_cleanup_timeout_operations(module);
-
     if (op_id == -1)
     {
+        module_cleanup_timeout_operations(module);
         zend_ulong num_idx;
         cuda_async_operation *op;
         zend_bool all_success = 1;

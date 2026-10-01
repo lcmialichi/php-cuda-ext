@@ -148,6 +148,10 @@ class Kernel {}
 
 class ContiguousArray implements \ArrayAccess, Countable
 {
+    public function __construct(array $values, ?string $dtype = 'float32', bool $pinned = false) {}
+    public static function fromBuffer(string $bytes, array $shape, ?string $dtype = 'float32', bool $pinned = false): self {}
+    public function toBuffer(): string {}
+    public function isPinned(): bool {}
     public function toGpu(): CudaArray {}
 
     function offsetExists(mixed $offset): bool {}
@@ -179,6 +183,9 @@ class ContiguousArray implements \ArrayAccess, Countable
     public function __serialize(): array {}
     public function __unserialize(array $data): void {}
 }
+
+/** @see ContiguousArray */
+class_alias(ContiguousArray::class, 'Cuda\\HostArray');
 
 /**
  * @property int|float|bool|null|string|CudaArray $cdata

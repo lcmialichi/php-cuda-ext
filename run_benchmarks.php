@@ -17,17 +17,21 @@ if (!extension_loaded('cuda')) {
 }
 
 $importOnly = in_array('--import', $argv, true);
-$benchmarks = $importOnly ? [new CudaArrayMemoryCopyOperationsBenchmark()] : [
+$matmulOnly = in_array('--matmul', $argv, true);
+if ($importOnly && $matmulOnly) {
+    throw new InvalidArgumentException('Choose only one benchmark filter');
+}
+$benchmarks = $importOnly ? [new CudaArrayMemoryCopyOperationsBenchmark()] : ($matmulOnly ? [new CudaArrayLinearAlgebraBenchmark()] : [
     new CudaArrayBasicMathOperations(),
     new CudaArrayShapeManiliplationBenchmark(),
     new CudaArrayReductionBenchmark(),
     new CudaArrayMemoryCopyOperationsBenchmark(),
     new CudaArrayLinearAlgebraBenchmark(),
     // new ContiguousArrayBenchmark()
-];
+]);
 $app = new BenchmarkApplication(
     $benchmarks,
-    $importOnly ? ['cudaArrayImportPhp', 'cudaArrayImportBuffer', 'cudaArrayImportFile'] : null
+    $importOnly ? ['cudaArrayImportPhp', 'cudaArrayImportBuffer', 'hostArrayToGpu', 'hostArrayPinnedToGpu', 'cudaArrayImportFile'] : ($matmulOnly ? ['cudaArrayMatmul'] : null)
 );
 
 $dir = __DIR__ . "/benchmarks/reports";

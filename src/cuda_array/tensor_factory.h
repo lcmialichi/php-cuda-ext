@@ -13,6 +13,7 @@ tensor_t *cuda_tensor_create_from_host_buffer(int *shape, int ndims, dtype_t dty
 tensor_t *cuda_tensor_create_with_value(int *shape, int ndims, scalar_value_t value, dtype_t dtype);
 tensor_t *cuda_tensor_create(const int shape[], int ndims, const void *data, dtype_t dtype);
 tensor_t *cuda_tensor_create_on_host(const int shape[], int ndims, void *data, dtype_t dtype);
+tensor_t *cuda_tensor_create_on_host_pinned(const int shape[], int ndims, void *data, dtype_t dtype);
 tensor_t *cuda_tensor_create_float(const int shape[], int ndims, const float data[]);
 tensor_t *cuda_tensor_create_int(const int shape[], int ndims, const int data[]);
 tensor_t *cuda_tensor_create_rand(

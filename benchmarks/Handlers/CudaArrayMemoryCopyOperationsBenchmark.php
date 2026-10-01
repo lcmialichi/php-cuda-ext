@@ -3,6 +3,7 @@
 namespace Benchmarks\Handlers;
 
 use Cuda\CudaArray;
+use Cuda\HostArray;
 use Benchmarks\Handlers\Benchmark;
 use Benchmarks\Support\Attr\InjectArgs;
 
@@ -146,6 +147,24 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
             [
                 "run" => 4,
                 "warmup" => true,
+                "name" => "HostArray::toGpu() [reused host storage -> GPU]",
+                "iterations" => 10,
+                "type" => "TRANSFER",
+                "handler" => "hostArrayToGpu",
+                "metadata" => $this->importMetadata()
+            ],
+            [
+                "run" => 4,
+                "warmup" => true,
+                "name" => "HostArray::toGpu() [pinned host storage -> GPU]",
+                "iterations" => 10,
+                "type" => "TRANSFER",
+                "handler" => "hostArrayPinnedToGpu",
+                "metadata" => $this->importMetadata()
+            ],
+            [
+                "run" => 4,
+                "warmup" => true,
                 "name" => "CudaArray::fromFile() [raw file -> GPU]",
                 "iterations" => 10,
                 "type" => "TRANSFER",
@@ -186,6 +205,18 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
         file_put_contents($path, $bytes);
         register_shutdown_function('unlink', $path);
         return [$path, $shape];
+    }
+
+    public function argsHostArray(int $count): array
+    {
+        [$bytes, $shape] = $this->argsImportBuffer($count);
+        return [HostArray::fromBuffer($bytes, $shape)];
+    }
+
+    public function argsPinnedHostArray(int $count): array
+    {
+        [$bytes, $shape] = $this->argsImportBuffer($count);
+        return [HostArray::fromBuffer($bytes, $shape, 'float32', true)];
     }
 
     private function unaryMetadata(): array
@@ -427,6 +458,18 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
     public function cudaArrayImportBuffer(string $bytes, array $shape): void
     {
         CudaArray::fromBuffer($bytes, $shape);
+    }
+
+    #[InjectArgs("argsHostArray")]
+    public function hostArrayToGpu(HostArray $host): void
+    {
+        $host->toGpu();
+    }
+
+    #[InjectArgs("argsPinnedHostArray")]
+    public function hostArrayPinnedToGpu(HostArray $host): void
+    {
+        $host->toGpu();
     }
 
     #[InjectArgs("argsImportFile")]

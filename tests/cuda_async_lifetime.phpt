@@ -17,7 +17,15 @@ unset($tensor);
 var_dump($weak->get() instanceof Cuda\CudaArray);
 $module->sync();
 var_dump($weak->get() === null);
+$next = new Cuda\CudaArray([1.0]);
+$operation = $module->launchAsync('touch', config: ['grid' => [1, 1, 1], 'block' => [1, 1, 1]], args: [$next]);
+usleep(60000);
+var_dump($module->sync($operation));
+$module->cleanup();
+var_dump($next->toArray()[0]);
 ?>
 --EXPECT--
 bool(true)
 bool(true)
+bool(true)
+float(2)

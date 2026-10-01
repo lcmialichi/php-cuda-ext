@@ -52,6 +52,7 @@ typedef struct tensor
     size_t *d_strides;
     int *d_shape;
     int is_on_gpu;
+    int host_pinned;
     int is_dirty;
     int is_contiguous_cached;
 } tensor_t;

@@ -3,6 +3,10 @@
 #include "../tensor.h"
 #include <cuda_runtime.h>
 #include <string.h>
+#ifdef HAVE_CUBLAS
+#include <cublas_v2.h>
+#include <limits.h>
+#endif
 
 #define TILE_SIZE 32
 
@@ -15,6 +19,179 @@ struct MatMulParamsND
     int M, N, K;
     int total_batches;
 };
+
+#ifdef HAVE_CUBLAS
+struct BlasContext
+{
+    cublasHandle_t handle;
+    int device;
+
+    BlasContext() : handle(nullptr), device(-1) {}
+    ~BlasContext() { if (handle) cublasDestroy(handle); }
+};
+
+static thread_local BlasContext blas_context;
+
+extern "C" void cuda_blas_shutdown(void)
+{
+    if (blas_context.handle)
+    {
+        cublasDestroy(blas_context.handle);
+        blas_context.handle = nullptr;
+        blas_context.device = -1;
+    }
+}
+
+static cublasHandle_t get_blas_handle()
+{
+    int device;
+    if (cudaGetDevice(&device) != cudaSuccess)
+        return nullptr;
+    if (blas_context.handle && blas_context.device != device)
+    {
+        cublasDestroy(blas_context.handle);
+        blas_context.handle = nullptr;
+    }
+    if (!blas_context.handle)
+    {
+        if (cublasCreate(&blas_context.handle) != CUBLAS_STATUS_SUCCESS)
+            return nullptr;
+        blas_context.device = device;
+    }
+    return blas_context.handle;
+}
+
+static int blas_matrix_layout(int rows, int cols, size_t stride_row, size_t stride_col,
+                              cublasOperation_t *operation, int *leading_dimension)
+{
+    if (stride_col == 1 && stride_row == (size_t)cols)
+    {
+        *operation = CUBLAS_OP_N;
+        *leading_dimension = cols;
+        return 1;
+    }
+    if (stride_row == 1 && stride_col == (size_t)rows)
+    {
+        *operation = CUBLAS_OP_T;
+        *leading_dimension = rows;
+        return 1;
+    }
+    return 0;
+}
+
+static int blas_matmul_2d(float *a, float *b, float *c,
+                          int rows, int inner, int cols,
+                          size_t a_row, size_t a_col, size_t b_row, size_t b_col,
+                          size_t c_row, size_t c_col)
+{
+    if ((double)rows * inner * cols < 500000 || c_col != 1 || c_row != (size_t)cols)
+        return 0;
+    cublasOperation_t op_a, op_b;
+    int lda, ldb;
+    if (!blas_matrix_layout(rows, inner, a_row, a_col, &op_a, &lda) ||
+        !blas_matrix_layout(inner, cols, b_row, b_col, &op_b, &ldb))
+        return 0;
+
+    cublasHandle_t handle = get_blas_handle();
+    if (!handle) return 0;
+    cublasStatus_t status;
+    if (rows == 1 && cols == 1 && inner >= 4096 && a_col <= INT_MAX && b_row <= INT_MAX)
+    {
+        if (cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE) != CUBLAS_STATUS_SUCCESS)
+            return 0;
+        status = cublasSdot(handle, inner, a, (int)a_col, b, (int)b_row, c);
+        cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_HOST);
+    }
+    else
+    {
+        const float alpha = 1.0f, beta = 0.0f;
+        status = cublasSgemm(handle, op_b, op_a, cols, rows, inner,
+                             &alpha, b, ldb, a, lda, &beta, c, cols);
+    }
+    if (status == CUBLAS_STATUS_SUCCESS) return 1;
+    cublasDestroy(blas_context.handle);
+    blas_context.handle = nullptr;
+    return 0;
+}
+
+static int blas_batch_stride(const int *shape, const size_t *strides, int ndims,
+                             const MatMulParamsND *params, size_t *batch_stride)
+{
+    if (ndims == 2)
+    {
+        *batch_stride = 0;
+        return 1;
+    }
+    if (ndims != params->ndC)
+        return 0;
+
+    int broadcast = 1, dense = 1;
+    for (int axis = 0; axis < ndims - 2; axis++)
+    {
+        broadcast &= shape[axis] == 1;
+        dense &= shape[axis] == params->shapeC[axis];
+    }
+    if (broadcast)
+    {
+        *batch_stride = 0;
+        return 1;
+    }
+    if (!dense)
+        return 0;
+
+    size_t stride = strides[ndims - 3];
+    if (stride == 0)
+        return 0;
+    for (int axis = ndims - 4; axis >= 0; axis--)
+    {
+        if ((size_t)shape[axis + 1] > SIZE_MAX / stride ||
+            strides[axis] != stride * (size_t)shape[axis + 1])
+            return 0;
+        stride = strides[axis];
+    }
+    *batch_stride = strides[ndims - 3];
+    return 1;
+}
+
+static int blas_matmul_batched(const MatMulParamsND *params)
+{
+    if (params->ndC < 3 || (double)params->M * params->N * params->K * params->total_batches < 500000)
+        return 0;
+
+    cublasOperation_t op_a, op_b;
+    int lda, ldb;
+    if (!blas_matrix_layout(params->M, params->K,
+                            params->strideA[params->ndA - 2], params->strideA[params->ndA - 1], &op_a, &lda) ||
+        !blas_matrix_layout(params->K, params->N,
+                            params->strideB[params->ndB - 2], params->strideB[params->ndB - 1], &op_b, &ldb))
+        return 0;
+
+    size_t stride_a, stride_b;
+    size_t stride_c = params->strideC[params->ndC - 3];
+    if (!blas_batch_stride(params->shapeA, params->strideA, params->ndA, params, &stride_a) ||
+        !blas_batch_stride(params->shapeB, params->strideB, params->ndB, params, &stride_b) ||
+        stride_c != (size_t)params->M * params->N ||
+        stride_a > LLONG_MAX || stride_b > LLONG_MAX || stride_c > LLONG_MAX)
+        return 0;
+
+    cublasHandle_t handle = get_blas_handle();
+    if (!handle) return 0;
+    const float alpha = 1.0f, beta = 0.0f;
+    cublasStatus_t status = cublasSgemmStridedBatched(handle, op_b, op_a,
+        params->N, params->M, params->K,
+        &alpha, params->B, ldb, (long long)stride_b,
+        params->A, lda, (long long)stride_a,
+        &beta, params->C, params->N, (long long)stride_c, params->total_batches);
+    if (status == CUBLAS_STATUS_SUCCESS) return 1;
+    cublasDestroy(blas_context.handle);
+    blas_context.handle = nullptr;
+    return 0;
+}
+#endif
+
+#ifndef HAVE_CUBLAS
+extern "C" void cuda_blas_shutdown(void) {}
+#endif
 
 static __global__ void matmul_kernel(float *a, float *b, float *c,
                                      int m, int n, int k,
@@ -150,6 +327,11 @@ extern "C" int cuda_batched_matmul_nd_launcher(
     params.K = inner;
     params.total_batches = batches;
 
+#ifdef HAVE_CUBLAS
+    if (blas_matmul_batched(&params))
+        return 1;
+#endif
+
     dim3 block(TILE_SIZE, TILE_SIZE);
     dim3 grid = cuda_grid_2d(cols, rows, TILE_SIZE, TILE_SIZE, batches);
     matmul_nd_tiled_kernel<<<grid, block>>>(params);
@@ -164,6 +346,13 @@ extern "C" int cuda_matmul_launcher(float *a, float *b, float *c,
 {
     if (m <= 0 || n <= 0 || k <= 0)
         return 0;
+
+#ifdef HAVE_CUBLAS
+    if (blas_matmul_2d(a, b, c, m, n, k,
+                       a_stride0, a_stride1, b_stride0, b_stride1,
+                       c_stride0, c_stride1))
+        return 1;
+#endif
 
     dim3 block(32, 32);
     dim3 grid = cuda_grid_2d(k, m, 32, 32);

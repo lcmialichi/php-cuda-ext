@@ -59,6 +59,16 @@ if test "$PHP_CUDA" != "no"; then
     PHP_ADD_LIBRARY_WITH_PATH(cudart, $CUDA_LIB_DIR, CUDA_SHARED_LIBADD)
     PHP_ADD_LIBRARY_WITH_PATH(curand, $CUDA_LIB_DIR, CUDA_SHARED_LIBADD)
 
+    CUDA_CUBLAS_FLAG=""
+    if test "${CUDA_USE_CUBLAS:-yes}" != "no" && test -f "$PHP_CUDA/include/cublas_v2.h"; then
+        PHP_CHECK_LIBRARY(cublas, cublasCreate_v2, [
+            CUDA_CUBLAS_FLAG="-DHAVE_CUBLAS"
+        ], [
+            AC_MSG_WARN([cuBLAS not found; using built-in matmul kernels])
+        ], [-L$CUDA_LIB_DIR])
+    fi
+    PHP_SUBST(CUDA_CUBLAS_FLAG)
+
     CXXFLAGS="$CXXFLAGS -O2"
     CFLAGS="$CFLAGS -O2"
     
@@ -86,6 +96,9 @@ if test "$PHP_CUDA" != "no"; then
     PHP_SUBST(CUDA_ARCH_FLAG)
 
     PHP_EVAL_LIBLINE([-L. -lcudakernels], CUDA_SHARED_LIBADD)
+    if test -n "$CUDA_CUBLAS_FLAG"; then
+        CUDA_SHARED_LIBADD="$CUDA_SHARED_LIBADD -lcublas"
+    fi
     
     PHP_SUBST(CUDA_SHARED_LIBADD)
     SRC_FILES="\

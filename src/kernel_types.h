@@ -50,6 +50,7 @@ typedef struct _cuda_async_operation
     void **cuda_args;
     void **temp_buffers;
     int temp_buffers_count;
+    zval retained_args;
     zend_bool is_active;
     double start_time;
 

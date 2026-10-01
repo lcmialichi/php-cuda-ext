@@ -427,8 +427,8 @@ tensor_t *cuda_tensor_matmul(tensor_t *a, tensor_t *b)
         return NULL;
     }
 
-    LAZY_COPY_METADATA(a);
-    LAZY_COPY_METADATA(b);
+    if (!lazy_copy_metadata_to_gpu(a) || !lazy_copy_metadata_to_gpu(b))
+        return NULL;
 
     if (a->ndims != 2 || b->ndims != 2)
     {

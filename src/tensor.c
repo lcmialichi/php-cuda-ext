@@ -22,19 +22,17 @@ static void compute_strides_from_shape(int *shape, size_t *strides, int ndims)
     }
 }
 
-static size_t compute_total_size(int *shape, int ndims)
+static int compute_total_size(const int *shape, int ndims, size_t *total)
 {
-    if (ndims <= 0)
-        return 1;
-
-    size_t total = 1;
+    size_t size = 1;
     for (int i = 0; i < ndims; i++)
     {
-        if (shape[i] < 0)
+        if (shape[i] < 0 || (shape[i] != 0 && size > SIZE_MAX / (size_t)shape[i]))
             return 0;
-        total *= (size_t)shape[i];
+        size *= (size_t)shape[i];
     }
-    return total;
+    *total = size;
+    return 1;
 }
 
 int is_contiguous(tensor_t *tensor)
@@ -131,7 +129,7 @@ tensor_t *tensor_cast(tensor_t *tensor, dtype_t new_dtype)
 
 tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
 {
-    if (!shape || ndims < 0 || dtype >= DTYPE_COUNT)
+    if (!shape || ndims < 0 || ndims > MAX_DIMS || dtype >= DTYPE_COUNT)
     {
         return NULL;
     }
@@ -171,9 +169,9 @@ tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
         {
             return handle_allocation_failure(tensor, "Failed to allocate strides array", cudaSuccess);
         }
+        if (!compute_total_size(shape, ndims, &tensor->total_size))
+            return handle_allocation_failure(tensor, "Invalid tensor shape", cudaSuccess);
         compute_strides_from_shape(shape, tensor->strides, ndims);
-
-        tensor->total_size = compute_total_size(shape, ndims);
     }
     else
     {
@@ -182,10 +180,14 @@ tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
         tensor->strides = NULL;
     }
 
+    if (tensor->total_size > SIZE_MAX / tensor->element_size)
+        return handle_allocation_failure(tensor, "Tensor size overflow", cudaSuccess);
     size_t total_bytes = tensor->total_size * tensor->element_size;
     if (total_bytes > 0)
     {
         tensor->data = cuda_mem_alloc(total_bytes);
+        if (!tensor->data)
+            return handle_allocation_failure(tensor, "Failed to allocate tensor data", cudaErrorMemoryAllocation);
         tensor->allocated_size = total_bytes;
     }
 
@@ -194,8 +196,14 @@ tensor_t *cuda_tensor_create_with_dtype(int *shape, int ndims, dtype_t dtype)
     {
         tensor->d_shape = cuda_mem_alloc(ndims * sizeof(int));
         tensor->d_strides = cuda_mem_alloc(ndims * sizeof(size_t));
-        cudaMemcpy(tensor->d_shape, tensor->shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
-        cudaMemcpy(tensor->d_strides, tensor->strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
+        if (!tensor->d_shape || !tensor->d_strides)
+            return handle_allocation_failure(tensor, "Failed to allocate tensor metadata", cudaErrorMemoryAllocation);
+
+        cudaError_t status = cudaMemcpy(tensor->d_shape, tensor->shape, ndims * sizeof(int), cudaMemcpyHostToDevice);
+        if (status == cudaSuccess)
+            status = cudaMemcpy(tensor->d_strides, tensor->strides, ndims * sizeof(size_t), cudaMemcpyHostToDevice);
+        if (status != cudaSuccess)
+            return handle_allocation_failure(tensor, "Failed to copy tensor metadata", status);
     }
 
     return tensor;
@@ -330,6 +338,8 @@ static tensor_t *handle_allocation_failure(tensor_t *tensor, const char *message
 
     if (tensor)
     {
+        if (tensor->data && tensor->is_on_gpu)
+            cuda_mem_free(tensor->data);
         if (tensor->d_strides)
             cuda_mem_free(tensor->d_strides);
         if (tensor->d_shape)
@@ -343,12 +353,27 @@ static tensor_t *handle_allocation_failure(tensor_t *tensor, const char *message
     return NULL;
 }
 
-void lazy_copy_metadata_to_gpu(tensor_t *t)
+int lazy_copy_metadata_to_gpu(tensor_t *t)
 {
-    t->d_shape = cuda_mem_alloc(t->ndims * sizeof(int));
-    t->d_strides = cuda_mem_alloc(t->ndims * sizeof(size_t));
-    cudaMemcpy(t->d_shape, t->shape, t->ndims * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(t->d_strides, t->strides, t->ndims * sizeof(size_t), cudaMemcpyHostToDevice);
+    if (t->d_shape && t->d_strides)
+        return 1;
+
+    int *shape = t->d_shape ? t->d_shape : cuda_mem_alloc(t->ndims * sizeof(int));
+    size_t *strides = t->d_strides ? t->d_strides : cuda_mem_alloc(t->ndims * sizeof(size_t));
+    if (!shape || !strides ||
+        cudaMemcpy(shape, t->shape, t->ndims * sizeof(int), cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(strides, t->strides, t->ndims * sizeof(size_t), cudaMemcpyHostToDevice) != cudaSuccess)
+    {
+        if (!t->d_shape && shape)
+            cuda_mem_free(shape);
+        if (!t->d_strides && strides)
+            cuda_mem_free(strides);
+        return 0;
+    }
+
+    t->d_shape = shape;
+    t->d_strides = strides;
+    return 1;
 }
 
 tensor_t *cuda_tensor_create_sliced_view(tensor_t *base_tensor, slice_info_t *slices, int num_slices)

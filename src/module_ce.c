@@ -1159,6 +1159,7 @@ static int module_create_async_operation(cuda_module_object *module,
     op->temp_buffers = NULL;
     op->temp_buffers_count = 0;
     op->argc = 0;
+    ZVAL_UNDEF(&op->retained_args);
     
     op->is_active = 1;
     op->start_time = module_get_current_time_ms();
@@ -1207,6 +1208,11 @@ static void module_cleanup_async_operation_by_id(cuda_module_object *module, int
         zend_string_release(op->kernel_name);
     }
 
+    if (!Z_ISUNDEF(op->retained_args))
+    {
+        zval_ptr_dtor(&op->retained_args);
+    }
+
     zend_hash_index_del(module->async_operations, op_id);
     efree(op);
 }
@@ -1223,6 +1229,15 @@ static void module_cleanup_all_async_operations(cuda_module_object *module)
     {
         if (op)
         {
+            if (op->is_active && op->stream)
+            {
+                CUcontext old_context = NULL;
+                if (cuCtxPushCurrent(op->context) == CUDA_SUCCESS)
+                {
+                    cuStreamSynchronize(op->stream);
+                    cuCtxPopCurrent(&old_context);
+                }
+            }
             module_cleanup_async_operation_by_id(module, op->id);
         }
     }
@@ -1729,6 +1744,11 @@ ZEND_METHOD(CompiledModule, launchAsync)
         RETURN_FALSE;
     }
 
+    if (args_zv)
+    {
+        ZVAL_COPY(&op->retained_args, args_zv);
+    }
+
     double start_time = module_get_current_time_ms();
     
     // O cuLaunchKernel faz a cópia do `cuda_args` para a VRAM/Command Buffer *AGORA* antes de retornar
@@ -1923,7 +1943,6 @@ ZEND_METHOD(CompiledModule, sync)
                 }
 
                 module_cleanup_async_operation_by_id(module, op->id);
-                op->is_active = 0;
             }
         }
         ZEND_HASH_FOREACH_END();
@@ -2562,11 +2581,18 @@ ZEND_METHOD(CompiledModule, cancelOperation)
         RETURN_TRUE;
     }
 
-    CUresult cu_result = cuStreamSynchronize(op->stream);
-    if (cu_result != CUDA_SUCCESS && cu_result != CUDA_ERROR_NOT_READY)
+    CUcontext old_context = NULL;
+    CUresult cu_result = cuCtxPushCurrent(op->context);
+    if (cu_result == CUDA_SUCCESS)
+    {
+        cu_result = cuStreamSynchronize(op->stream);
+        cuCtxPopCurrent(&old_context);
+    }
+    if (cu_result != CUDA_SUCCESS)
     {
         module_log_error("Failed to synchronize stream before cancellation: %s",
                          get_cuda_error_string(cu_result));
+        RETURN_FALSE;
     }
 
     op->is_active = 0;

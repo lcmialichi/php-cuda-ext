@@ -87,6 +87,13 @@ use `cuda_launch_status`, synchronizing only when their existing API requires
 it; void launchers remain asynchronous. New `.cu` files must be
 listed in both `config.m4` and `Makefile.frag`.
 
+The CUDA allocator reserves up to a quarter of `cuda.memory_size` (at most
+16 MB) for small blocks, uses a grow-on-demand pool for larger blocks and
+caches up to 64 independent allocations. The limit applies to reserved device
+bytes, including the small pool and cached allocations. This allocator uses
+a mutex and synchronous `cudaMalloc`/`cudaFree`; compare it with CUDA's
+stream-ordered allocator on real GPUs before adopting an asynchronous backend.
+
 ---
 
 ## Requirements

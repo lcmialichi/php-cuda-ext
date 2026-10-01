@@ -5,23 +5,15 @@
 #define MAX_CACHED_BLOCKS 64
 #define SMALL_BLOCK_THRESHOLD (1024 * 1024)
 
-typedef struct AllocatedBlock {
-    void* ptr;
-    size_t size; 
-    struct AllocatedBlock* next;
-} AllocatedBlock;
-
-typedef struct FreeBlock {
+typedef struct MemoryBlock {
     void* ptr;
     size_t size;
-    struct FreeBlock* next;
-} FreeBlock;
+    struct MemoryBlock* next;
+} MemoryBlock;
 
-typedef struct CachedBlock {
-    void* ptr;
-    size_t size;       
-    struct CachedBlock* next;
-} CachedBlock;
+typedef MemoryBlock AllocatedBlock;
+typedef MemoryBlock FreeBlock;
+typedef MemoryBlock CachedBlock;
 
 int tensor_mem_init(size_t size);
 void *cuda_mem_alloc(size_t size);

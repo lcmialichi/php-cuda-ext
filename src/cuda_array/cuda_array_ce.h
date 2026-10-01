@@ -14,6 +14,10 @@ int cuda_array_init(size_t size);
 void cuda_array_shutdown();
 
 ZEND_METHOD(CudaArray, __construct);
+ZEND_METHOD(CudaArray, fromBuffer);
+ZEND_METHOD(CudaArray, fromFile);
+ZEND_METHOD(CudaArray, fromNpy);
+ZEND_METHOD(CudaArray, where);
 ZEND_METHOD(CudaArray, __serialize);
 ZEND_METHOD(CudaArray, __unserialize);
 ZEND_METHOD(CudaArray, __invoke);

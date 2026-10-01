@@ -126,15 +126,66 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
                 "metadata" => $this->transferMetadata()
             ],
             [
-                "run" => 7,
+                "run" => 4,
                 "warmup" => true,
-                "name" => "CudaArray::__construct() [PHP Array -> GPU]",
+                "name" => "CudaArray import [PHP Array -> GPU]",
                 "iterations" => 10,
-                "type" => "CUDA",
-                "handler" => "cudaArrayConstructor",
-                "metadata" => $this->unaryMetadata()
+                "type" => "TRANSFER",
+                "handler" => "cudaArrayImportPhp",
+                "metadata" => $this->importMetadata()
+            ],
+            [
+                "run" => 4,
+                "warmup" => true,
+                "name" => "CudaArray::fromBuffer() [packed bytes -> GPU]",
+                "iterations" => 10,
+                "type" => "TRANSFER",
+                "handler" => "cudaArrayImportBuffer",
+                "metadata" => $this->importMetadata()
+            ],
+            [
+                "run" => 4,
+                "warmup" => true,
+                "name" => "CudaArray::fromFile() [raw file -> GPU]",
+                "iterations" => 10,
+                "type" => "TRANSFER",
+                "handler" => "cudaArrayImportFile",
+                "metadata" => $this->importMetadata()
             ],
         ];
+    }
+
+    private function importMetadata(): array
+    {
+        return array_map(
+            static fn(int $size): array => ["shape" => (string)$size, "dtype" => "float32"],
+            [4096, 65536, 262144, 1048576]
+        );
+    }
+
+    private function importSize(int $count): int
+    {
+        return [4096, 65536, 262144, 1048576][$count - 1];
+    }
+
+    public function argsImportPhp(int $count): array
+    {
+        return [array_fill(0, $this->importSize($count), 1.0)];
+    }
+
+    public function argsImportBuffer(int $count): array
+    {
+        $size = $this->importSize($count);
+        return [pack('g*', ...array_fill(0, $size, 1.0)), [$size]];
+    }
+
+    public function argsImportFile(int $count): array
+    {
+        [$bytes, $shape] = $this->argsImportBuffer($count);
+        $path = tempnam(sys_get_temp_dir(), 'cuda-transfer-');
+        file_put_contents($path, $bytes);
+        register_shutdown_function('unlink', $path);
+        return [$path, $shape];
     }
 
     private function unaryMetadata(): array
@@ -318,19 +369,6 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
         };
     }
 
-    public function argsConstructor(int $count): array
-    {
-        return match ($count) {
-            1 => [array_fill(0, 15, array_fill(0, 15, array_fill(0, 15, $count)))],
-            2 => [array_fill(0, 63, array_fill(0, 63, array_fill(0, 63, $count)))],
-            3 => [array_fill(0, 255, array_fill(0, 255, array_fill(0, 63, $count)))],
-            4 => [array_fill(0, 511, array_fill(0, 511, $count))],
-            5 => [array_fill(0, 1023, array_fill(0, 511, $count))],
-            6 => [array_fill(0, 1, array_fill(0, 180000, $count))],
-            7 => [array_fill(0, 180000, $count)],
-        };
-    }
-
     #[InjectArgs("args3DShape")]
     public function cudaArrayOnes(array $shape): void
     {
@@ -379,9 +417,21 @@ class CudaArrayMemoryCopyOperationsBenchmark extends Benchmark
         $tensor->toArray();
     }
 
-    #[InjectArgs("argsConstructor")]
-    public function cudaArrayConstructor(array $phpArray): void
+    #[InjectArgs("argsImportPhp")]
+    public function cudaArrayImportPhp(array $values): void
     {
-        new CudaArray($phpArray);
+        new CudaArray($values);
+    }
+
+    #[InjectArgs("argsImportBuffer")]
+    public function cudaArrayImportBuffer(string $bytes, array $shape): void
+    {
+        CudaArray::fromBuffer($bytes, $shape);
+    }
+
+    #[InjectArgs("argsImportFile")]
+    public function cudaArrayImportFile(string $path, array $shape): void
+    {
+        CudaArray::fromFile($path, $shape);
     }
 }

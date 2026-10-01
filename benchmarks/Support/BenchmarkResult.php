@@ -73,6 +73,21 @@ class BenchmarkResult implements \JsonSerializable
         return array_sum($this->times) / count($this->times);
     }
 
+    public function getMedianTime(): float
+    {
+        $times = $this->times;
+        sort($times, SORT_NUMERIC);
+        $middle = intdiv(count($times), 2);
+        return count($times) % 2 ? $times[$middle] : ($times[$middle - 1] + $times[$middle]) / 2;
+    }
+
+    public function getP95Time(): float
+    {
+        $times = $this->times;
+        sort($times, SORT_NUMERIC);
+        return $times[(int)ceil(count($times) * 0.95) - 1];
+    }
+
     public function jsonSerialize(): array
     {
         return [
@@ -85,6 +100,8 @@ class BenchmarkResult implements \JsonSerializable
                 "min" => $this->getMinTime(),
                 "max" => $this->getMaxTime(),
                 "avg" => $this->getAvgTime(),
+                "median" => $this->getMedianTime(),
+                "p95" => $this->getP95Time(),
                 "total" => array_sum($this->getTimes())
             ],
             "memory" => [

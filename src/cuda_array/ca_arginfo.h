@@ -10,6 +10,28 @@ ZEND_ARG_TYPE_INFO(0, data, IS_ARRAY, 0)
 ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, dtype, IS_STRING, 1, "\"float32\"")
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_fromBuffer, 0, 2, Cuda\\CudaArray, 0)
+ZEND_ARG_TYPE_INFO(0, bytes, IS_STRING, 0)
+ZEND_ARG_TYPE_INFO(0, shape, IS_ARRAY, 0)
+ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, dtype, IS_STRING, 1, "\"float32\"")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_fromFile, 0, 2, Cuda\\CudaArray, 0)
+ZEND_ARG_TYPE_INFO(0, path, IS_STRING, 0)
+ZEND_ARG_TYPE_INFO(0, shape, IS_ARRAY, 0)
+ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, dtype, IS_STRING, 1, "\"float32\"")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_fromNpy, 0, 1, Cuda\\CudaArray, 0)
+ZEND_ARG_TYPE_INFO(0, path, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_cuda_array_where, 0, 3, Cuda\\CudaArray, 0)
+ZEND_ARG_INFO(0, condition)
+ZEND_ARG_INFO(0, x)
+ZEND_ARG_INFO(0, y)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_Tensor___debugInfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -121,6 +143,10 @@ ZEND_END_ARG_INFO()
 
 static zend_function_entry cuda_array_methods[] = {
     ZEND_ME(CudaArray, __construct, arginfo_cuda_array_construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+    ZEND_ME(CudaArray, fromBuffer, arginfo_cuda_array_fromBuffer, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME(CudaArray, fromFile, arginfo_cuda_array_fromFile, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME(CudaArray, fromNpy, arginfo_cuda_array_fromNpy, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME(CudaArray, where, arginfo_cuda_array_where, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
         ZEND_ME(CudaArray, __serialize, arginfo_cuda_array_serialize, ZEND_ACC_PUBLIC)
             ZEND_ME(CudaArray, __unserialize, arginfo_cuda_array_unserialize, ZEND_ACC_PUBLIC)
         ZEND_ME(CudaArray, __invoke, arginfo_cuda_array_invoke, ZEND_ACC_PUBLIC)

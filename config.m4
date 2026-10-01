@@ -3,79 +3,87 @@ PHP_ARG_WITH(cuda, for CUDA support,
 
 if test "$PHP_CUDA" != "no"; then
     PHP_REQUIRE_CXX()
+    if test "$PHP_CUDA" = "yes"; then
+        if test -n "$CUDA_HOME"; then
+            PHP_CUDA="$CUDA_HOME"
+        else
+            PHP_CUDA=/usr/local/cuda
+        fi
+    fi
+
+    if test ! -f "$PHP_CUDA/include/cuda_runtime.h"; then
+        AC_MSG_ERROR([CUDA headers not found in $PHP_CUDA/include; use --with-cuda=/path/to/toolkit])
+    fi
+
+    PATH="$PHP_CUDA/bin:$PATH"
     AC_PATH_PROG(NVCC, nvcc, no)
     if test "$NVCC" = "no"; then
         AC_MSG_ERROR([nvcc not found - please install CUDA toolkit])
     fi
 
-    NVCCFLAGS="$NVCCFLAGS -use_fast_math"
-
-    PHP_ADD_INCLUDE(/usr/local/cuda/include)
+    PHP_ADD_INCLUDE($PHP_CUDA/include)
     PHP_ADD_INCLUDE([src])
     PHP_ADD_INCLUDE([src/cuda])
-    PHP_ADD_INCLUDE([src/kernel])
     PHP_ADD_INCLUDE([src/cuda_array])
     PHP_ADD_LIBRARY(stdc++, 1, CUDA_SHARED_LIBADD)
 
     AC_DEFINE_UNQUOTED(CUDA_INCLUDE_PATH_STR, "-I$PHP_CUDA/include", [inclusion path for NVRTC JIT])
     AC_DEFINE_UNQUOTED(CUDA_CRT_INCLUDE_STR, "-I$PHP_CUDA/include/crt", [ C++ inclusion path for NVRTC JIT])
     AC_DEFINE(HAVE_CUDA, 1, [Define if CUDA support is enabled])
-    
+
+    CUDA_LIB_DIR="$PHP_CUDA/lib64"
+    if test ! -f "$CUDA_LIB_DIR/libcudart.so"; then
+        CUDA_LIB_DIR="$PHP_CUDA/targets/x86_64-linux/lib"
+    fi
+    if test ! -f "$CUDA_LIB_DIR/libcudart.so"; then
+        AC_MSG_ERROR([CUDA runtime libraries not found under $PHP_CUDA])
+    fi
+
     PHP_CHECK_LIBRARY(nvrtc, nvrtcCreateProgram, [
-    PHP_ADD_LIBRARY_WITH_PATH(nvrtc, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
+        PHP_ADD_LIBRARY_WITH_PATH(nvrtc, $CUDA_LIB_DIR, CUDA_SHARED_LIBADD)
     ], [
-        AC_MSG_ERROR([libnvrtc not found. Please set PHP_CUDA or ensure libnvrtc is installed.])
-    ])
+        AC_MSG_ERROR([libnvrtc not found under $CUDA_LIB_DIR])
+    ], [-L$CUDA_LIB_DIR])
 
-    PHP_CHECK_LIBRARY(cuda, cuInit, [
-        PHP_ADD_LIBRARY_WITH_PATH(cuda, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
-    ], [
-        AC_MSG_WARN([libcuda (Driver API) not explicitly found. Assuming it is available in standard path.])
-        PHP_ADD_LIBRARY(cuda, CUDA_SHARED_LIBADD)
-    ])
+    CUDA_STUB_DIR="$CUDA_LIB_DIR/stubs"
+    if test -f "$CUDA_STUB_DIR/libcuda.so"; then
+        CUDA_DRIVER_LINK_DIR="$CUDA_STUB_DIR"
+    else
+        CUDA_DRIVER_LINK_DIR="$CUDA_LIB_DIR"
+    fi
+    PHP_CHECK_LIBRARY(cuda, cuInit, [], [
+        AC_MSG_ERROR([libcuda not found for linking; install the CUDA toolkit stubs or NVIDIA driver development files])
+    ], [-L$CUDA_DRIVER_LINK_DIR])
+    CUDA_SHARED_LIBADD="$CUDA_SHARED_LIBADD -L$CUDA_DRIVER_LINK_DIR -lcuda"
 
-    PHP_ADD_LIBRARY_WITH_PATH(cudart, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
-    PHP_ADD_LIBRARY_WITH_PATH(curand, $PHP_CUDA/lib64, CUDA_SHARED_LIBADD)
+    PHP_ADD_LIBRARY_WITH_PATH(cudart, $CUDA_LIB_DIR, CUDA_SHARED_LIBADD)
+    PHP_ADD_LIBRARY_WITH_PATH(curand, $CUDA_LIB_DIR, CUDA_SHARED_LIBADD)
 
     CXXFLAGS="$CXXFLAGS -O2"
     CFLAGS="$CFLAGS -O2"
     
-    CUDA_FILES="src/cuda/float_kernels.cu src/cuda/activation_kernels.cu src/cuda/matmul_kernels.cu src/cuda/concat_kernels.cu src/cuda/broadcast_ops.cu src/cuda/scalar_ops.cu src/cuda/unary_ops.cu src/cuda/reduction_ops.cu src/cuda/factory_kernels.cu"
-
     AC_MSG_CHECKING([for CUDA GPU architecture])
-    DETECTED_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '.')
-    
-    AC_MSG_CHECKING([for CUDA GPU architecture])
-    if test -z "$DETECTED_ARCH"; then
-        CUDA_ARCH_FLAG="sm_50"
-        AC_MSG_RESULT([none detected, falling back to $CUDA_ARCH_FLAG])
+    if test -n "$CUDA_ARCH"; then
+        CUDA_ARCH_FLAG="$CUDA_ARCH"
+        AC_MSG_RESULT([using $CUDA_ARCH_FLAG (CUDA_ARCH)])
     else
-        CUDA_ARCH_FLAG="sm_$DETECTED_ARCH"
-        AC_MSG_RESULT([detected $CUDA_ARCH_FLAG])
+        DETECTED_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader,nounits 2>/dev/null | head -n 1 | tr -d '.')
+        if test -z "$DETECTED_ARCH"; then
+            CUDA_ARCH_FLAG="sm_70"
+            AC_MSG_RESULT([none detected, using $CUDA_ARCH_FLAG; override with CUDA_ARCH=sm_XX])
+        else
+            CUDA_ARCH_FLAG="sm_$DETECTED_ARCH"
+            AC_MSG_RESULT([detected $CUDA_ARCH_FLAG])
+        fi
     fi
 
-    AC_MSG_RESULT([Compiling CUDA kernels:])
+    case "$CUDA_ARCH_FLAG" in
+      sm_@<:@0-9@:>@*) ;;
+      *) AC_MSG_ERROR([Invalid CUDA_ARCH: $CUDA_ARCH_FLAG; expected sm_XX]);;
+    esac
 
-    TOTAL_FILES=$(echo $CUDA_FILES | wc -w)
-    CURRENT_FILE=1
-    CUDA_OBJECTS=""
-
-    for f in $CUDA_FILES; do
-        printf "  [%d/%d] Compiling..." "$CURRENT_FILE" "$TOTAL_FILES"
-        
-        $NVCC -arch=$CUDA_ARCH_FLAG -O3 --use_fast_math -Xcompiler -fPIC -c $f -o ${f%.cu}.o  || {
-            printf "\n"
-            AC_MSG_ERROR([Failed to compile $f])
-        }
-        
-        printf "[OK]\n"
-        CUDA_OBJECTS="$CUDA_OBJECTS ${f%.cu}.o"
-        CURRENT_FILE=$((CURRENT_FILE + 1))
-    done
-
-    AC_MSG_RESULT([all kernels compiled successfully])
-
-    ar rcs libcudakernels.a $CUDA_OBJECTS
+    PHP_SUBST(NVCC)
+    PHP_SUBST(CUDA_ARCH_FLAG)
 
     PHP_EVAL_LIBLINE([-L. -lcudakernels], CUDA_SHARED_LIBADD)
     
@@ -95,10 +103,13 @@ if test "$PHP_CUDA" != "no"; then
     src/tensor.c \
     src/cuda/memory_pool.c \
     src/cuda_array/tensor_factory.c \
+    src/cuda_array/tensor_import.c \
+    src/cuda_array/npy_import.c \
+    src/cuda_array/tensor_where.c \
     src/operations.c \
     src/compiler_ce.c \
     src/module_ce.c"
 
     PHP_NEW_EXTENSION(cuda, $SRC_FILES, $ext_shared)
-    PHP_ADD_MAKEFILE_FRAGMENT(makefile.frag, $ext_srcdir)
+    PHP_ADD_MAKEFILE_FRAGMENT(Makefile.frag, $ext_srcdir)
 fi

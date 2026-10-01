@@ -9,7 +9,7 @@ use Benchmarks\Support\BenchmarkClassResult;
 
 class BenchmarkApplication
 {
-  public function __construct(private array $benchmarks) {}
+  public function __construct(private array $benchmarks, private ?array $handlers = null) {}
 
   public function run(): BenchmarkReport
   {
@@ -31,6 +31,9 @@ class BenchmarkApplication
     foreach ($benchmark->register() as $config) {
 
       $handler = $config["handler"] ?? null;
+      if ($this->handlers !== null && !in_array($handler, $this->handlers, true)) {
+        continue;
+      }
       if (!is_callable([$benchmark, $handler])) {
         throw new \Exception($benchmark::class . "::$handler must be callable");
       }

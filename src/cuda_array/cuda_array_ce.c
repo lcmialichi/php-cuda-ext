@@ -12,6 +12,8 @@
 #include "tensor_transfer.h"
 #include "cuda_exceptions.h"
 #include "concat_kernels.h"
+#include "tensor_import.h"
+#include "tensor_where.h"
 
 zend_class_entry *cuda_array_ce;
 static zend_object_handlers cuda_array_handlers;
@@ -82,6 +84,122 @@ ZEND_METHOD(CudaArray, __construct)
     tensor->dtype = dtype;
     obj->tensor_handle = tensor;
     sync_php_object_shape(obj, tensor);
+}
+
+ZEND_METHOD(CudaArray, fromBuffer)
+{
+    zend_string *bytes;
+    zval *shape_array;
+    zend_string *dtype_name = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(2, 3)
+    Z_PARAM_STR(bytes)
+    Z_PARAM_ARRAY(shape_array)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(dtype_name)
+    ZEND_PARSE_PARAMETERS_END();
+
+    dtype_t dtype = parse_dtype_param(dtype_name);
+    if (dtype == DTYPE_UNKNOWN)
+    {
+        CUDA_THROW_INVALID("Invalid dtype: '%s'", ZSTR_VAL(dtype_name));
+        RETURN_THROWS();
+    }
+
+    int shape[MAX_DIMS];
+    size_t elements;
+    int ndims = tensor_import_shape(shape_array, shape, &elements);
+    if (!ndims) RETURN_THROWS();
+
+    size_t element_size = dtype_size(dtype);
+    if (!element_size || elements > SIZE_MAX / element_size ||
+        ZSTR_LEN(bytes) != elements * element_size)
+    {
+        CUDA_THROW_INVALID("Buffer size does not match shape and dtype");
+        RETURN_THROWS();
+    }
+
+    tensor_t *tensor = cuda_tensor_create_from_host_buffer(shape, ndims, dtype, ZSTR_VAL(bytes), ZSTR_LEN(bytes));
+    if (!tensor) RETURN_THROWS();
+    create_result_object(return_value, tensor);
+}
+
+ZEND_METHOD(CudaArray, fromFile)
+{
+    zend_string *path;
+    zval *shape_array;
+    zend_string *dtype_name = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(2, 3)
+    Z_PARAM_STR(path)
+    Z_PARAM_ARRAY(shape_array)
+    Z_PARAM_OPTIONAL
+    Z_PARAM_STR(dtype_name)
+    ZEND_PARSE_PARAMETERS_END();
+
+    dtype_t dtype = parse_dtype_param(dtype_name);
+    if (dtype == DTYPE_UNKNOWN)
+    {
+        CUDA_THROW_INVALID("Invalid dtype: '%s'", ZSTR_VAL(dtype_name));
+        RETURN_THROWS();
+    }
+
+    int shape[MAX_DIMS];
+    size_t elements;
+    int ndims = tensor_import_shape(shape_array, shape, &elements);
+    if (!ndims) RETURN_THROWS();
+
+    size_t element_size = dtype_size(dtype);
+    if (!element_size || elements > SIZE_MAX / element_size)
+    {
+        CUDA_THROW_INVALID("Tensor byte size exceeds supported limits");
+        RETURN_THROWS();
+    }
+
+    tensor_t *tensor = tensor_import_file(path, shape, ndims, dtype, elements * element_size);
+    if (!tensor) RETURN_THROWS();
+    create_result_object(return_value, tensor);
+}
+
+ZEND_METHOD(CudaArray, fromNpy)
+{
+    zend_string *path;
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+    Z_PARAM_STR(path)
+    ZEND_PARSE_PARAMETERS_END();
+
+    tensor_t *tensor = tensor_import_npy(path);
+    if (!tensor) RETURN_THROWS();
+    create_result_object(return_value, tensor);
+}
+
+ZEND_METHOD(CudaArray, where)
+{
+    zval *condition_value, *true_value, *false_value;
+    ZEND_PARSE_PARAMETERS_START(3, 3)
+    Z_PARAM_ZVAL(condition_value)
+    Z_PARAM_ZVAL(true_value)
+    Z_PARAM_ZVAL(false_value)
+    ZEND_PARSE_PARAMETERS_END();
+
+    zval *values[] = {condition_value, true_value, false_value};
+    tensor_t *tensors[3];
+    for (int index = 0; index < 3; index++)
+    {
+        if (Z_TYPE_P(values[index]) != IS_OBJECT ||
+            !instanceof_function(Z_OBJCE_P(values[index]), cuda_array_ce))
+        {
+            CUDA_THROW_INVALID("where expects condition, x and y to be CudaArray objects");
+            RETURN_THROWS();
+        }
+        cuda_array_obj *object = php_cuda_array_fetch_valid_object(Z_OBJ_P(values[index]));
+        if (!object) RETURN_THROWS();
+        tensors[index] = object->tensor_handle;
+    }
+
+    tensor_t *result = cuda_tensor_where(tensors[0], tensors[1], tensors[2]);
+    if (!result) RETURN_THROWS();
+    create_result_object(return_value, result);
 }
 
 ZEND_METHOD(CudaArray, __serialize)

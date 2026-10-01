@@ -236,6 +236,8 @@ class BenchmarkReport {
                                         <th width="50">#</th>
                                         <th>Configuration</th>
                                         <th width="120">Avg Time</th>
+                                        <th width="120">Median</th>
+                                        <th width="120">P95</th>
                                         <th width="120">Memory</th>
                                         <th width="120">Ops/Sec</th>
                                         <th width="100">Iterations</th>
@@ -266,6 +268,8 @@ class BenchmarkReport {
                         </div>
                     </td>
                     <td class="text-nowrap"><span class="badge bg-time">${this.formatTime(result.stats.time.avg)}</span></td>
+                    <td class="text-nowrap">${this.formatTime(result.stats.time.median)}</td>
+                    <td class="text-nowrap">${this.formatTime(result.stats.time.p95)}</td>
                     <td class="text-nowrap"><span class="badge bg-memory">${this.formatBytes(result.stats.memory.avg)}</span></td>
                     <td class="text-nowrap"><span class="badge bg-ops">${result.stats.ops.formatted}</span></td>
                     <td class="text-center">${result.iterations}</td>

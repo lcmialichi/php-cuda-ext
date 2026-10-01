@@ -2,7 +2,14 @@
 set -e
 
 EXT_NAME="cuda"
-BUILD_DIR="./${EXT_NAME}_build"
+PHP_CONFIG=${PHP_CONFIG:-php-config}
+PHP_BIN=${PHP_BIN:-php}
+PHP_VERSION=$($PHP_CONFIG --version | cut -d. -f1,2)
+BUILD_DIR=${BUILD_DIR:-"./${EXT_NAME}_build-${PHP_VERSION}"}
+if [ "${1:-}" != "" ] && [ "$1" != "--require-gpu" ]; then
+   echo "Usage: $0 [--require-gpu]" >&2
+   exit 2
+fi
 
 if [ ! -d "$BUILD_DIR" ]; then
    echo "Compile the extension before running tests"
@@ -10,10 +17,30 @@ if [ ! -d "$BUILD_DIR" ]; then
 fi
 
 cd "$BUILD_DIR"
+if [ "${1:-}" = "--require-gpu" ]; then
+   if ! "$PHP_BIN" -n -d extension="$PWD/modules/cuda.so" -r 'exit(extension_loaded("cuda") && cuda_get_device_count() > 0 ? 0 : 1);'; then
+      echo "GPU validation needs a working NVIDIA driver (libcuda.so.1) and a visible device" >&2
+      exit 1
+   fi
+fi
 POOL_TEST_BINARY=$(mktemp)
 trap 'rm -f "$POOL_TEST_BINARY"' EXIT
-${CC:-cc} -D_GNU_SOURCE -pthread $(php-config --includes) \
+${CC:-cc} -D_GNU_SOURCE -pthread $($PHP_CONFIG --includes) \
    -I"${CUDA_HOME:-/usr/local/cuda}/include" -Isrc/cuda \
    tests/memory_pool_test.c -o "$POOL_TEST_BINARY"
 "$POOL_TEST_BINARY"
+NPY_TEST_BINARY=$(mktemp)
+trap 'rm -f "$POOL_TEST_BINARY" "$NPY_TEST_BINARY"' EXIT
+${CC:-cc} -D_GNU_SOURCE -ffunction-sections -fdata-sections \
+   -Wl,--gc-sections $($PHP_CONFIG --includes) \
+   -I"${CUDA_HOME:-/usr/local/cuda}/include" -Isrc -Isrc/cuda -Isrc/cuda_array \
+   tests/npy_header_test.c -o "$NPY_TEST_BINARY"
+"$NPY_TEST_BINARY"
+WHERE_TEST_BINARY=$(mktemp)
+trap 'rm -f "$POOL_TEST_BINARY" "$NPY_TEST_BINARY" "$WHERE_TEST_BINARY"' EXIT
+${CC:-cc} -D_GNU_SOURCE -ffunction-sections -fdata-sections \
+   -Wl,--gc-sections $($PHP_CONFIG --includes) \
+   -I"${CUDA_HOME:-/usr/local/cuda}/include" -Isrc -Isrc/cuda -Isrc/cuda_array \
+   tests/where_shape_test.c -o "$WHERE_TEST_BINARY"
+"$WHERE_TEST_BINARY"
 make test TEST_PHP_ARGS="-q"

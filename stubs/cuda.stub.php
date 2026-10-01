@@ -185,6 +185,11 @@ class ContiguousArray implements \ArrayAccess, Countable
  */
 class CudaArray implements \ArrayAccess
 {
+    public static function fromBuffer(string $bytes, array $shape, ?string $dtype = 'float32'): CudaArray {}
+    public static function fromFile(string $path, array $shape, ?string $dtype = 'float32'): CudaArray {}
+    public static function fromNpy(string $path): CudaArray {}
+    public static function where(CudaArray $condition, CudaArray $x, CudaArray $y): CudaArray {}
+
     /**
      *
      * @param array<int, float> $data

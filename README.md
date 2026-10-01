@@ -112,7 +112,7 @@ pending or per-item states. The C allocator test runs before PHPTs when invoking
 - NVIDIA GPU with CUDA capability
 - NVIDIA Driver compatible with CUDA Toolkit
 - CUDA Toolkit **11.x+** (12.x recommended)
-- PHP **8.0+**
+- PHP **8.0+** (GPU test suite verified with 8.1 and 8.3)
 - Linux (tested on Ubuntu / Debian-based systems)
 - `gcc`, `g++`, `make`, `autoconf`, `phpize`
 
@@ -127,19 +127,55 @@ git clone https://github.com/lcmialichi/php-cuda-ext.git
 cd php-cuda-ext
 ```
 
-Compile and install:
+Build without installing or requiring root:
 
 ```bash
 ./compile.sh
+./run-tests.sh --require-gpu
 ```
 
-The script runs:
-- ``phpize``
-- ``./configure``
-- ``make``
-- ``make install``
+The output is in `cuda_build-<PHP major.minor>/modules/cuda.so`. To select
+another installed PHP version, pass matching tools (for example):
 
-Notice: the script will register cuda extension automatically
+```bash
+PHP_BIN=php8.3 PHPIZE=phpize8.3 PHP_CONFIG=php-config8.3 ./compile.sh
+PHP_BIN=php8.3 PHP_CONFIG=php-config8.3 ./run-tests.sh --require-gpu
+```
+
+`CUDA_HOME` selects a nonstandard toolkit location; `CUDA_ARCH=sm_86` overrides
+GPU architecture detection for cross-builds. `./compile.sh --install` is the
+explicit install/INI registration step and needs write access to the PHP
+extension/INI directories. Build directories are versioned so PHP ABIs do not
+overwrite each other. `./run-tests.sh` always runs CPU-side C checks; with
+`--require-gpu` it fails early unless the extension loads and a CUDA device is
+visible, rather than reporting only skipped PHPTs.
+
+To compare CPU-to-GPU import paths on your own device after building:
+
+```bash
+php -n -d extension=./cuda_build-8.1/modules/cuda.so run_benchmarks.php --import
+```
+
+The focused benchmark prepares arrays, packed bytes and temporary files before
+timing, and reports the average cost of each import method, including file I/O
+for `fromFile()`. Both `--import` and the full run export JSON and HTML under
+`benchmarks/reports/`; the full run already includes the import cases. Reports
+include median and p95 alongside average time to expose timing spikes.
+Benchmarks vary with storage and GPU; `pack()` time is excluded. The reported
+memory change comes from PHP's `memory_get_usage(true)`, **not GPU VRAM**.
+Metadata-only views such as `flatten()` and `reshape()` do not measure GPU
+kernel throughput.
+
+For Docker, `docker compose run --rm php_cuda_dev bash -lc './compile.sh && ./run-tests.sh --require-gpu'`
+builds and tests with a host NVIDIA GPU. The default image uses Ubuntu 22.04
+and its PHP 8.1 packages, without a third-party PHP PPA. To build another
+version, choose a CUDA development image whose distribution provides that PHP
+version and set `CUDA_IMAGE` and `PHP_VERSION` as Compose build arguments.
+
+The CUDA toolkit supplies `libcuda.so` stubs for **linking only**. Running the
+extension requires the host NVIDIA driver to provide the real `libcuda.so.1`;
+do not install or ship the toolkit stub as a runtime driver. `gpus: all` in
+Compose exposes the driver and device to the container.
 
 Verify installation:
 ```bash
@@ -167,6 +203,27 @@ $result = ($a * 2.0 + $b) ** 2;
 All operations above are executed on the GPU.
 
 ## Data Transfer
+
+For data already packed in row-major order, bypass recursive PHP array conversion:
+
+```php
+$tensor = Cuda\CudaArray::fromBuffer(pack('g*', 1, 2, 3, 4), [2, 2], 'float32');
+$raw = Cuda\CudaArray::fromFile('/data/weights.f32', [2, 2], 'float32');
+$numpy = Cuda\CudaArray::fromNpy('/data/weights.npy');
+```
+
+`fromBuffer()` copies directly from the PHP string to the device. `fromFile()`
+reads raw bytes directly into pinned host memory for files of at least 1 MB,
+falling back to regular host memory if pinning is unavailable. Both require an
+exact shape/dtype byte count and native little-endian numeric data. `fromNpy()`
+reads NumPy `.npy` v1-v3 C-order arrays with little-endian float32/64, signed
+or unsigned 8/16/32/64-bit integers, or bool; Fortran-order, big-endian, and
+other dtypes are rejected rather than silently converted.
+
+`Cuda\CudaArray::where($condition, $x, $y)` selects elements on the GPU with
+NumPy-style broadcasting across all three tensors. A nonzero condition is true;
+`$x` and `$y` must both be `CudaArray` instances with the same dtype. The
+one-argument indices form of NumPy/CuPy `where` is not provided.
 
 ```php
 use Cuda\CudaArray;

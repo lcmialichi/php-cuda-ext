@@ -112,6 +112,8 @@ class HtmlExporter implements ExporterInterface
                         'min' => $result->getMinTime(),
                         'max' => $result->getMaxTime(),
                         'avg' => $avgTime,
+                        'median' => $result->getMedianTime(),
+                        'p95' => $result->getP95Time(),
                         'total' => array_sum($times),
                         'std_dev' => $this->calculateStdDev($times)
                     ],

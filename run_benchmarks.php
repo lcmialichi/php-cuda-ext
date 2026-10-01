@@ -16,14 +16,19 @@ if (!extension_loaded('cuda')) {
     die(" CUDA extension not loaded. Please compile and install the extension first.\n");
 }
 
-$app = new BenchmarkApplication([
+$importOnly = in_array('--import', $argv, true);
+$benchmarks = $importOnly ? [new CudaArrayMemoryCopyOperationsBenchmark()] : [
     new CudaArrayBasicMathOperations(),
     new CudaArrayShapeManiliplationBenchmark(),
     new CudaArrayReductionBenchmark(),
     new CudaArrayMemoryCopyOperationsBenchmark(),
     new CudaArrayLinearAlgebraBenchmark(),
     // new ContiguousArrayBenchmark()
-]);
+];
+$app = new BenchmarkApplication(
+    $benchmarks,
+    $importOnly ? ['cudaArrayImportPhp', 'cudaArrayImportBuffer', 'cudaArrayImportFile'] : null
+);
 
 $dir = __DIR__ . "/benchmarks/reports";
 

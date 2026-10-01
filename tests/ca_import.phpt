@@ -1,0 +1,91 @@
+--TEST--
+CudaArray import from packed bytes, raw files and NumPy arrays
+--SKIPIF--
+<?php
+if (!extension_loaded('cuda')) die('skip cuda extension unavailable');
+if (cuda_get_device_count() < 1) die('skip CUDA device unavailable');
+?>
+--FILE--
+<?php
+$bytes = pack('g*', 1, 2, 3, 4);
+$raw = tempnam(sys_get_temp_dir(), 'cuda-raw-');
+$npy = tempnam(sys_get_temp_dir(), 'cuda-npy-');
+try {
+    var_dump(Cuda\CudaArray::fromBuffer($bytes, [2, 2])->toArray());
+    file_put_contents($raw, $bytes);
+    var_dump(Cuda\CudaArray::fromFile($raw, [2, 2])->toArray());
+
+    $header = "{'descr': '<f4', 'fortran_order': False, 'shape': (2, 2), }";
+    $padding = (16 - ((10 + strlen($header) + 1) % 16)) % 16;
+    $header .= str_repeat(' ', $padding) . "\n";
+    file_put_contents($npy, "\x93NUMPY" . chr(1) . chr(0) . pack('v', strlen($header)) . $header . $bytes);
+    var_dump(Cuda\CudaArray::fromNpy($npy)->toArray());
+
+    try {
+        Cuda\CudaArray::fromBuffer($bytes, [3, 2]);
+    } catch (Cuda\InvalidArgumentException $error) {
+        echo "invalid buffer size\n";
+    }
+    file_put_contents($npy, "\x93NUMPY" . chr(1) . chr(0) . pack('v', strlen($header)) .
+        str_replace("'<f4'", "'>f4'", $header) . $bytes);
+    try {
+        Cuda\CudaArray::fromNpy($npy);
+    } catch (Cuda\InvalidArgumentException $error) {
+        echo "unsupported endian\n";
+    }
+} finally {
+    unlink($raw);
+    unlink($npy);
+}
+?>
+--EXPECT--
+array(2) {
+  [0]=>
+  array(2) {
+    [0]=>
+    float(1)
+    [1]=>
+    float(2)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    float(3)
+    [1]=>
+    float(4)
+  }
+}
+array(2) {
+  [0]=>
+  array(2) {
+    [0]=>
+    float(1)
+    [1]=>
+    float(2)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    float(3)
+    [1]=>
+    float(4)
+  }
+}
+array(2) {
+  [0]=>
+  array(2) {
+    [0]=>
+    float(1)
+    [1]=>
+    float(2)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    float(3)
+    [1]=>
+    float(4)
+  }
+}
+invalid buffer size
+unsupported endian

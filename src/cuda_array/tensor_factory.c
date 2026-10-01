@@ -511,24 +511,7 @@ static cudaError_t cuda_copy_host_buffer_to_gpu(void *gpu_data, const void *host
     {
         return cudaSuccess;
     }
-
-    if (byte_count < PINNED_TRANSFER_THRESHOLD_BYTES)
-    {
-        return cudaMemcpy(gpu_data, host_data, byte_count, cudaMemcpyHostToDevice);
-    }
-
-    void *pinned_host_data = NULL;
-    cudaError_t status = cudaMallocHost(&pinned_host_data, byte_count);
-    if (status != cudaSuccess)
-    {
-        return status;
-    }
-
-    memcpy(pinned_host_data, host_data, byte_count);
-    status = cudaMemcpy(gpu_data, pinned_host_data, byte_count, cudaMemcpyHostToDevice);
-    cudaFreeHost(pinned_host_data);
-
-    return status;
+    return cudaMemcpy(gpu_data, host_data, byte_count, cudaMemcpyHostToDevice);
 }
 
 static void flatten_php_array(zval *data, float *flat_array, int *index)

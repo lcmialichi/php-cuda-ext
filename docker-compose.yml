@@ -1,9 +1,14 @@
 services:
   php_cuda_dev:
-    build: .
-    runtime: nvidia
+    build:
+      context: .
+      args:
+        CUDA_IMAGE: ${CUDA_IMAGE:-nvidia/cuda:12.3.2-devel-ubuntu22.04}
+        PHP_VERSION: ${PHP_VERSION:-8.1}
+    gpus: all
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - .:/usr/src/ext
     tty: true

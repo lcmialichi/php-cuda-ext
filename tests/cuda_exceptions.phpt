@@ -20,9 +20,9 @@ try {
 }
 
 try {
-    (new ReflectionClass(Cuda\CudaArray::class))->newInstanceWithoutConstructor()->getShape();
+    (new Cuda\CudaArray([1.0]))->astype('float64');
 } catch (Cuda\RuntimeException $error) {
-    echo "uninitialized tensor\n";
+    echo "unsupported cast\n";
 }
 
 try {
@@ -36,5 +36,5 @@ bool(true)
 bool(true)
 bool(true)
 invalid dtype
-uninitialized tensor
+unsupported cast
 out of memory

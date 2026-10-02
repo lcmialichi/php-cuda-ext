@@ -1,6 +1,6 @@
 # Contributing to PHP GPU Tensors
 
-Thanks for considering a contribution. The extension is experimental: small,
+Thanks for considering a contribution. The extension is in beta: small,
 reproducible changes with tests and clear API behavior are especially useful.
 Documentation, examples, bug reports, and results from other GPUs and PHP
 versions count as contributions too.
@@ -51,11 +51,10 @@ against [`tests/api_surface.json`](tests/api_surface.json); update that
 baseline with `php tests/check_api_surface.php --update` only for an approved
 API change.
 
-The implementation remains experimental: the API freeze is not a claim of
-production readiness or broad hardware support. Release tags use the
-`vMAJOR.MINOR.PATCH` format. CI creates a draft release only after the build
-and CPU-side tests pass; drafts contain source archives, not prebuilt CUDA
-binaries.
+This beta is not a claim of production readiness or broad hardware support.
+Release tags use the `vMAJOR.MINOR.PATCH` format. CI creates a draft release
+only after the build and CPU-side tests pass; drafts contain source archives,
+not prebuilt CUDA binaries.
 
 ## Build and test
 

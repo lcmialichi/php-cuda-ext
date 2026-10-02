@@ -9,7 +9,7 @@ workloads. Build tensor operations and machine-learning data pipelines in PHP,
 move data explicitly between host and GPU, and compile custom CUDA C++ kernels
 at runtime with NVRTC. No Python runtime required.
 
-**Status:** experimental, with the PHP API frozen at `0.1.0`. The freeze does
+**Status:** beta, with the PHP API frozen at `0.1.0`. The freeze does
 not imply production readiness: so far, Linux, PHP 8.1 and 8.3, and CUDA 12.3
 have been exercised with an NVIDIA RTX A2000. PHP 8.4.26 and 8.5.11 also pass
 extension builds with CUDA 12.6.3. PIE 1.5.1 installed and loaded the current
@@ -45,22 +45,21 @@ PHP_BIN=php8.3 PHP_CONFIG=php-config8.3 ./run-tests.sh --require-gpu
 
 ### Install with PIE 🥧
 
-For the recommended route, run PIE itself with PHP 8.5 or newer. PIE 1.5.1
-successfully installed the current source under PHP 8.4.26 and 8.5.11. The
-Packagist `0.1.0-beta.2` predates the PHP 8.4/8.5 support changes; wait for a
-subsequent release containing these changes before installing those targets
-from Packagist.
+PIE 1.5.1 installed the current source under PHP 8.1.34, 8.4.26, and 8.5.11.
+The native `hash_file()` `$options` argument was added in PHP 8.1
+([PHP.Watch](https://php.watch/codex/hash_file#changes-php-8.1)); the official
+PHP 8.1.34 build accepts it, and PIE installation succeeds.
 
-There is a known checksum bug when PIE itself runs under PHP 8.1 with Safe
-3.4.0: Safe forwards a fourth `$options` argument to native `hash_file()`,
-which PHP 8.1 rejects. This is tracked in [Safe PR #757](https://github.com/thecodingmachine/safe/pull/757)
-and [PIE issue #757](https://github.com/php/pie/issues/757). This is not a
-blanket failure for every PHP version before 8.5; the PIE 1.5.1 install passed
-under PHP 8.4.26. To build for PHP 8.1, run PIE under PHP 8.5 and pass matching
-target tools, for example `--with-php-config=/usr/bin/php-config8.1` and
-`--with-phpize-path=/usr/bin/phpize8.1`. This runner/target combination was
-tested successfully. Building directly with `./compile.sh --install` remains
-an alternative.
+An earlier failure came from the Ubuntu PHP 8.1.2 package used in one test
+container, whose `hash_file()` rejected the fourth argument. That result is
+specific to that package build and must not be generalized to PHP 8.1 as a
+whole. If a distribution's PHP build reproduces it, run PIE under PHP 8.5 and
+target PHP 8.1 with matching `--with-php-config=/usr/bin/php-config8.1` and
+`--with-phpize-path=/usr/bin/phpize8.1`, or install from source with
+`./compile.sh --install`.
+
+The Packagist `0.1.0-beta.2` predates PHP 8.4/8.5 and ZTS support. Use the new
+`0.1.0-beta.3` release for those changes.
 
 PIE builds the native extension for the selected PHP installation; it does not
 install an NVIDIA driver or CUDA Toolkit. Those must already be available on

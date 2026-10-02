@@ -32,7 +32,7 @@ jobs:
             '
 
   draft-release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event.deleted != true && startsWith(github.ref, 'refs/tags/v')
     needs: build-and-cpu-tests
     runs-on: ubuntu-22.04
     permissions:
@@ -48,7 +48,7 @@ jobs:
             echo "Invalid release tag: $RELEASE_TAG" >&2
             exit 1
           fi
-          MODULE_VERSION=$(sed -n 's/^#define PHP_CUDA_VERSION "\(.*\)"/\1/p' src/cuda.h)
+          MODULE_VERSION=$(sed -n 's/^#define PHP_CUDA_VERSION "\(.*\)"/\1/p' src/cuda.h | tr -d '\r')
           RELEASE_VERSION="${RELEASE_TAG#v}"
           if [[ "$MODULE_VERSION" != "$RELEASE_VERSION" ]]; then
             echo "Release tag $RELEASE_TAG does not match module version $MODULE_VERSION" >&2

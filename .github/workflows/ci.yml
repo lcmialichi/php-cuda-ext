@@ -21,6 +21,8 @@ jobs:
             -w /workspace \
             nvidia/cuda:12.3.2-devel-ubuntu22.04 \
             bash -euo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              export TZ=Etc/UTC
               apt-get update
               apt-get install -y --no-install-recommends \
                 php8.1-cli php8.1-dev build-essential autoconf pkg-config libtool

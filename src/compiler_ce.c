@@ -4,7 +4,11 @@
 #include "php.h"
 #include "zend_interfaces.h"
 #include "zend_exceptions.h"
+#if PHP_VERSION_ID >= 80500
+#include "zend_smart_string.h"
+#else
 #include "ext/standard/php_smart_string.h"
+#endif
 #include "cuda_globals.h"
 #include "ext/hash/php_hash.h"
 #include "ext/standard/md5.h"

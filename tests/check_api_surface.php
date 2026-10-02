@@ -93,10 +93,34 @@ function publicApiSurface(array $stubFunctions): array
     ];
 }
 
+$normalizeSelfTypes = static function (array $surface): array {
+    foreach ($surface['classes'] as $className => &$class) {
+        foreach ($class['methods'] as &$method) {
+            if ($method['returnType'] === $className) {
+                $method['returnType'] = 'self';
+            }
+
+            foreach ($method['parameters'] as &$parameter) {
+                if ($parameter['type'] === $className) {
+                    $parameter['type'] = 'self';
+                }
+            }
+            unset($parameter);
+        }
+        unset($method);
+    }
+    unset($class);
+
+    return $surface;
+};
+
 $baselinePath = __DIR__ . '/api_surface.json';
 $stubFunctions = array_values(array_diff(get_defined_functions()['user'], $functionsBeforeStubs));
 sort($stubFunctions);
-$actual = json_encode(publicApiSurface($stubFunctions), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . PHP_EOL;
+$actual = json_encode(
+    $normalizeSelfTypes(publicApiSurface($stubFunctions)),
+    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+) . PHP_EOL;
 
 if (($argv[1] ?? '') === '--update') {
     if (file_put_contents($baselinePath, $actual) === false) {
@@ -113,7 +137,18 @@ if (isset($argv[1])) {
 }
 
 $expected = file_get_contents($baselinePath);
-if ($expected === false || !hash_equals($expected, $actual)) {
+if ($expected === false) {
+    fwrite(STDERR, "Unable to read frozen PHP API baseline.\n");
+    exit(1);
+}
+
+$expectedSurface = json_decode($expected, true, 512, JSON_THROW_ON_ERROR);
+$expected = json_encode(
+    $normalizeSelfTypes($expectedSurface),
+    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+) . PHP_EOL;
+
+if (!hash_equals($expected, $actual)) {
     fwrite(STDERR, "Public PHP API differs from tests/api_surface.json. Review the change and update the baseline only when approved.\n");
     exit(1);
 }

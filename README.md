@@ -11,8 +11,11 @@ at runtime with NVRTC. No Python runtime required.
 
 **Status:** experimental, with the PHP API frozen at `0.1.0`. The freeze does
 not imply production readiness: so far, Linux, PHP 8.1 and 8.3, and CUDA 12.3
-have been exercised with an NVIDIA RTX A2000. Other PHP/CUDA versions and GPUs
-need independent testing.
+have been exercised with an NVIDIA RTX A2000. PHP 8.4.26 and 8.5.11 also pass
+extension builds with CUDA 12.6.3. PIE 1.5.1 installed and loaded the current
+source under PHP 8.4.26 and 8.5.11, and under PHP 8.5 targeting PHP 8.1. The
+full GPU suite passes 26/26 tests on PHP 8.5.11 with an RTX A2000. Other
+PHP/CUDA versions and GPUs need independent testing.
 
 ## Start here
 
@@ -39,14 +42,24 @@ PHP_BIN=php8.3 PHPIZE=phpize8.3 PHP_CONFIG=php-config8.3 ./compile.sh
 PHP_BIN=php8.3 PHP_CONFIG=php-config8.3 ./run-tests.sh --require-gpu
 ```
 
-### Install with PIE
+### Install with PIE 🥧
 
-On Linux, after the beta package is published to Packagist, install it with PIE
-and point `--with-cuda` at the CUDA Toolkit:
+For the recommended route, run PIE itself with PHP 8.5 or newer. PIE 1.5.1
+successfully installed the current source under PHP 8.4.26 and 8.5.11. The
+Packagist `0.1.0-beta.2` predates the PHP 8.4/8.5 support changes; wait for a
+subsequent release containing these changes before installing those targets
+from Packagist.
 
-```bash
-pie install lcmialichi/php-gpu-tensors:0.1.0-beta.2 --with-cuda=/usr/local/cuda
-```
+There is a known checksum bug when PIE itself runs under PHP 8.1 with Safe
+3.4.0: Safe forwards a fourth `$options` argument to native `hash_file()`,
+which PHP 8.1 rejects. This is tracked in [Safe PR #757](https://github.com/thecodingmachine/safe/pull/757)
+and [PIE issue #757](https://github.com/php/pie/issues/757). This is not a
+blanket failure for every PHP version before 8.5; the PIE 1.5.1 install passed
+under PHP 8.4.26. To build for PHP 8.1, run PIE under PHP 8.5 and pass matching
+target tools, for example `--with-php-config=/usr/bin/php-config8.1` and
+`--with-phpize-path=/usr/bin/phpize8.1`. This runner/target combination was
+tested successfully. Building directly with `./compile.sh --install` remains
+an alternative.
 
 PIE builds the native extension for the selected PHP installation; it does not
 install an NVIDIA driver or CUDA Toolkit. Those must already be available on
@@ -198,10 +211,9 @@ and host-side tests are possible without an NVIDIA GPU.
 
 ## Benchmarks
 
-Run `php -n -d extension=./cuda_build-8.1/modules/cuda.so run_benchmarks.php`
-for the full benchmark suite, or add `--matmul` / `--import` for focused runs.
-Reports are written to `benchmarks/reports/`. Results depend on the GPU,
-driver, data sizes and transfer path; PHP memory usage is not GPU VRAM.
+The benchmark suite is maintained in the separate
+[PHP GPU Tensors Benchmarks repository](https://github.com/lcmialichi/php-gpu-tensors-benchmarks).
+It includes focused `--matmul` and `--import` runs and JSON/HTML reports.
 
 For possible directions, see the [roadmap](ROADMAP.md). A feature does not
 need to be listed there to be worth discussing.

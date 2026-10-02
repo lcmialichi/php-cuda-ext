@@ -36,7 +36,7 @@ $app = new BenchmarkApplication(
 
 $dir = __DIR__ . "/benchmarks/reports";
 
-echo "Running PHP-CUDA-EXT Benchmarks...\n";
+echo "Running PHP GPU Tensors benchmarks...\n";
 
 $report = $app->run();
 $jsonPath = $report->saveJSON($dir);

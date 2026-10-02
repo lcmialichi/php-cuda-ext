@@ -1,4 +1,4 @@
-# PHP-CUDA-EXT Examples
+# PHP GPU Tensors Examples
 
 This directory contains functional implementations of the extension's API. The examples are organized by complexity, moving from high-level tensor abstractions to low-level JIT kernel compilation.
 
@@ -16,7 +16,7 @@ This directory contains functional implementations of the extension's API. The e
 ## Execution Requirements
 
 1. **NVIDIA Driver** & **CUDA Toolkit** installed.
-2. **php-cuda-ext** compiled and enabled in your `php.ini`.
+2. **PHP GPU Tensors** built and loaded in PHP (module name: `cuda`).
 3. An active NVIDIA GPU visible to the system.
 
 To run any example:

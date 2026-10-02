@@ -1,11 +1,13 @@
 {
-    "name": "lcmialichi/php-cuda-ext",
-    "description": "Native PHP extension for CUDA GPU computing, tensor operations, and machine-learning numerical workloads.",
+    "name": "lcmialichi/php-gpu-tensors",
+    "description": "Native PHP extension for NVIDIA GPU tensors, CUDA-accelerated computing, and machine-learning workloads.",
     "keywords": [
         "php-extension",
         "cuda",
         "nvidia",
         "gpu-computing",
+        "gpu-tensors",
+        "tensors",
         "machine-learning",
         "tensor",
         "deep-learning",

@@ -1,4 +1,4 @@
-# Contributing to php-cuda-ext
+# Contributing to PHP GPU Tensors
 
 Thanks for considering a contribution. The extension is experimental: small,
 reproducible changes with tests and clear API behavior are especially useful.

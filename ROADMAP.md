@@ -1,4 +1,4 @@
-# php-cuda-ext Roadmap
+# PHP GPU Tensors Roadmap
 
 This document describes possible directions, not promised deadlines.
 Suggestions and concrete proposals are welcome via GitHub issues; see
@@ -64,7 +64,7 @@ Focus: **expanding capabilities**
 
 ### Tooling
 - [ ] Built-in profiler (kernel time, memory usage)
-- [ ] `php-cuda` CLI for common tasks
+- [ ] `gpu-tensors` CLI for common tasks
 - [ ] Debug mode with shape/bounds checking
 
 ### Performance
@@ -77,10 +77,10 @@ Focus: **expanding capabilities**
 Focus: **ecosystem**
 
 ### Standard Library
-- [ ] `php-cuda/nn` — neural network layers (linear, conv, pooling)
-- [ ] `php-cuda/optim` — optimizers (SGD, Adam, RMSprop)
-- [ ] `php-cuda/data` — data pipeline, augmentation
-- [ ] `php-cuda/io` — common dataset loaders
+- [ ] `php-gpu-tensors/nn` — neural network layers (linear, conv, pooling)
+- [ ] `php-gpu-tensors/optim` — optimizers (SGD, Adam, RMSprop)
+- [ ] `php-gpu-tensors/data` — data pipeline, augmentation
+- [ ] `php-gpu-tensors/io` — common dataset loaders
 
 ### Integrations
 - [ ] Windows support (at least via WSL2) and macOS (via eGPU if viable)

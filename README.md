@@ -1,9 +1,9 @@
-# php-cuda-ext
+# PHP GPU Tensors
 
-Native PHP extension for CUDA GPU computing and machine-learning numerical
-workloads. Work with GPU-backed tensors from PHP, move data explicitly between
-host and device, and compile custom CUDA C++ kernels at runtime with NVRTC. No
-Python runtime required.
+Native PHP extension for GPU tensors and NVIDIA CUDA-accelerated numerical
+workloads. Build tensor operations and machine-learning data pipelines in PHP,
+move data explicitly between host and GPU, and compile custom CUDA C++ kernels
+at runtime with NVRTC. No Python runtime required.
 
 **Status:** experimental. Public APIs may change; this project is not yet
 recommended for production use. Linux, PHP 8.1 and 8.3, and CUDA 12.3 have
@@ -18,8 +18,8 @@ toolchain, `make`, and `autoconf`. The extension builds on Linux. Building
 requires the toolkit; running requires the host driver's `libcuda.so.1`.
 
 ```bash
-git clone https://github.com/lcmialichi/php-cuda-ext.git
-cd php-cuda-ext
+git clone https://github.com/lcmialichi/php-gpu-tensors.git
+cd php-gpu-tensors
 ./compile.sh
 ./run-tests.sh --require-gpu
 php -n -d extension=./cuda_build-8.1/modules/cuda.so examples/01_basics_cuda_array.php
@@ -50,7 +50,7 @@ docker compose run --rm php_cuda_dev bash -lc './compile.sh && ./run-tests.sh --
 `./run-tests.sh` also runs CPU-side C tests. `--require-gpu` fails immediately
 when no GPU is visible, instead of treating skipped GPU tests as success.
 
-## Tensor basics
+## GPU Tensors in PHP
 
 ```php
 use Cuda\CudaArray;

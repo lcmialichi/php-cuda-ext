@@ -215,8 +215,8 @@ The benchmark suite is maintained in the separate
 [PHP GPU Tensors Benchmarks repository](https://github.com/lcmialichi/php-gpu-tensors-benchmarks).
 It includes focused `--matmul` and `--import` runs, JSON/HTML reports, and a
 [published PHP 8.5 NTS vs ZTS comparison](https://github.com/lcmialichi/php-gpu-tensors-benchmarks/blob/main/published-reports/php85-nts-vs-zts/README.md),
-as well as a [full-suite NTS vs ZTS comparison](https://github.com/lcmialichi/php-gpu-tensors-benchmarks/blob/main/published-reports/php85-nts-vs-zts-full/README.md)
-with 368 matched cases and downloadable raw reports.
+as well as a [full-suite benchmark report](https://github.com/lcmialichi/php-gpu-tensors-benchmarks/blob/main/published-reports/php85-nts-vs-zts-full/README.md)
+covering 368 cases across five workload groups with downloadable raw reports.
 
 For possible directions, see the [roadmap](ROADMAP.md). A feature does not
 need to be listed there to be worth discussing.

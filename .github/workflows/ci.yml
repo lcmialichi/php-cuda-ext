@@ -45,8 +45,8 @@ jobs:
             php-cuda-zts \
             bash -euo pipefail -c '
               php tests/check_pie_package.php
-              PHP_BIN=/usr/local/bin/php PHPIZE=/usr/local/bin/phpize PHP_CONFIG=/usr/local/bin/php-config ./compile.sh
-              PHP_BIN=/usr/local/bin/php PHP_CONFIG=/usr/local/bin/php-config ./run-tests.sh --cpu-only
+              PHP_BIN=/usr/local/bin/php PHPIZE=/usr/local/bin/phpize PHP_CONFIG=/usr/local/bin/php-config bash ./compile.sh
+              PHP_BIN=/usr/local/bin/php PHP_CONFIG=/usr/local/bin/php-config bash ./run-tests.sh --cpu-only
             '
 
   draft-release:

@@ -39,6 +39,20 @@ PHP_BIN=php8.3 PHPIZE=phpize8.3 PHP_CONFIG=php-config8.3 ./compile.sh
 PHP_BIN=php8.3 PHP_CONFIG=php-config8.3 ./run-tests.sh --require-gpu
 ```
 
+### Install with PIE
+
+On Linux, after the beta package is published to Packagist, install it with PIE
+and point `--with-cuda` at the CUDA Toolkit:
+
+```bash
+pie install lcmialichi/php-gpu-tensors:0.1.0-beta.2 --with-cuda=/usr/local/cuda
+```
+
+PIE builds the native extension for the selected PHP installation; it does not
+install an NVIDIA driver or CUDA Toolkit. Those must already be available on
+the system. GPU execution additionally requires a compatible NVIDIA driver
+and visible GPU.
+
 Set `CUDA_HOME` if the toolkit is not at `/usr/local/cuda`, or `CUDA_ARCH=sm_86`
 when cross-building. cuBLAS is used when available for compatible larger
 matrix products; `CUDA_USE_CUBLAS=no ./compile.sh` builds with the extension's
@@ -172,17 +186,24 @@ in [examples](examples/README.md). `astype()` currently supports only the
 same dtype. GPU data has no CPU fallback. The project does not yet provide a
 stable API or automatic kernel fusion.
 
-## Benchmarks and contributing
+## Contribute
+
+Contributions can be code, tests, documentation, runnable examples, or reports
+from another PHP/CUDA/GPU combination. Browse
+[open issues](https://github.com/lcmialichi/php-gpu-tensors/issues),
+[report a bug](https://github.com/lcmialichi/php-gpu-tensors/issues/new?template=bug_report.yml),
+or [propose a feature](https://github.com/lcmialichi/php-gpu-tensors/issues/new?template=feature_request.yml).
+Start with the [contribution guide](CONTRIBUTING.md); documentation, examples,
+and host-side tests are possible without an NVIDIA GPU.
+
+## Benchmarks
 
 Run `php -n -d extension=./cuda_build-8.1/modules/cuda.so run_benchmarks.php`
 for the full benchmark suite, or add `--matmul` / `--import` for focused runs.
 Reports are written to `benchmarks/reports/`. Results depend on the GPU,
 driver, data sizes and transfer path; PHP memory usage is not GPU VRAM.
 
-Contributions are welcome, including reproducible bug reports, tests,
-documentation, portability findings and performance measurements. Start with
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup and review expectations, and
-[ROADMAP.md](ROADMAP.md) for possible directions. A feature does not need to be
-on the roadmap to be worth discussing.
+For possible directions, see the [roadmap](ROADMAP.md). A feature does not
+need to be listed there to be worth discussing.
 
 Licensed under the [MIT License](LICENSE).

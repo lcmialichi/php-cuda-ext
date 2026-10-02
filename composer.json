@@ -1,6 +1,8 @@
 {
     "name": "lcmialichi/php-gpu-tensors",
+    "type": "php-ext",
     "description": "Native PHP extension for NVIDIA GPU tensors, CUDA-accelerated computing, and machine-learning workloads.",
+    "license": "MIT",
     "keywords": [
         "php-extension",
         "cuda",
@@ -18,5 +20,24 @@
             "Benchmarks\\": "benchmarks/"
         }
     },
-    "require": {}
+    "require": {
+        "php": ">=8.1 <8.4"
+    },
+    "replace": {
+        "ext-cuda": "*"
+    },
+    "php-ext": {
+        "extension-name": "cuda",
+        "support-zts": false,
+        "os-families": [
+            "linux"
+        ],
+        "configure-options": [
+            {
+                "name": "with-cuda",
+                "description": "Path to the CUDA Toolkit installation, for example /usr/local/cuda.",
+                "needs-value": true
+            }
+        ]
+    }
 }

@@ -1,0 +1,50 @@
+name: Bug report
+description: Report a reproducible defect in PHP GPU Tensors.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: Include a small reproducer and text logs. Do not include credentials or private data.
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version and build type
+      placeholder: PHP 8.1 NTS
+    validations:
+      required: true
+  - type: input
+    id: toolkit-version
+    attributes:
+      label: CUDA Toolkit version
+      placeholder: CUDA 12.3
+    validations:
+      required: true
+  - type: input
+    id: gpu-driver
+    attributes:
+      label: NVIDIA GPU and driver version
+      placeholder: RTX A2000, driver 545.xx
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include the smallest PHP example and the command used.
+      render: php
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste text output; redact private paths and secrets.
+      render: text
+    validations:
+      required: false

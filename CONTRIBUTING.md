@@ -18,6 +18,23 @@ describe the desired behavior in an issue before implementing it. The
 Issues with a narrowly scoped reproducer or a missing regression test are
 good places to begin.
 
+## First contribution
+
+Documentation fixes, examples, API-stub updates, and host-side tests are useful
+contributions that do not need access to an NVIDIA GPU. For host-side tests,
+you still need the CUDA Toolkit and PHP development headers to build the
+extension, but no visible GPU is required:
+
+```bash
+bash ./compile.sh
+bash ./run-tests.sh --cpu-only
+```
+
+For CUDA behavior changes, run `bash ./run-tests.sh --require-gpu` on an NVIDIA
+system when possible. If you cannot, include the CPU-only results and state
+which GPU tests were not run. Check the open issues for a task that fits your
+environment; ask before starting a larger API or ownership change.
+
 ## API and versioning
 
 The PHP API is frozen at `0.1.0`, as declared by the signatures in

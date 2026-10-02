@@ -1,0 +1,37 @@
+name: Feature request
+description: Propose a capability or improvement for PHP GPU Tensors.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to accomplish, and what blocks you today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API or workflow you have in mind, if known.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Tensor API
+        - CUDA kernels or performance
+        - Data import and transfer
+        - Documentation or examples
+        - Build or developer tooling
+        - Other
+    validations:
+      required: true

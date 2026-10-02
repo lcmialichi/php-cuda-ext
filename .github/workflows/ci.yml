@@ -26,6 +26,7 @@ jobs:
               apt-get update
               apt-get install -y --no-install-recommends \
                 php8.1-cli php8.1-dev build-essential autoconf pkg-config libtool
+              php tests/check_pie_package.php
               bash ./compile.sh
               bash ./run-tests.sh --cpu-only
             '

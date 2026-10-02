@@ -23,7 +23,7 @@
     },
     "php-ext": {
         "extension-name": "cuda",
-        "support-zts": false,
+        "support-zts": true,
         "os-families": [
             "linux"
         ],

@@ -31,9 +31,27 @@ jobs:
               bash ./run-tests.sh --cpu-only
             '
 
+  build-and-cpu-tests-zts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test with PHP 8.5 ZTS
+        run: |
+          docker build -f .github/docker/php85-zts.Dockerfile -t php-cuda-zts .
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            php-cuda-zts \
+            bash -euo pipefail -c '
+              php tests/check_pie_package.php
+              PHP_BIN=/usr/local/bin/php PHPIZE=/usr/local/bin/phpize PHP_CONFIG=/usr/local/bin/php-config ./compile.sh
+              PHP_BIN=/usr/local/bin/php PHP_CONFIG=/usr/local/bin/php-config ./run-tests.sh --cpu-only
+            '
+
   draft-release:
     if: github.event.deleted != true && startsWith(github.ref, 'refs/tags/v')
-    needs: build-and-cpu-tests
+    needs: [build-and-cpu-tests, build-and-cpu-tests-zts]
     runs-on: ubuntu-22.04
     permissions:
       contents: write

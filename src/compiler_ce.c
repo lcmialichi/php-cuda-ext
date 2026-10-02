@@ -43,12 +43,28 @@ static int validate_and_adjust_architecture(const char *desired_arch, int driver
 static void free_parameter_list(func_parameter_list_t *params);
 static void free_kernel_data(cuda_kernel_data *kernel);
 
-static const char *g_cached_nvrtc_options[32] = {0};
-static int g_cached_option_count = 0;
-static char g_cached_target[16] = "";
-static int g_cached_opt_level = 0;
-static zend_bool g_cached_debug = 0;
-static zend_bool g_cached_fast_math = 0;
+typedef struct
+{
+    const char *values[24];
+    char storage[24][512];
+    int count;
+} nvrtc_options_t;
+
+static zend_bool nvrtc_options_add(nvrtc_options_t *options, const char *value)
+{
+    size_t length = strlen(value);
+    if (options->count >= (int)(sizeof(options->values) / sizeof(options->values[0])) ||
+        length >= sizeof(options->storage[0]))
+    {
+        return 0;
+    }
+
+    char *storage = options->storage[options->count];
+    memcpy(storage, value, length + 1);
+    options->values[options->count] = storage;
+    options->count++;
+    return 1;
+}
 
 static void append_math_constants(smart_string *program)
 {
@@ -212,8 +228,10 @@ static char *compute_program_hash(cuda_compiler_object *compiler)
     return estrdup(hexdigest);
 }
 
-static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char ***options_out)
+static int build_nvrtc_options(cuda_compiler_object *compiler, nvrtc_options_t *options)
 {
+    memset(options, 0, sizeof(*options));
+
     const char *current_target;
     char compatible_arch[16];
     int driver_version = 0;
@@ -254,60 +272,44 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
 
     const char *final_arch = (validation_result > 0) ? compatible_arch : current_target;
 
-    if (g_cached_option_count > 0 &&
-        strcmp(g_cached_target, final_arch) == 0 &&
-        g_cached_opt_level == compiler->optimization_level &&
-        g_cached_debug == compiler->debug_mode &&
-        g_cached_fast_math == compiler->fast_math)
-    {
-        *options_out = g_cached_nvrtc_options;
-        return g_cached_option_count;
-    }
-
-    for (int i = 0; i < g_cached_option_count; i++)
-    {
-        if (g_cached_nvrtc_options[i])
-        {
-            efree((void *)g_cached_nvrtc_options[i]);
-            g_cached_nvrtc_options[i] = NULL;
-        }
-    }
-
-    g_cached_option_count = 0;
-
     int major = 0, minor = 0;
     char arch_opt[64];
-    char sm_code[64];
 
     if (strncmp(final_arch, "sm_", 3) == 0)
     {
         sscanf(final_arch + 3, "%1d%1d", &major, &minor);
         snprintf(arch_opt, sizeof(arch_opt), "compute_%d%d", major, minor);
-        snprintf(sm_code, sizeof(sm_code), "sm_%d%d", major, minor);
     }
     else
     {
         sscanf(final_arch + 8, "%1d%1d", &major, &minor);
         snprintf(arch_opt, sizeof(arch_opt), "%s", final_arch);
-        snprintf(sm_code, sizeof(sm_code), "sm_%d%d", major, minor);
     }
 
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--gpu-architecture");
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup(arch_opt);
+    if (!nvrtc_options_add(options, "--gpu-architecture") ||
+        !nvrtc_options_add(options, arch_opt))
+    {
+        return 0;
+    }
 
     if (compiler->debug_mode)
     {
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-G");
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-lineinfo");
+        if (!nvrtc_options_add(options, "-G") || !nvrtc_options_add(options, "-lineinfo"))
+        {
+            return 0;
+        }
     }
 
     if (compiler->fast_math && !compiler->debug_mode)
     {
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--use_fast_math");
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--ftz=true");
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--prec-div=false");
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--prec-sqrt=false");
-        g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--fmad=true");
+        if (!nvrtc_options_add(options, "--use_fast_math") ||
+            !nvrtc_options_add(options, "--ftz=true") ||
+            !nvrtc_options_add(options, "--prec-div=false") ||
+            !nvrtc_options_add(options, "--prec-sqrt=false") ||
+            !nvrtc_options_add(options, "--fmad=true"))
+        {
+            return 0;
+        }
     }
 
     /** @todo ensure the nvrtc version to enable this flag */
@@ -316,25 +318,21 @@ static int get_cached_nvrtc_options(cuda_compiler_object *compiler, const char *
     //     g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-O");
     // }
 
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--std=c++11");
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup("--restrict");
-
     char include_cuda[256], include_crt[256];
     snprintf(include_cuda, sizeof(include_cuda), "%s", CUDA_INCLUDE_PATH_STR);
     snprintf(include_crt, sizeof(include_crt), "%s", CUDA_CRT_INCLUDE_STR);
 
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup(include_cuda);
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup(include_crt);
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-I.");
-    g_cached_nvrtc_options[g_cached_option_count++] = estrdup("-I./include");
+    if (!nvrtc_options_add(options, "--std=c++11") ||
+        !nvrtc_options_add(options, "--restrict") ||
+        !nvrtc_options_add(options, include_cuda) ||
+        !nvrtc_options_add(options, include_crt) ||
+        !nvrtc_options_add(options, "-I.") ||
+        !nvrtc_options_add(options, "-I./include"))
+    {
+        return 0;
+    }
 
-    strncpy(g_cached_target, final_arch, sizeof(g_cached_target) - 1);
-    g_cached_opt_level = compiler->optimization_level;
-    g_cached_debug = compiler->debug_mode;
-    g_cached_fast_math = compiler->fast_math;
-
-    *options_out = g_cached_nvrtc_options;
-    return g_cached_option_count;
+    return options->count;
 }
 
 static int get_max_compute_from_driver(int driver_version)
@@ -1135,8 +1133,8 @@ ZEND_METHOD(Compiler, compile)
         RETURN_NULL();
     }
 
-    const char **options = NULL;
-    int option_count = get_cached_nvrtc_options(compiler, &options);
+    nvrtc_options_t options = {0};
+    int option_count = build_nvrtc_options(compiler, &options);
     if (option_count == 0)
     {
         efree(cuda_program);
@@ -1148,7 +1146,7 @@ ZEND_METHOD(Compiler, compile)
     char *ptx_code = NULL;
     size_t ptx_size = 0;
     nvrtcResult nvrtc_result = compile_with_nvrtc(cuda_program, program_len,
-                                                  options, option_count,
+                                                  options.values, option_count,
                                                   &ptx_code, &ptx_size);
     efree(cuda_program);
 

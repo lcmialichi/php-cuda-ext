@@ -82,7 +82,7 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module);
 static void module_return_stream_to_pool(cuda_module_object *module, CUstream stream);
 static void module_initialize_stream_pool(cuda_module_object *module);
 static void module_initialize_stream_pool_progressive(cuda_module_object *module);
-static void module_expand_stream_pool_async(cuda_module_object *module);
+static void module_expand_stream_pool(cuda_module_object *module);
 static void module_destroy_stream_pool(cuda_module_object *module);
 static zend_bool module_initialize_global_cuda(cuda_module_object *module);
 static void module_prepare_launch_config(zval *config_zv, int grid[3], int block[3]);
@@ -231,18 +231,19 @@ static zend_bool module_validate_launch_config_cached(int grid[3], int block[3])
     size_t hash;
     module_hash_launch_config(grid, block, &hash);
 
+    pthread_mutex_lock(&g_launch_cache_mutex);
     for (int i = 0; i < LAUNCH_CACHE_SIZE; i++)
     {
         if (g_launch_cache[i].hash == hash)
         {
             if (g_launch_cache[i].grid[0] == grid[0] && g_launch_cache[i].block[0] == block[0])
             {
-                return g_launch_cache[i].valid;
+                zend_bool valid = g_launch_cache[i].valid;
+                pthread_mutex_unlock(&g_launch_cache_mutex);
+                return valid;
             }
         }
     }
-
-    pthread_mutex_lock(&g_launch_cache_mutex);
 
     zend_bool valid = module_validate_launch_config(NULL, grid, block);
 
@@ -368,6 +369,20 @@ static zend_bool module_get_shared_context(cuda_module_object *module)
         }
     }
 
+    CUresult context_result = cuCtxSetCurrent(g_shared_context);
+    if (context_result != CUDA_SUCCESS)
+    {
+        if (g_shared_context_refcount == 0 && g_shared_context)
+        {
+            cuCtxDestroy(g_shared_context);
+            g_shared_context = NULL;
+        }
+        pthread_mutex_unlock(&g_shared_context_mutex);
+        module_log_error("Failed to set shared CUDA context on current thread: %s",
+                         get_cuda_error_string(context_result));
+        return 0;
+    }
+
     g_shared_context_refcount++;
     module->cu_context = g_shared_context;
     module->uses_shared_context = 1;
@@ -468,9 +483,8 @@ static void module_initialize_stream_pool_progressive(cuda_module_object *module
     }
 }
 
-static void *module_expand_stream_pool_thread(void *arg)
+static void module_expand_stream_pool(cuda_module_object *module)
 {
-    cuda_module_object *module = (cuda_module_object *)arg;
     CUcontext old_context = NULL;
     CUresult cu_result;
 
@@ -482,7 +496,7 @@ static void *module_expand_stream_pool_thread(void *arg)
         pthread_mutex_lock(&module->stream_pool->mutex);
         module->stream_pool->expand_lock = 0;
         pthread_mutex_unlock(&module->stream_pool->mutex);
-        return NULL;
+        return;
     }
 
     pthread_mutex_lock(&module->stream_pool->mutex);
@@ -492,9 +506,10 @@ static void *module_expand_stream_pool_thread(void *arg)
 
     if (target_size > module->stream_pool->capacity)
     {
+        module->stream_pool->expand_lock = 0;
         pthread_mutex_unlock(&module->stream_pool->mutex);
         cuCtxPopCurrent(&old_context);
-        return NULL;
+        return;
     }
 
     cu_result = cuStreamCreate(
@@ -513,18 +528,6 @@ static void *module_expand_stream_pool_thread(void *arg)
     pthread_mutex_unlock(&module->stream_pool->mutex);
 
     cuCtxPopCurrent(&old_context);
-
-    return NULL;
-}
-
-static void module_expand_stream_pool_async(cuda_module_object *module)
-{
-    if (!module->stream_pool || module->stream_pool->expand_lock)
-        return;
-
-    pthread_t expand_thread;
-    pthread_create(&expand_thread, NULL, module_expand_stream_pool_thread, module);
-    pthread_detach(expand_thread);
 }
 
 static zend_bool module_ensure_ptx_loaded(cuda_module_object *module)
@@ -585,6 +588,15 @@ static zend_bool module_ensure_cuda_initialized(cuda_module_object *module)
     if (cu_result != CUDA_SUCCESS)
     {
         CUDA_THROW_RUNTIME("Failed to retain primary context: %s", get_cuda_error_string(cu_result));
+        return 0;
+    }
+
+    cu_result = cuCtxSetCurrent(module->cu_context);
+    if (cu_result != CUDA_SUCCESS)
+    {
+        cuDevicePrimaryCtxRelease(g_primary_device);
+        module->cu_context = NULL;
+        CUDA_THROW_RUNTIME("Failed to set primary CUDA context: %s", get_cuda_error_string(cu_result));
         return 0;
     }
 
@@ -691,7 +703,7 @@ static CUstream module_get_stream_with_expansion(cuda_module_object *module)
         module->stream_pool->expand_lock = 1;
         pthread_mutex_unlock(&module->stream_pool->mutex);
 
-        module_expand_stream_pool_async(module);
+        module_expand_stream_pool(module);
 
         pthread_mutex_lock(&module->stream_pool->mutex);
     }
@@ -1032,18 +1044,23 @@ static zend_bool module_validate_launch_config(cuda_module_object *module, int g
 
     if (!limits_loaded)
     {
-        if (!g_cuda_initialized)
+        pthread_mutex_lock(&g_cuda_global_init_mutex);
+        zend_bool cuda_initialized = g_cuda_initialized;
+        CUdevice primary_device = g_primary_device;
+        pthread_mutex_unlock(&g_cuda_global_init_mutex);
+
+        if (!cuda_initialized)
         {
             return 0;
         }
 
-        cuDeviceGetAttribute(&max_threads, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, g_primary_device);
-        cuDeviceGetAttribute(&max_block[0], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, g_primary_device);
-        cuDeviceGetAttribute(&max_block[1], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, g_primary_device);
-        cuDeviceGetAttribute(&max_block[2], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, g_primary_device);
-        cuDeviceGetAttribute(&max_grid[0], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, g_primary_device);
-        cuDeviceGetAttribute(&max_grid[1], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, g_primary_device);
-        cuDeviceGetAttribute(&max_grid[2], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, g_primary_device);
+        cuDeviceGetAttribute(&max_threads, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, primary_device);
+        cuDeviceGetAttribute(&max_block[0], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, primary_device);
+        cuDeviceGetAttribute(&max_block[1], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, primary_device);
+        cuDeviceGetAttribute(&max_block[2], CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, primary_device);
+        cuDeviceGetAttribute(&max_grid[0], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, primary_device);
+        cuDeviceGetAttribute(&max_grid[1], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, primary_device);
+        cuDeviceGetAttribute(&max_grid[2], CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, primary_device);
         limits_loaded = 1;
     }
 
@@ -1067,13 +1084,12 @@ static zend_bool module_validate_launch_config(cuda_module_object *module, int g
 
 static void module_cleanup_timeout_operations(cuda_module_object *module)
 {
-    static double last_check = 0;
     double current_time = module_get_current_time_ms();
 
-    if (current_time - last_check < ERROR_CHECK_INTERVAL)
+    if (current_time - module->last_timeout_check_ms < ERROR_CHECK_INTERVAL)
         return;
 
-    last_check = current_time;
+    module->last_timeout_check_ms = current_time;
 
     zend_ulong num_idx;
     cuda_async_operation *op;
@@ -2761,7 +2777,9 @@ int module_init(void)
 
 void module_shutdown(void)
 {
+    pthread_mutex_lock(&g_cuda_global_init_mutex);
     g_cuda_initialized = 0;
+    pthread_mutex_unlock(&g_cuda_global_init_mutex);
 
     pthread_mutex_lock(&g_shared_context_mutex);
     if (g_shared_context)

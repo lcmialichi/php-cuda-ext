@@ -139,6 +139,7 @@ typedef struct _cuda_module_object
     size_t peak_memory_usage;
     int kernel_execution_count;
     double total_execution_time_ms;
+    double last_timeout_check_ms;
 
     stream_pool_t *stream_pool;
     zend_bool uses_shared_context;

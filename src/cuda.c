@@ -313,7 +313,11 @@ zend_module_entry cuda_module_entry = {
     PHP_RSHUTDOWN(cuda),
     NULL,
     PHP_CUDA_VERSION,
-    STANDARD_MODULE_PROPERTIES};
+    PHP_MODULE_GLOBALS(cuda),
+    PHP_GINIT(cuda),
+    NULL,
+    NULL,
+    STANDARD_MODULE_PROPERTIES_EX};
 
 static size_t parse_size_string(const char *str)
 {

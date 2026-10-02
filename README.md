@@ -14,8 +14,9 @@ not imply production readiness: so far, Linux, PHP 8.1 and 8.3, and CUDA 12.3
 have been exercised with an NVIDIA RTX A2000. PHP 8.4.26 and 8.5.11 also pass
 extension builds with CUDA 12.6.3. PIE 1.5.1 installed and loaded the current
 source under PHP 8.4.26 and 8.5.11, and under PHP 8.5 targeting PHP 8.1. The
-full GPU suite passes 26/26 tests on PHP 8.5.11 with an RTX A2000. Other
-PHP/CUDA versions and GPUs need independent testing.
+full GPU suite passes 26/26 tests on PHP 8.5.11 NTS and ZTS, and PHP 8.1.34
+ZTS. Four concurrent PHP 8.5 ZTS runtimes also passed tensor and JIT workloads
+on an RTX A2000. Other PHP/CUDA versions and GPUs need independent testing.
 
 ## Start here
 

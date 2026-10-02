@@ -197,7 +197,7 @@ class CudaArray
     public function le(float|CudaArray $other): CudaArray {}
     /** Sum across an axis; omit axis to reduce all elements. */
     public function sum(?int $axis = null): CudaArray {}
-    /** Currently unsupported. @throws RuntimeException */
+    /** Mean across an axis; omit axis to reduce all elements. */
     public function mean(?int $axis = null): CudaArray {}
     /** Maximum across an axis; omit axis to reduce all elements. */
     public function max(?int $axis = null): CudaArray {}

@@ -7,7 +7,7 @@ This directory contains functional implementations of the extension's API. The e
 | File | Feature Demonstrated | Key Concepts |
 | :--- | :--- | :--- |
 | `01_basics_cuda_array.php` | Memory Management | VRAM allocation, Operator overloading. |
-| `02_math_and_reductions.php` | Data Aggregation | Parallel math functions, Reductions (sum/max). |
+| `02_math_and_reductions.php` | Data Aggregation | Parallel math functions, tensor reductions (sum/mean/min/max/product). |
 | `03_advanced_manipulation.php` | Tensor Geometry | Reshaping, Transposition, Broadcasting. |
 | `04_custom_jit_kernels.php` | JIT Compilation | CUDA source strings, typed parameters, Grid/Block config. |
 | `05_jit_async_execution.php` | Concurrency | Non-blocking execution, Op polling, Stream sync. |
@@ -21,7 +21,7 @@ This directory contains functional implementations of the extension's API. The e
 
 To run any example:
 ```bash
-php 01_tensor_basics.php
+php 01_basics_cuda_array.php
 ```
 
 ## Technical Notes

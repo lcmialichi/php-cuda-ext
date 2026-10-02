@@ -1,8 +1,9 @@
 # php-cuda-ext
 
-Native PHP extension for numerical computing on NVIDIA GPUs. Work with GPU
-tensors from PHP, move data explicitly between host and device, and compile
-custom CUDA C++ kernels at runtime with NVRTC. No Python runtime required.
+Native PHP extension for CUDA GPU computing and machine-learning numerical
+workloads. Work with GPU-backed tensors from PHP, move data explicitly between
+host and device, and compile custom CUDA C++ kernels at runtime with NVRTC. No
+Python runtime required.
 
 **Status:** experimental. Public APIs may change; this project is not yet
 recommended for production use. Linux, PHP 8.1 and 8.3, and CUDA 12.3 have
@@ -57,6 +58,7 @@ use Cuda\CudaArray;
 $input = new CudaArray([[1, 2], [3, 4]], 'float32');
 $weights = CudaArray::ones([2, 2]);
 $output = $input->add($weights)->multiply(2);
+$column_means = $input->mean(0);
 
 print_r($output->toArray()); // [[4, 6], [8, 10]]
 echo $output->dtype();       // float32
@@ -65,8 +67,21 @@ echo $output->dtype();       // float32
 `CudaArray` holds GPU storage; operations return GPU tensors. `toArray()`
 transfers to the CPU and expands all values into PHP arrays. Operations include
 arithmetic, broadcasting, comparisons, `matmul()` (including batches), shape
-views, and `sum()`, `min()`, `max()`, `prod()`, `argMax()`, and `argMin()` with an
-optional axis. PHP arithmetic operators also dispatch to tensor methods.
+views, and `sum()`, `mean()`, `min()`, `max()`, `prod()`, `argMax()`, and
+`argMin()` with an optional axis. PHP arithmetic operators also dispatch to
+tensor methods. `mean()` reduces all values when called without an axis, or
+reduces one dimension when given an axis. It returns `float32` for `float32`
+input and `float64` for `float64`, integer, and boolean input.
+
+## PHP GPU Computing for Machine Learning
+
+Use this PHP CUDA extension to build GPU-accelerated numerical steps into PHP
+applications: tensor arithmetic, matrix multiplication, broadcasting,
+reductions such as `mean()`, and custom CUDA kernels. These primitives can
+support machine-learning data preparation and inference workloads while the
+data remains in NVIDIA GPU memory. This is a low-level GPU computing library,
+not a complete machine-learning framework; model training, automatic
+differentiation, and Python interoperability are outside its current scope.
 
 For data already in packed row-major bytes, avoid creating individual PHP
 scalars. `fromFile()` reads raw bytes, whereas `fromNpy()` parses NumPy's
@@ -148,8 +163,8 @@ or `wait()`. Keep tensors alive until asynchronous work finishes. See
 The annotated signatures are in [class stubs](stubs/cuda.stub.php) and
 [device function stubs](stubs/cuda_methods.stub.php); runnable examples live
 in [examples](examples/README.md). `astype()` currently supports only the
-same dtype; `mean()` is not implemented. GPU data has no CPU fallback. The
-project does not yet provide a stable API or automatic kernel fusion.
+same dtype. GPU data has no CPU fallback. The project does not yet provide a
+stable API or automatic kernel fusion.
 
 ## Benchmarks and contributing
 

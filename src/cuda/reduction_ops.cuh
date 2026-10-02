@@ -35,14 +35,15 @@ __device__ size_t get_linear_index(const int *coords)
     return index;
 }
 
-template <typename T, typename Op>
+template <typename InputT, typename AccumT, typename Op>
 __global__ void reduce_kernel(
-    const T *__restrict__ input,
-    T *__restrict__ result,
-    size_t input_base_offset)
+    const InputT *__restrict__ input,
+    AccumT *__restrict__ result,
+    size_t input_base_offset,
+    size_t divisor)
 {
     extern __shared__ char sdata_raw[];
-    T *sdata = (T *)sdata_raw;
+    AccumT *sdata = (AccumT *)sdata_raw;
 
     size_t idx_out = blockIdx.x;
     if (idx_out >= d_reduce_params.total_elements_out)
@@ -63,11 +64,11 @@ __global__ void reduce_kernel(
         }
     }
 
-    T accumulator = ArgIdentity<T, Op>::get_init_val();
+    AccumT accumulator = ArgIdentity<AccumT, Op>::get_init_val();
 
     for (int current_idx = tid; current_idx < reduce_dim_size; current_idx += blockDim.x)
     {
-        accumulator = Op::apply(accumulator, input[base_flat_index + (size_t)current_idx * axis_stride]);
+        accumulator = Op::apply(accumulator, static_cast<AccumT>(input[base_flat_index + (size_t)current_idx * axis_stride]));
     }
 
     for (int s = WARP_SIZE / 2; s > 0; s >>= 1)
@@ -85,7 +86,7 @@ __global__ void reduce_kernel(
 
     if (warp_id == 0)
     {
-        accumulator = (tid < (blockDim.x / WARP_SIZE)) ? sdata[tid] : ArgIdentity<T, Op>::get_init_val();
+            accumulator = (tid < (blockDim.x / WARP_SIZE)) ? sdata[tid] : ArgIdentity<AccumT, Op>::get_init_val();
 
         for (int s = 16; s > 0; s >>= 1)
         {
@@ -93,7 +94,7 @@ __global__ void reduce_kernel(
         }
 
         if (tid == 0)
-            result[idx_out] = accumulator;
+            result[idx_out] = accumulator / static_cast<AccumT>(divisor);
     }
 }
 
@@ -180,12 +181,13 @@ __global__ void arg_reduce_kernel(
     }
 }
 
-template <typename T, typename Op>
-void launch_reduce_op_kernel(T *input, T *result,
+template <typename InputT, typename AccumT, typename Op>
+void launch_reduce_op_kernel(InputT *input, AccumT *result,
                              int *input_shape, int input_ndims,
                              int *result_shape, size_t *input_strides, int result_ndims,
                              int axis,
-                             size_t total_elements_out, size_t input_base_offset)
+                             size_t total_elements_out, size_t input_base_offset,
+                             size_t divisor)
 {
     if (total_elements_out == 0)
         return;
@@ -203,12 +205,12 @@ void launch_reduce_op_kernel(T *input, T *result,
     int minGridSize;
     int threads;
 
-    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &threads, reduce_kernel<T, Op>, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &threads, reduce_kernel<InputT, AccumT, Op>, 0, 0);
 
-    size_t shared_mem_size = (threads / 32) * sizeof(T);
+    size_t shared_mem_size = (threads / 32) * sizeof(AccumT);
 
-    reduce_kernel<T, Op><<<total_elements_out, threads, shared_mem_size>>>(
-        input, result, input_base_offset);
+    reduce_kernel<InputT, AccumT, Op><<<total_elements_out, threads, shared_mem_size>>>(
+        input, result, input_base_offset, divisor);
 
     cudaDeviceSynchronize();
 }

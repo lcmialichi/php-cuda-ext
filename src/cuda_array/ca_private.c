@@ -228,13 +228,12 @@ tensor_t *cuda_tensor_reduce(tensor_t *input, int axis, operation_type_t operati
         return NULL;
     }
 
-    if (operation_type == OP_REDUCE_MEAN)
-    {
-        CUDA_THROW_RUNTIME("OP_REDUCE_MEAN not implemented yet.");
-        return NULL;
-    }
-
-    tensor_t *result = cuda_tensor_create_empty_dtype(result_shape_arr, result_ndims, input->dtype);
+    dtype_t result_dtype = operation_type == OP_REDUCE_MEAN
+                               ? (input->dtype == DTYPE_FLOAT64 || dtype_is_integer(input->dtype) || input->dtype == DTYPE_BOOL
+                                      ? DTYPE_FLOAT64
+                                      : DTYPE_FLOAT32)
+                               : input->dtype;
+    tensor_t *result = cuda_tensor_create_empty_dtype(result_shape_arr, result_ndims, result_dtype);
     if (!result)
         return NULL;
 

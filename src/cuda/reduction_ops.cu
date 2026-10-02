@@ -13,9 +13,48 @@ extern "C" void launch_reduction(
     int result_ndims, int axis,
     size_t total_elements_out, size_t input_base_offset)
 {
+    if (op_type == OP_REDUCE_MEAN)
+    {
+        if (dtype != DTYPE_FLOAT32)
+        {
+            DISPATCH_DTYPE(dtype, {
+                launch_reduce_op_kernel<scalar_t, double, AddOpT<double>>(
+                    (scalar_t *)input,
+                    (double *)output,
+                    input_shape,
+                    input_ndims,
+                    result_shape,
+                    input_strides,
+                    result_ndims,
+                    axis,
+                    total_elements_out,
+                    input_base_offset,
+                    input_shape[axis]);
+            });
+        }
+        else
+        {
+            DISPATCH_DTYPE(dtype, {
+                launch_reduce_op_kernel<scalar_t, float, AddOpT<float>>(
+                    (scalar_t *)input,
+                    (float *)output,
+                    input_shape,
+                    input_ndims,
+                    result_shape,
+                    input_strides,
+                    result_ndims,
+                    axis,
+                    total_elements_out,
+                    input_base_offset,
+                    input_shape[axis]);
+            });
+        }
+        return;
+    }
+
     DISPATCH_DTYPE(dtype, {
         DISPATCH_OP_REDUCTION(op_type, {
-            launch_reduce_op_kernel<scalar_t, bin_op_t>(
+            launch_reduce_op_kernel<scalar_t, scalar_t, bin_op_t>(
                 (scalar_t *)input,
                 (scalar_t *)output,
                 input_shape,
@@ -25,7 +64,8 @@ extern "C" void launch_reduction(
                 result_ndims,
                 axis,
                 total_elements_out,
-                input_base_offset);
+                input_base_offset,
+                1);
         });
     });
 }

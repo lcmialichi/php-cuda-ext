@@ -1,7 +1,7 @@
 # PHP GPU Tensors
 
 <p align="center">
-    <img src="art/php-gpu-tensors.jpg" alt="PHP GPU Tensors: high-performance computing with PHP and NVIDIA GPUs" width="860">
+    <img src="art/php-gpu-tensors.jpg" alt="PHP GPU Tensors: high-performance computing with PHP and NVIDIA GPUs" width="350">
 </p>
 
 Native PHP extension for GPU tensors and NVIDIA CUDA-accelerated numerical

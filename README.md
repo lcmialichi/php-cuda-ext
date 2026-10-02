@@ -1,5 +1,7 @@
 # PHP GPU Tensors
 
+![PHP GPU Tensors: high-performance computing with PHP and NVIDIA GPUs](art/php-gpu-tensors.jpg)
+
 Native PHP extension for GPU tensors and NVIDIA CUDA-accelerated numerical
 workloads. Build tensor operations and machine-learning data pipelines in PHP,
 move data explicitly between host and GPU, and compile custom CUDA C++ kernels

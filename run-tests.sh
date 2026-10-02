@@ -6,8 +6,11 @@ PHP_CONFIG=${PHP_CONFIG:-php-config}
 PHP_BIN=${PHP_BIN:-php}
 PHP_VERSION=$($PHP_CONFIG --version | cut -d. -f1,2)
 BUILD_DIR=${BUILD_DIR:-"./${EXT_NAME}_build-${PHP_VERSION}"}
-if [ "${1:-}" != "" ] && [ "$1" != "--require-gpu" ]; then
-   echo "Usage: $0 [--require-gpu]" >&2
+CPU_ONLY=0
+if [ "${1:-}" = "--cpu-only" ]; then
+   CPU_ONLY=1
+elif [ "${1:-}" != "" ] && [ "$1" != "--require-gpu" ]; then
+   echo "Usage: $0 [--require-gpu|--cpu-only]" >&2
    exit 2
 fi
 
@@ -17,6 +20,7 @@ if [ ! -d "$BUILD_DIR" ]; then
 fi
 
 cd "$BUILD_DIR"
+"$PHP_BIN" -n tests/check_api_surface.php
 if [ "${1:-}" = "--require-gpu" ]; then
    if ! "$PHP_BIN" -n -d extension="$PWD/modules/cuda.so" -r 'exit(extension_loaded("cuda") && cuda_get_device_count() > 0 ? 0 : 1);'; then
       echo "GPU validation needs a working NVIDIA driver (libcuda.so.1) and a visible device" >&2
@@ -43,4 +47,8 @@ ${CC:-cc} -D_GNU_SOURCE -ffunction-sections -fdata-sections \
    -I"${CUDA_HOME:-/usr/local/cuda}/include" -Isrc -Isrc/cuda -Isrc/cuda_array \
    tests/where_shape_test.c -o "$WHERE_TEST_BINARY"
 "$WHERE_TEST_BINARY"
+if [ "$CPU_ONLY" -eq 1 ]; then
+   echo "Skipping PHP/GPU PHPT tests (--cpu-only)."
+   exit 0
+fi
 make test TEST_PHP_ARGS="-q"

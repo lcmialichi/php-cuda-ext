@@ -18,6 +18,28 @@ describe the desired behavior in an issue before implementing it. The
 Issues with a narrowly scoped reproducer or a missing regression test are
 good places to begin.
 
+## API and versioning
+
+The PHP API is frozen at `0.1.0`, as declared by the signatures in
+[`stubs/cuda.stub.php`](stubs/cuda.stub.php) and
+[`stubs/cuda_methods.stub.php`](stubs/cuda_methods.stub.php). The freeze covers
+public names, signatures, parameter defaults, return types, aliases, and
+documented behavior; internal C/CUDA symbols are not public API. New releases
+may add backward-compatible functionality, but must not remove or change the
+existing contract. Any unavoidable breaking change before `1.0.0` requires
+maintainer approval, migration notes, and a minor-version bump. From `1.0.0`,
+breaking changes require a major-version bump. Deprecate public APIs for at
+least one release before removal when practical. CI checks the reflected API
+against [`tests/api_surface.json`](tests/api_surface.json); update that
+baseline with `php tests/check_api_surface.php --update` only for an approved
+API change.
+
+The implementation remains experimental: the API freeze is not a claim of
+production readiness or broad hardware support. Release tags use the
+`vMAJOR.MINOR.PATCH` format. CI creates a draft release only after the build
+and CPU-side tests pass; drafts contain source archives, not prebuilt CUDA
+binaries.
+
 ## Build and test
 
 Linux, a compatible NVIDIA driver and CUDA Toolkit, and PHP development tools

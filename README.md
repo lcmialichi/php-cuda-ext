@@ -9,10 +9,10 @@ workloads. Build tensor operations and machine-learning data pipelines in PHP,
 move data explicitly between host and GPU, and compile custom CUDA C++ kernels
 at runtime with NVRTC. No Python runtime required.
 
-**Status:** experimental. Public APIs may change; this project is not yet
-recommended for production use. Linux, PHP 8.1 and 8.3, and CUDA 12.3 have
-been exercised with an NVIDIA RTX A2000. Other PHP/CUDA versions and GPUs need
-independent testing.
+**Status:** experimental, with the PHP API frozen at `0.1.0`. The freeze does
+not imply production readiness: so far, Linux, PHP 8.1 and 8.3, and CUDA 12.3
+have been exercised with an NVIDIA RTX A2000. Other PHP/CUDA versions and GPUs
+need independent testing.
 
 ## Start here
 
@@ -51,7 +51,9 @@ build and test in the development image:
 docker compose run --rm php_cuda_dev bash -lc './compile.sh && ./run-tests.sh --require-gpu'
 ```
 
-`./run-tests.sh` also runs CPU-side C tests. `--require-gpu` fails immediately
+`./run-tests.sh` runs CPU-side C tests and the PHP test suite. Use
+`--cpu-only` to run only the host-side C tests in build environments without a
+GPU; this does not validate CUDA execution. `--require-gpu` fails immediately
 when no GPU is visible, instead of treating skipped GPU tests as success.
 
 ## GPU Tensors in PHP

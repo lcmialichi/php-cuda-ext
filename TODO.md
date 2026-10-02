@@ -1,4 +1,4 @@
-# TODO — PHP CUDA Extension
+# TODO — PHP GPU Tensors
 
 This file lists upcoming features and tasks planned for the PHP CUDA extension.  
 Items are prioritized but not yet scheduled.
@@ -24,11 +24,9 @@ $x[[0, 5]] = $x[[1, 6]];
 - [ ] Handle overlapping ranges safely
 
 ## GPU Device Management
-- [ ] Implement effective GPU device selection (function exists but does not apply the device yet)
-    - Apply device via cudaSetDevice()
-    - Validate device availability
-    - Update internal global state
-    - Ensure tensors respect the selected device
+- [x] Apply `cuda_set_device()` through CUDA's `cudaSetDevice()` API
+- [x] Add regression tests for valid and invalid device selection
+- [ ] Define behavior for existing tensors and memory pools when switching devices
 
 ## Data Types
 

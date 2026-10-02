@@ -23,14 +23,14 @@ workloads without leaving the PHP ecosystem.
 Focus: **stability and foundation**
 
 ### API & Stability
-- [ ] Freeze the public `CudaArray` API (v0.1.0)
-- [ ] Define Semantic Versioning (SemVer) policy
+- [x] Freeze the public PHP API at v0.1.0 (signatures documented in `stubs/`)
+- [x] Define Semantic Versioning (SemVer) policy
 - [ ] Clearly mark experimental APIs with `@internal` or `_experimental` suffix
 
 ### Quality & Testing
 - [ ] Reach ≥ 70% test coverage for core operations
 - [ ] Add regression tests for known bugs
-- [ ] Set up CI that builds the extension (even without a GPU)
+- [x] Set up CI that builds the extension (even without a GPU)
 - [ ] Add memory leak tests (valgrind/ASan)
 
 ### Documentation
